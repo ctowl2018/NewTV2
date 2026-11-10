@@ -31,7 +31,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.C;
-import androidx.media3.common.DiscMenuState;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.common.VideoSize;
@@ -1145,7 +1144,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     private void onEnding() {
         long position = player().getPosition();
         long duration = player().getDuration();
-        if (player().canSetEnding(position, duration)) setEnding(duration - position);
+        if (player().canSetEnding(position, duration)) setEnding(position);
         setR1Callback();
     }
 
@@ -1524,14 +1523,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     @Override
     protected void onReclaim() {
         mVod.refresh();
-    }
-
-    @Override
-    public void onDiscMenuStateChanged(@NonNull DiscMenuState state) {
-        if (!isNativePlaybackCurrent()) return;
-        super.onDiscMenuStateChanged(state);
-        updateDiscMenuVisibility();
-        if (isDiscMenuTransition()) hideProgress();
     }
 
     private void updateDiscMenuVisibility() {

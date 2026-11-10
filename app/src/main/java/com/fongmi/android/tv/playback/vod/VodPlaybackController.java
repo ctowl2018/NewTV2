@@ -492,7 +492,7 @@ public class VodPlaybackController {
         History history = currentHistory();
         host.setPlaybackEnding(history == null ? 0 : history.getEnding());
         historyPolicy.updateProgress(history, time, position, duration);
-        if (history != null && duration > 0 && history.getEnding() > 0 && history.getEnding() + position >= duration) {
+        if (history != null && duration > 0 && history.getEnding() > 0 && position >= history.getEnding()) {
             skipEnding(history, duration, request);
             return;
         }

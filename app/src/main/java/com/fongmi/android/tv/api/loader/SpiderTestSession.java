@@ -205,7 +205,6 @@ public final class SpiderTestSession implements AutoCloseable {
             }
             case "playerContent" -> spider.playerContent(string(args.get(0)), string(args.get(1)), strings(args.getJSONArray(2)));
             case "action" -> spider.action(string(args.get(0)));
-            case "liveContent" -> spider.liveContent(string(args.get(0)));
             case "manualVideoCheck" -> spider.manualVideoCheck();
             case "isVideoFormat" -> spider.isVideoFormat(string(args.get(0)));
             case "proxy" -> spider.proxy(stringMap(args.getJSONObject(0)));
@@ -216,7 +215,7 @@ public final class SpiderTestSession implements AutoCloseable {
     private static void checkArgs(String method, JSONArray args) {
         int count = switch (method) {
             case "homeVideoContent", "manualVideoCheck" -> 0;
-            case "homeContent", "detailContent", "liveContent", "isVideoFormat", "action", "proxy" -> 1;
+            case "homeContent", "detailContent", "isVideoFormat", "action", "proxy" -> 1;
             case "searchContent", "playerContent" -> 3;
             case "categoryContent" -> 4;
             default -> throw new IllegalArgumentException("Unknown crawler method: " + method);

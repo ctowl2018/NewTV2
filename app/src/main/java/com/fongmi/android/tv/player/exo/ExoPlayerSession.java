@@ -4,125 +4,60 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.audio.AudioProcessor;
-import androidx.media3.exoplayer.DecoderManager;
-import androidx.media3.exoplayer.DecoderMode;
 import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.libass.LibassConfiguration;
-import androidx.media3.exoplayer.libass.LibassPlaybackSession;
-import androidx.media3.exoplayer.libass.LibassSubtitleController;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.preload.DefaultPreloadManager;
 import androidx.media3.exoplayer.source.preload.PreloadException;
 import androidx.media3.exoplayer.source.preload.PreloadManagerListener;
-import androidx.media3.exoplayer.text.SecondaryTextOutput;
-import androidx.media3.exoplayer.text.SubtitleTranscriptSession;
-import androidx.media3.exoplayer.trackselection.SecondaryTextTrackSelector;
-import androidx.media3.exoplayer.trackselection.TrackSelector;
 
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.player.subtitle.AndroidFontConfig;
-import com.fongmi.android.tv.player.subtitle.ExternalFont;
-import com.fongmi.android.tv.player.subtitle.SubtitleFileContent;
-import com.fongmi.android.tv.setting.DecodeSetting;
-import com.fongmi.android.tv.setting.PlayerSetting;
-import com.fongmi.android.tv.setting.PreloadSetting;
-import com.fongmi.android.tv.setting.SubtitleSetting;
+import com.fongmi.android.tv.player.subtitle.AssSubtitleSupport;
 
-import java.io.File;
-
+/**
+ * 一次播放会话：ExoPlayer + 预加载管理器（3a 降级版）。
+ *
+ * <p>上游在这里还挂了四样私有分支组件：{@code DecoderManager}（按轨切换解码器）、
+ * {@code LibassPlaybackSession}/{@code LibassSubtitleController}（ASS 字幕）、
+ * {@code SecondaryTextOutput}（二级字幕）、{@code SubtitleTranscriptSession}（字幕抄本）。
+ * 这些在本构建中全部移除；预加载保留，改用公开的 {@link DefaultPreloadManager} 独立实例。
+ */
 final class ExoPlayerSession {
 
     private static final String TAG = ExoPlayerSession.class.getSimpleName();
-    private static final int MAX_PRELOAD_BUFFER_BYTES = 64 * 1024 * 1024;
-    private static final int LIBASS_MAX_RENDER_PIXELS = 1920 * 1080;
-    private static final int LIBASS_MAX_BITMAP_CACHE_SIZE_MB = 48;
-    private static final int LIBASS_MAX_GLYPH_COUNT = 4096;
     private static final long PRELOAD_DURATION_MS = 10_000;
 
-    private final DecoderManager decoderManager;
-    private final LibassSubtitleController libassSubtitleController;
-    private final LibassPlaybackSession libassPlaybackSession;
-    private final SubtitleTranscriptSession subtitleTranscriptSession;
     private final DefaultPreloadManager preloadManager;
-    private final boolean libassEnabled;
-    private final boolean decoderPrewarmingEnabled;
-    private final int motionFps;
     private final ExoPlayer player;
+
+    @Nullable
+    private final AssSubtitleSupport ass;
 
     @Nullable
     private PreloadRequest preloadRequest;
 
     ExoPlayerSession(AudioProcessor audioProcessor) {
-        this.motionFps = PlayerSetting.getExoMotionFps();
-        this.decoderPrewarmingEnabled = PreloadSetting.shouldPrewarmDecoder();
-        DecoderMode audioMode = DecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_AUDIO));
-        DecoderMode videoMode = DecoderMode.fromCommonDecoderMode(DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_VIDEO));
-        this.decoderManager = new DecoderManager(audioMode, videoMode);
-        TrackSelector.Factory decodeTrackSelectorFactory = context -> ExoUtil.buildTrackSelector(decoderManager);
-        SecondaryTextTrackSelector.Factory secondaryTextTrackSelectorFactory = new SecondaryTextTrackSelector.Factory(decodeTrackSelectorFactory);
-        SecondaryTextOutput secondaryTextOutput = new SecondaryTextOutput();
-        this.libassEnabled = PlayerSetting.isLibass();
-        this.libassPlaybackSession = createLibassPlaybackSession(libassEnabled);
-        this.subtitleTranscriptSession = new SubtitleTranscriptSession();
-        this.subtitleTranscriptSession.setLoader(new SubtitleFileContent());
-        DefaultPreloadManager.Builder builder = createPreloadManagerBuilder(audioProcessor, secondaryTextTrackSelectorFactory, secondaryTextOutput);
-        this.preloadManager = builder.build();
+        this.ass = AssSubtitleSupport.create();
+        this.preloadManager = createPreloadManagerBuilder().build();
         this.preloadManager.addListener(new PreloadListener());
-        this.player = ExoUtil.buildPlayer(builder);
-        this.subtitleTranscriptSession.setPlayer(player);
-        this.decoderManager.attach(player);
-        this.libassSubtitleController = new LibassSubtitleController(player, libassPlaybackSession, secondaryTextTrackSelectorFactory, secondaryTextOutput);
+        this.player = ExoUtil.buildPlayer(audioProcessor, ass);
+        if (ass != null) ass.init(player);
     }
 
     ExoPlayer player() {
         return player;
     }
 
-    LibassPlaybackSession libassPlaybackSession() {
-        return libassPlaybackSession;
-    }
-
-    SubtitleTranscriptSession subtitleTranscriptSession() {
-        return subtitleTranscriptSession;
-    }
-
-    LibassSubtitleController libassSubtitleController() {
-        return libassSubtitleController;
-    }
-
-    boolean hasSettingsChanged() {
-        return hasPlaybackSettingsChanged() || decoderPrewarmingEnabled != PreloadSetting.shouldPrewarmDecoder();
-    }
-
-    boolean hasPlaybackSettingsChanged() {
-        return libassEnabled != PlayerSetting.isLibass() || motionFps != PlayerSetting.getExoMotionFps();
-    }
-
     @Nullable
-    DecoderMode decoderMode(@C.TrackType int trackType) {
-        return switch (trackType) {
-            case C.TRACK_TYPE_AUDIO -> decoderManager.getAudioMode();
-            case C.TRACK_TYPE_VIDEO -> decoderManager.getVideoMode();
-            default -> null;
-        };
-    }
-
-    void setDecoderMode(@C.TrackType int trackType, DecoderMode mode) {
-        if (trackType != C.TRACK_TYPE_AUDIO && trackType != C.TRACK_TYPE_VIDEO) return;
-        clearPreload();
-        if (trackType == C.TRACK_TYPE_AUDIO) decoderManager.selectAudioDecoder(mode);
-        else decoderManager.selectVideoDecoder(mode);
+    AssSubtitleSupport ass() {
+        return ass;
     }
 
     void preload(MediaItem mediaItem, long startPositionMs, Runnable onReady, Runnable onError) {
         PreloadRequest request = new PreloadRequest(mediaItem, Math.max(0, startPositionMs), onReady, onError);
         clearPreload();
         preloadRequest = request;
-        libassPlaybackSession.setPreloadMediaItem(mediaItem);
-        subtitleTranscriptSession.setPreloadMediaItem(mediaItem);
         preloadManager.add(request.mediaItem(), 0);
         preloadManager.invalidate();
     }
@@ -137,15 +72,11 @@ final class ExoPlayerSession {
 
     MediaSource createMediaSource(MediaItem mediaItem) {
         MediaSource preloaded = usePreloadedMediaSource(mediaItem);
-        return preloaded != null ? preloaded
-                : ExoMediaSourceFactory.supplier(libassPlaybackSession, subtitleTranscriptSession)
-                .get().createMediaSource(mediaItem);
+        return preloaded != null ? preloaded : ExoMediaSourceFactory.supplier(ass).get().createMediaSource(mediaItem);
     }
 
     void clearPreload() {
         PreloadRequest request = preloadRequest;
-        libassPlaybackSession.setPreloadMediaItem(null);
-        subtitleTranscriptSession.setPreloadMediaItem(null);
         if (request == null) return;
         preloadRequest = null;
         preloadManager.remove(request.mediaItem());
@@ -153,41 +84,27 @@ final class ExoPlayerSession {
 
     void release() {
         preloadRequest = null;
-        libassSubtitleController.close();
-        subtitleTranscriptSession.close();
         preloadManager.release();
-        decoderManager.detach();
         player.release();
-        libassPlaybackSession.close();
+        if (ass != null) ass.release();
     }
 
     long getPreloadStartPositionMs() {
         return preloadRequest == null ? 0 : preloadRequest.startPositionMs();
     }
 
-    private DefaultPreloadManager.Builder createPreloadManagerBuilder(AudioProcessor audioProcessor, SecondaryTextTrackSelector.Factory secondaryTextTrackSelectorFactory, SecondaryTextOutput secondaryTextOutput) {
-        return new DefaultPreloadManager.Builder(App.get(), ignored -> DefaultPreloadManager.PreloadStatus.specifiedRangeLoaded(getPreloadStartPositionMs(), PRELOAD_DURATION_MS)).setMediaSourceFactorySupplier(ExoMediaSourceFactory.supplier(libassPlaybackSession, subtitleTranscriptSession)).setRenderersFactory(ExoUtil.buildRenderersFactory(audioProcessor, secondaryTextOutput, libassPlaybackSession, decoderManager, motionFps, decoderPrewarmingEnabled)).setTrackSelectorFactory(secondaryTextTrackSelectorFactory).setLoadControl(ExoUtil.buildLoadControl(MAX_PRELOAD_BUFFER_BYTES));
-    }
-
-    private static LibassPlaybackSession createLibassPlaybackSession(boolean libassEnabled) {
-        File fontConfig = libassEnabled ? AndroidFontConfig.prepare() : null;
-        String fontConfigPath = fontConfig != null && fontConfig.length() > 0 ? fontConfig.getAbsolutePath() : null;
-        ExternalFont.Item font = libassEnabled ? SubtitleSetting.getFont() : null;
-        String fontFamily = font == null ? null : font.familyName();
-        String fontsDirectory = libassEnabled ? (font == null ? ExternalFont.getDirectory() : font.directory()).getAbsolutePath() : null;
-        LibassConfiguration configuration = new LibassConfiguration.Builder().setFontConfig(fontConfigPath).setFontsDirectory(fontsDirectory).setDefaultFontFamily(fontFamily).setMaximumRenderPixels(LIBASS_MAX_RENDER_PIXELS).setMaximumGlyphCount(LIBASS_MAX_GLYPH_COUNT).setMaximumBitmapCacheSizeMb(LIBASS_MAX_BITMAP_CACHE_SIZE_MB).build();
-        return new LibassPlaybackSession(configuration, libassEnabled);
+    private DefaultPreloadManager.Builder createPreloadManagerBuilder() {
+        return new DefaultPreloadManager.Builder(App.get(), ignored -> DefaultPreloadManager.PreloadStatus.specifiedRangeLoaded(getPreloadStartPositionMs(), PRELOAD_DURATION_MS))
+                .setMediaSourceFactorySupplier(ExoMediaSourceFactory.supplier(ass))
+                .setRenderersFactory(ExoUtil.buildRenderersFactory(null))
+                .setTrackSelectorFactory(ignored -> ExoUtil.buildTrackSelector())
+                .setLoadControl(ExoUtil.buildLoadControl());
     }
 
     private final class PreloadListener implements PreloadManagerListener {
 
         @Override
         public void onCompleted(@NonNull MediaItem mediaItem) {
-            onPreloadReady(mediaItem);
-        }
-
-        @Override
-        public void onPreloadPaused(@NonNull MediaItem mediaItem) {
             onPreloadReady(mediaItem);
         }
 
@@ -210,5 +127,4 @@ final class ExoPlayerSession {
 
     private record PreloadRequest(MediaItem mediaItem, long startPositionMs, Runnable onReady, Runnable onError) {
     }
-
 }

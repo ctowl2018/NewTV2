@@ -73,7 +73,6 @@ final class BrowseSearch {
 
     private static List<ListenableFuture<List<MediaItem>>> submitSearches(String query, String keyword) {
         List<ListenableFuture<List<MediaItem>>> futures = new ArrayList<>();
-        futures.add(Task.largeExecutor().submit(() -> LiveBrowse.search(keyword)));
         VodConfig.get().getSites().stream().filter(site -> site.isSearchable()).forEach(site -> futures.add(Task.largeExecutor().submit(() -> VodBrowse.search(site, query.trim()))));
         return futures;
     }
@@ -81,8 +80,8 @@ final class BrowseSearch {
     private static ImmutableList<MediaItem> selectResults(List<MediaItem> found, String keyword) {
         found.sort((a, b) -> score(b, keyword) - score(a, keyword));
         ImmutableList.Builder<MediaItem> selected = ImmutableList.builder();
-        int live = 0, vod = 0;
-        for (MediaItem item : found) if (item.mediaId.startsWith(LiveBrowse.LIVE_CH) ? live++ < CATALOG_LIMIT : vod++ < CATALOG_LIMIT) selected.add(item);
+        int vod = 0;
+        for (MediaItem item : found) if (vod++ < CATALOG_LIMIT) selected.add(item);
         return selected.build();
     }
 

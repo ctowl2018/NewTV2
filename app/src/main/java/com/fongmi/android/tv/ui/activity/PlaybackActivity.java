@@ -26,8 +26,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.C;
-import androidx.media3.common.DiscMenuController;
-import androidx.media3.common.DiscMenuState;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -39,7 +37,6 @@ import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
 import androidx.media3.ui.danmaku.Danmaku;
 import androidx.media3.ui.danmaku.DanmakuConfig;
-import androidx.media3.ui.danmaku.DanmakuPlayerViewController;
 
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
@@ -55,6 +52,7 @@ import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.BrowserWebView;
+import com.fongmi.android.tv.ui.danmaku.DanmakuPlayerViewController;
 import com.fongmi.android.tv.ui.dialog.CloudflareDialog;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -118,113 +116,47 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         return mService.player();
     }
 
-    @Nullable
-    private DiscMenuController discMenu() {
-        if (mService == null || !isOwner() || isWebPlaybackActive()) return null;
-        return player().getDiscMenuController();
-    }
-
-    private DiscMenuState discMenuState() {
-        return discMenu() != null ? player().getPlayer().getDiscMenuState() : DiscMenuState.EMPTY;
-    }
-
     protected boolean hasDiscMenu() {
-        return discMenuState().availability == DiscMenuState.AVAILABILITY_AVAILABLE;
-    }
-
-    protected boolean isIsoNavigationPlayback() {
-        DiscMenuController menu = discMenu();
-        return menu != null && menu.isNavigationPlayback();
-    }
-
-    protected boolean isIsoPlaybackOngoing() {
-        return discMenuState().navigationPlaybackOngoing;
-    }
-
-    protected boolean isDiscMenuActive() {
-        return discMenuState().phase == DiscMenuState.PHASE_ACTIVE;
-    }
-
-    protected boolean isDiscMenuTransition() {
-        return discMenuState().phase != DiscMenuState.PHASE_IDLE;
-    }
-
-    protected boolean dispatchDiscMenuKey(KeyEvent event) {
-        int keyCode = event.getKeyCode();
-        if (event.getAction() == KeyEvent.ACTION_UP) {
-            if (!discMenuHeldKeys.get(keyCode)) return false;
-            discMenuHeldKeys.delete(keyCode);
-            return true;
-        }
-        if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-        if (event.getRepeatCount() > 0) return discMenuHeldKeys.get(keyCode);
-        discMenuHeldKeys.delete(keyCode);
-        DiscMenuController menu = discMenu();
-        if (isLock() || menu == null) return false;
-        String action = switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_UP -> "up";
-            case KeyEvent.KEYCODE_DPAD_DOWN -> "down";
-            case KeyEvent.KEYCODE_DPAD_LEFT -> "left";
-            case KeyEvent.KEYCODE_DPAD_RIGHT -> "right";
-            case KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> "select";
-            case KeyEvent.KEYCODE_BACK -> "prev";
-            case KeyEvent.KEYCODE_MEDIA_TOP_MENU -> "menu";
-            case KeyEvent.KEYCODE_MENU -> "title-menu";
-            case KeyEvent.KEYCODE_TV_CONTENTS_MENU -> "popup";
-            default -> null;
-        };
-        if (action == null) return false;
-        boolean opensMenu = "menu".equals(action) || "title-menu".equals(action) || "popup".equals(action);
-        boolean canHandle = opensMenu ? hasDiscMenu() : menu.isActive();
-        if (!canHandle) return false;
-        if (opensMenu ? !requestDiscMenuOpen(menu, action) : !menu.sendAction(action)) return false;
-        discMenuHeldKeys.put(keyCode, true);
-        return true;
-    }
-
-    protected void openDiscMenu() {
-        openDiscMenu("menu");
-    }
-
-    protected boolean openDiscTitleMenu() {
-        return openDiscMenu("title-menu");
-    }
-
-    protected boolean openDiscPopupMenu() {
-        return openDiscMenu("popup");
-    }
-
-    private boolean openDiscMenu(String action) {
-        DiscMenuController menu = discMenu();
-        return menu != null && hasDiscMenu() && requestDiscMenuOpen(menu, action);
-    }
-
-    private boolean requestDiscMenuOpen(DiscMenuController menu, String action) {
-        if (menu.open(action, result -> onDiscMenuOpened(menu, result))) return true;
-        Notify.show(R.string.play_disc_menu_unavailable);
         return false;
     }
 
-    private void onDiscMenuOpened(DiscMenuController menu, DiscMenuController.OpenResult result) {
-        if (discMenu() != menu || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
-        if (result == DiscMenuController.OpenResult.RUNTIME_MISSING) Notify.show(ResUtil.getString(R.string.error_module_missing, ResUtil.getString(R.string.module_bdj)));
-        else if (result == DiscMenuController.OpenResult.UNAVAILABLE || result == DiscMenuController.OpenResult.TIMED_OUT) Notify.show(result == DiscMenuController.OpenResult.TIMED_OUT ? R.string.play_disc_menu_timeout : R.string.play_disc_menu_unavailable);
+    protected boolean isIsoNavigationPlayback() {
+        return false;
+    }
+
+    protected boolean isIsoPlaybackOngoing() {
+        return false;
+    }
+
+    protected boolean isDiscMenuActive() {
+        return false;
+    }
+
+    protected boolean isDiscMenuTransition() {
+        return false;
+    }
+
+    protected boolean dispatchDiscMenuKey(KeyEvent event) {
+        return false;
+    }
+
+    protected void openDiscMenu() {
+    }
+
+    protected boolean openDiscTitleMenu() {
+        return false;
+    }
+
+    protected boolean openDiscPopupMenu() {
+        return false;
     }
 
     protected boolean handleDiscMenuBack() {
-        DiscMenuController menu = discMenu();
-        return !isLock() && menu != null && menu.isActive() && menu.sendAction("prev");
+        return false;
     }
 
     protected boolean dispatchDiscMenuTouch(MotionEvent event) {
-        DiscMenuController menu = discMenu();
-        if (isLock() || menu == null || !menu.isActive() || !menu.supportsPointer()) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL || event.getPointerCount() != 1) return true;
-        View surface = getPlayerView().getVideoSurfaceView();
-        if (surface == null || surface.getWidth() <= 0 || surface.getHeight() <= 0) return true;
-        if (event.getActionMasked() == MotionEvent.ACTION_UP && event.getEventTime() - event.getDownTime() >= ViewConfiguration.getLongPressTimeout()) onDiscMenuLongPress();
-        else if (event.getActionMasked() == MotionEvent.ACTION_DOWN || event.getActionMasked() == MotionEvent.ACTION_MOVE || event.getActionMasked() == MotionEvent.ACTION_UP) getPlayerView().dispatchDiscMenuTouchEvent(event);
-        return true;
+        return false;
     }
 
     protected void onDiscMenuLongPress() {
@@ -424,13 +356,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     protected void onPreloadTransition(Object tag, long oldPositionMs, long oldDurationMs) {
-    }
-
-    @Override
-    public void onDiscMenuStateChanged(@NonNull DiscMenuState state) {
-        if (!isNativePlaybackCurrent()) return;
-        updateKeepScreenOn(player().getPlayer().isPlaying());
-        if (isBuffering()) onStateChanged(Player.STATE_BUFFERING);
     }
 
     protected void onWebPlaybackChanged(boolean active) {
@@ -694,7 +619,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         onTracksChanged();
         onDecodeChanged();
         onMediaOptionsChanged();
-        onDiscMenuStateChanged(current.getDiscMenuState());
     }
 
     private void addSeekListener() {
@@ -851,7 +775,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     private void hidePlayerViewForWebPlayback() {
         PlayerView playerView = getPlayerView();
-        playerView.setDiscMenuController(null);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         View shutter = playerView.findViewById(androidx.media3.ui.R.id.exo_shutter);
         if (shutter != null) shutter.setVisibility(View.VISIBLE);
@@ -864,7 +787,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         player().bindPlayerView(getPlayerView());
         danmakuController.bind(getPlayerView());
         danmakuController.setConfig(player().getDanmakuConfig());
-        getPlayerView().setDiscMenuController(discMenu());
         syncDanmakuSource();
         restoreDebugView();
     }
@@ -1081,7 +1003,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
         configurePlayerView();
-        getSeekView().setDurationSupplier(this::getActivePlaybackDuration);
         bindPlaybackService();
         addSeekListener();
     }
@@ -1090,9 +1011,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     public void onEvents(@NonNull Player player, @NonNull Player.Events events) {
         if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) && pendingResume != null && (mService == null || !pendingResume.matches(player().getPlayer()))) pendingResume = null;
         if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_AVAILABLE_COMMANDS_CHANGED)) updateKeyIncrement();
-        if (isNativePlaybackCurrent() && events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_DISC_MENU_STATE_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+        if (isNativePlaybackCurrent() && events.containsAny(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
             Player current = player().getPlayer();
-            boolean ended = current.getPlaybackState() == Player.STATE_ENDED && !current.getDiscMenuState().navigationPlaybackOngoing;
+            boolean ended = current.getPlaybackState() == Player.STATE_ENDED;
             if (!ended) {
                 playbackEndHandled = false;
             } else if (!playbackEndHandled) {
@@ -1121,7 +1042,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     public void onPlaybackStateChanged(int state) {
         if (!isNativePlaybackCurrent()) return;
         onStateChanged(state);
-        getPlayerView().setDiscMenuController(discMenu());
     }
 
     @Override
@@ -1160,7 +1080,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         setRedirect(false);
         dispatchPendingObservers();
         updatePlaybackPlayerState();
-        getPlayerView().setDiscMenuController(discMenu());
         if (webView != null) webView.onResume();
         if (!isWebPlaybackActive()) {
             resumePlayback();
@@ -1180,7 +1099,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     protected void onStop() {
         super.onStop();
         discMenuHeldKeys.clear();
-        getPlayerView().setDiscMenuController(null);
         if ((isWebPlaybackActive() || isOwner()) && shouldPausePlayback()) pausePlayback();
         if (!isInPictureInPictureMode()) detachPlayerView();
     }
@@ -1188,7 +1106,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     @Override
     protected void onDestroy() {
         discMenuHeldKeys.clear();
-        getPlayerView().setDiscMenuController(null);
         pendingResume = null;
         releaseWebView();
         clearObservers();

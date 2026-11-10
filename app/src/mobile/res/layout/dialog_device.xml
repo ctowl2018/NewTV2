@@ -46,7 +46,7 @@
 
         <com.fongmi.android.tv.ui.custom.DialogActionView
             android:id="@+id/refresh"
-            android:contentDescription="@string/live_refresh"
+            android:contentDescription="@string/device_refresh"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackgroundBorderless"

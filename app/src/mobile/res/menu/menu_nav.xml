@@ -8,12 +8,6 @@
         android:visible="false" />
 
     <item
-        android:id="@+id/live"
-        android:icon="@drawable/ic_nav_live"
-        android:title="@string/nav_live"
-        android:visible="false" />
-
-    <item
         android:id="@+id/setting"
         android:icon="@drawable/ic_nav_setting"
         android:title="@string/nav_setting"

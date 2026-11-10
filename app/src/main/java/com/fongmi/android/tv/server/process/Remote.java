@@ -274,7 +274,7 @@ public class Remote implements Process {
         body.addProperty("state", snapshot.state());
         body.addProperty("playWhenReady", player.getPlaybackState() != Player.STATE_ENDED && player.getPlayer().getPlayWhenReady());
         body.addProperty("repeatOne", player.isRepeatOne());
-        body.addProperty("live", metadata.mediaType != null && metadata.mediaType == MediaMetadata.MEDIA_TYPE_TV_CHANNEL || player.isLive());
+        body.addProperty("live", player.isLive());
         body.addProperty("canNavigate", service.canRemoteNavigate());
         body.addProperty("canSeek", service.canRemoteSeek());
         body.addProperty("canSetSpeed", service.canRemoteSetSpeed());

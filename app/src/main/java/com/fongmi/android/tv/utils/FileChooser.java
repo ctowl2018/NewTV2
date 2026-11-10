@@ -247,15 +247,4 @@ public final class FileChooser {
         return ContentResolver.SCHEME_CONTENT.equalsIgnoreCase(scheme) || ContentResolver.SCHEME_FILE.equalsIgnoreCase(scheme);
     }
 
-    public static boolean isLiveSource(@Nullable Intent intent) {
-        if (intent == null || !isFileSource(intent.getData())) return false;
-        String path = FileUtil.getDisplayName(intent.getData()).toLowerCase(Locale.ROOT);
-        if (path.endsWith(".m3u")) return true;
-        if (!"text/plain".equalsIgnoreCase(intent.getType())) return false;
-        String extension = path.substring(path.lastIndexOf('.') + 1);
-        return switch (extension) {
-            case "strm", "m3u8", "mpd", "torrent", "mp4", "mkv", "flv", "mp3", "m4a", "aac", "ts", "webm", "mov", "avi", "wav", "ogg", "wmv", "iso", "m2ts" -> false;
-            default -> true;
-        };
-    }
 }

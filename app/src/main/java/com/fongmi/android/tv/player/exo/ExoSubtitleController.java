@@ -1,76 +1,91 @@
 package com.fongmi.android.tv.player.exo;
 
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionOverride;
-import androidx.media3.common.text.SubtitleSelectionState;
-import androidx.media3.exoplayer.libass.LibassPlaybackSession;
-import androidx.media3.exoplayer.libass.LibassSubtitleController;
+import androidx.media3.common.Tracks;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
-import androidx.media3.ui.libass.LibassPlayerViewController;
 
+import com.fongmi.android.tv.player.compat.SubtitleSelectionState;
+import com.fongmi.android.tv.player.subtitle.AssSubtitleSupport;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 
+import java.util.List;
+
+/**
+ * 字幕控制。
+ *
+ * <p>文本类字幕仍走 media3 公开路径：{@code TextRenderer} → {@link SubtitleView}，
+ * 样式复用 {@link SubtitleSetting}。
+ *
+ * <p>ASS/SSA 由 {@link AssSubtitleSupport} 接管：解析交给 libass（{@code AssSubtitleParser}），
+ * 渲染是挂在同一个 {@link SubtitleView}（FrameLayout）下的 {@code AssSubtitleView}。
+ * libass 不可用（原生库缺失或用户关闭开关）时 {@code ass} 为 {@code null}，
+ * 自动退回原来的纯文本渲染，不会影响播放。
+ *
+ * <p>仍然不可用的能力：二级字幕（同时两条轨）、字幕抄本。
+ */
 final class ExoSubtitleController {
 
-    private final LibassSubtitleController libassSubtitleController;
-    private final LibassPlaybackSession libassPlaybackSession;
-    private final LibassPlayerViewController playerViewController;
+    @Nullable
+    private PlayerView playerView;
+    private final Player player;
 
-    ExoSubtitleController(ExoPlayerSession session, Player player) {
-        libassPlaybackSession = session.libassPlaybackSession();
-        libassSubtitleController = session.libassSubtitleController();
-        playerViewController = new LibassPlayerViewController(player, libassPlaybackSession, libassSubtitleController);
+    @Nullable
+    private final AssSubtitleSupport ass;
+
+    ExoSubtitleController(Player player, @Nullable AssSubtitleSupport ass) {
+        this.player = player;
+        this.ass = ass;
         applySubtitleStyle();
-        applySecondarySubtitleMode();
     }
 
     void release() {
-        playerViewController.close();
+        playerView = null;
     }
 
     void bindPlayerView(PlayerView playerView) {
-        playerViewController.bind(playerView);
+        this.playerView = playerView;
+        if (ass != null) ass.bindPlayerView(playerView);
+        applySubtitleStyle();
     }
 
     void applySubtitleStyle() {
-        libassPlaybackSession.setBottomPositionFraction(SubtitleSetting.getPosition() / 100.0f);
-        libassPlaybackSession.setSecondaryBottomPositionFraction(getSecondaryBottomPositionFraction());
-        libassPlaybackSession.setFontScale(SubtitleSetting.isScaleApplied() ? SubtitleSetting.getAppliedScale() : 1.0f, true);
-        playerViewController.setStyleOverride(SubtitleSetting.isStyleForced() ? SubtitleSetting.getStyle() : null, SubtitleSetting.getFontFamily());
-        playerViewController.setSecondarySubtitleViewConfigurator(this::applySecondarySubtitleStyle);
+        SubtitleView view = playerView == null ? null : playerView.getSubtitleView();
+        if (view == null) return;
+        SubtitleSetting.applyStyle(view);
+        view.setBottomPaddingFraction(0.0f);
+        if (ass != null) ass.applySubtitleStyle();
     }
 
+    /** ASS 是否正在接管渲染，供上层判断字号等设置是否只对文本字幕生效。 */
+    boolean isAssActive() {
+        return ass != null && ass.isAttached();
+    }
+
+    /**
+     * 由当前轨道状态反推选择态：主字幕取已选中的文本轨道，二级字幕恒为空。
+     */
     SubtitleSelectionState getSubtitleSelectionState() {
-        return libassSubtitleController.getSubtitleSelectionState();
+        Tracks tracks = player.getCurrentTracks();
+        for (Tracks.Group group : tracks.getGroups()) {
+            if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+            for (int index = 0; index < group.length; index++) {
+                if (!group.isTrackSelected(index)) continue;
+                return new SubtitleSelectionState(new TrackSelectionOverride(group.getMediaTrackGroup(), index), null, List.of(), null, false);
+            }
+        }
+        return SubtitleSelectionState.EMPTY;
     }
 
     void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        applySecondarySubtitleMode();
-        libassSubtitleController.setSecondaryTextTrackSelectionOverride(selection);
     }
 
     void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        libassSubtitleController.setSecondaryTextTrackAutoSelectionEnabled(false);
-        libassSubtitleController.setSecondaryTextTrackSelectionOverride(selection);
     }
 
     void prepareForNewMedia() {
-        applySecondarySubtitleMode();
-    }
-
-    private void applySecondarySubtitleMode() {
-        libassSubtitleController.setSecondaryTextTrackAutoSelectionEnabled(SubtitleSetting.getSecondaryMode() == SubtitleSetting.SECONDARY_MODE_AUTO);
-    }
-
-    private void applySecondarySubtitleStyle(SubtitleView subtitleView) {
-        SubtitleSetting.applyStyle(subtitleView);
-        subtitleView.setBottomPaddingFraction(0.0f);
-        subtitleView.setBottomPosition(getSecondaryBottomPositionFraction());
-    }
-
-    private static float getSecondaryBottomPositionFraction() {
-        return (100.0f - SubtitleSetting.getSecondaryPosition()) / 100.0f;
     }
 }

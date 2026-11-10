@@ -1,7 +1,6 @@
 package com.fongmi.android.tv.player.exo;
 
 import androidx.media3.common.Format;
-import androidx.media3.common.audio.AudioEffectParameters;
 import androidx.media3.common.audio.AudioProcessor;
 import androidx.media3.exoplayer.ExoPlayer;
 
@@ -125,8 +124,8 @@ public final class ExoPlayerEffect implements PlayerEffect {
         return previewVideoEffect ? VideoEffectProfile.off() : VideoSetting.getAppliedProfile();
     }
 
-    private AudioEffectParameters getAudioConfig(int channelCount) {
-        return previewAudioEffect ? AudioEffectParameters.DEFAULT : AudioEffectConfig.from(getAudioEffectBands(), channelCount);
+    private AudioEffectConfig getAudioConfig(int channelCount) {
+        return previewAudioEffect ? AudioEffectConfig.disabled() : AudioEffectConfig.from(getAudioEffectBands(), channelCount);
     }
 
     private int getAudioChannelCount() {
@@ -136,7 +135,7 @@ public final class ExoPlayerEffect implements PlayerEffect {
 
     private void applyAudioConfig(int channelCount) {
         if (channelCount == Format.NO_VALUE) return;
-        AudioEffectParameters config = getAudioConfig(channelCount);
+        AudioEffectConfig config = getAudioConfig(channelCount);
         audioEffectFailed = !audioEffectController.apply(player, config);
     }
 }

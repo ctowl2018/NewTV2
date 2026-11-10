@@ -27,19 +27,9 @@ public class BrowseTree {
 
     private static final String ROOT = "ROOT";
     private static final String VOD = "VOD";
-    private static final String LIVE = "LIVE";
     public static final String VOD_KEEP = "VOD_KEEP";
-    public static final String LIVE_KEEP = "LIVE_KEEP";
     private static final MediaItem ROOT_ITEM = folder(ROOT, "影視");
     private static final MediaItem VOD_FOLDER = build(VOD, true, false, MediaMetadata.MEDIA_TYPE_FOLDER_MIXED, "點播", null, icon(R.drawable.ic_nav_vod), null);
-    private static final MediaItem LIVE_FOLDER;
-
-    static {
-        Bundle extras = new Bundle();
-        extras.putInt(CONTENT_STYLE_BROWSABLE_HINT, CONTENT_STYLE_LIST);
-        MediaMetadata meta = new MediaMetadata.Builder().setTitle("直播").setArtworkUri(Uri.parse(icon(R.drawable.ic_nav_live))).setIsBrowsable(true).setIsPlayable(false).setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED).setExtras(extras).build();
-        LIVE_FOLDER = new MediaItem.Builder().setMediaId(LIVE).setMediaMetadata(meta).build();
-    }
 
     public static void clear() {
         clearVod();
@@ -70,13 +60,10 @@ public class BrowseTree {
     @NonNull
     private static ImmutableList<MediaItem> getChildrenInternal(@NonNull String parentId) throws Exception {
         return switch (parentId) {
-            case ROOT -> ImmutableList.of(VOD_FOLDER, LIVE_FOLDER);
+            case ROOT -> ImmutableList.of(VOD_FOLDER);
             case VOD -> ImmutableList.<MediaItem>builder().add(getItem(VOD_KEEP)).addAll(VodBrowse.getHistory()).build();
-            case LIVE -> ImmutableList.<MediaItem>builder().add(getItem(LIVE_KEEP)).addAll(LiveBrowse.getGroups()).build();
             case VOD_KEEP -> VodBrowse.getFavorites();
-            case LIVE_KEEP -> LiveBrowse.getFavorites();
             default -> {
-                if (parentId.startsWith(LiveBrowse.LIVE_GROUP)) yield LiveBrowse.getChannels(parentId);
                 if (parentId.startsWith(VodBrowse.VOD_DETAIL)) yield VodBrowse.getEpisodes(parentId);
                 yield ImmutableList.of();
             }
@@ -88,9 +75,8 @@ public class BrowseTree {
         return switch (mediaId) {
             case ROOT -> ROOT_ITEM;
             case VOD -> VOD_FOLDER;
-            case LIVE -> LIVE_FOLDER;
-            case VOD_KEEP, LIVE_KEEP -> folder(mediaId, ResUtil.getString(R.string.keep), R.drawable.ic_browse_keep);
-            default -> mediaId.startsWith(LiveBrowse.LIVE_GROUP) || mediaId.startsWith(LiveBrowse.LIVE_CH) ? LiveBrowse.getItem(mediaId) : VodBrowse.getItem(mediaId);
+            case VOD_KEEP -> folder(mediaId, ResUtil.getString(R.string.keep), R.drawable.ic_browse_keep);
+            default -> VodBrowse.getItem(mediaId);
         };
     }
 
@@ -106,7 +92,6 @@ public class BrowseTree {
 
     @Nullable
     public static MediaItem resolve(@NonNull String mediaId) throws Exception {
-        if (mediaId.startsWith(LiveBrowse.LIVE_CH)) return LiveBrowse.resolve(mediaId);
         return VodBrowse.resolve(mediaId);
     }
 
@@ -126,26 +111,12 @@ public class BrowseTree {
     }
 
     public static boolean canNavigate(String mediaId) {
-        return mediaId.startsWith(VodBrowse.VOD_EP) || mediaId.startsWith(LiveBrowse.LIVE_CH);
+        return mediaId.startsWith(VodBrowse.VOD_EP);
     }
 
     @Nullable
     public static MediaItem navigate(@NonNull String mediaId, int delta) throws Exception {
-        MediaItem vod = VodBrowse.navigate(mediaId, delta);
-        if (vod != null || mediaId.startsWith(VodBrowse.VOD_EP)) return vod;
-        return LiveBrowse.navigate(mediaId, delta);
-    }
-
-    @Nullable
-    public static MediaMetadata loadLiveMetadata(String mediaId) {
-        return LiveBrowse.loadMetadata(mediaId);
-    }
-
-    @Nullable
-    public static String getLiveGroupId(String mediaId) {
-        int separator = mediaId.lastIndexOf('|');
-        return mediaId.startsWith(LiveBrowse.LIVE_CH) && separator >= LiveBrowse.LIVE_CH.length()
-                ? LiveBrowse.LIVE_GROUP + mediaId.substring(LiveBrowse.LIVE_CH.length(), separator) : null;
+        return VodBrowse.navigate(mediaId, delta);
     }
 
     @Nullable

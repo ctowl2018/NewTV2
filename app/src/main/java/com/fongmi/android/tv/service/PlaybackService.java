@@ -82,7 +82,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private BrowsePlayback browsePlayback;
     private MediaLibrarySession session;
     private BrowseLibrary library;
-    private LiveMetadata liveMetadata;
     private ActivityBinding binding;
     private PlayerManager player;
     private SessionPlayer sessionPlayer;
@@ -96,7 +95,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     public void claimBinding(NavigationCallback owner, Runnable onReplaced) {
         if (ownsBinding(owner)) return;
-        liveMetadata.cancel();
         saveProgress();
         cancelNavigation();
         if (binding != null) binding.onReplaced().run();
@@ -130,7 +128,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         sessionPlayer = new SessionPlayer(player.getPlayer());
         session = new MediaLibrarySession.Builder(this, sessionPlayer, this).setBitmapLoader(new ArtworkBitmapLoader(this)).build();
         library = new BrowseLibrary(session);
-        liveMetadata = new LiveMetadata(player, library);
         session.setSessionActivity(buildDefaultIntent());
         EventBus.getDefault().register(this);
         Server.get().setService(this);
@@ -321,7 +318,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @Override
     public void onDestroy() {
         running = false;
-        liveMetadata.cancel();
         cancelNavigation();
         library.release();
         saveProgress();
@@ -343,7 +339,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void stopPlayback() {
-        liveMetadata.cancel();
         cancelNavigation();
         player.stop();
         Source.get().stop();
@@ -422,7 +417,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         if (session == null) return;
         if (event.getType() == RefreshEvent.Type.KEEP) {
             library.notifyChildrenChanged(BrowseTree.VOD_KEEP);
-            library.notifyChildrenChanged(BrowseTree.LIVE_KEEP);
             updateMediaButtons();
         } else if (event.getType() == RefreshEvent.Type.HISTORY) {
             library.notifyChildrenChanged("VOD");
@@ -441,19 +435,12 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onConfigEvent(ConfigEvent event) {
         if (session == null) return;
-        liveMetadata.cancel();
         cancelNavigation();
         library.invalidate();
         if (event.isVod()) {
             BrowseTree.clearVod();
             library.notifyChildrenChanged("VOD");
             library.notifyChildrenChanged(BrowseTree.VOD_KEEP);
-        } else if (event.isLive()) {
-            BrowseTree.clearSearch();
-        }
-        if (event.isVod() || event.isLive()) {
-            library.notifyChildrenChanged("LIVE");
-            library.notifyChildrenChanged(BrowseTree.LIVE_KEEP);
         }
     }
 
@@ -674,7 +661,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         protected ListenableFuture<?> handleSeek(int mediaItemIndex, long positionMs, int command) {
             if (command == COMMAND_SEEK_TO_PREVIOUS || command == COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) dispatchPrev();
             else if (command == COMMAND_SEEK_TO_NEXT || command == COMMAND_SEEK_TO_NEXT_MEDIA_ITEM) dispatchNext();
-            else if (player.getTimeshift().isActive()) return player.getTimeshift().seekTo(positionMs);
             else return super.handleSeek(mediaItemIndex, positionMs, command);
             return Futures.immediateVoidFuture();
         }
@@ -687,16 +673,11 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
         @Override
         protected State getState() {
-            State state = player.getTimeshift().getState(super.getState());
+            State state = super.getState();
             Player.Commands.Builder commands = state.availableCommands.buildUpon().removeAll(COMMAND_SEEK_TO_PREVIOUS, COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM, COMMAND_SEEK_TO_NEXT, COMMAND_SEEK_TO_NEXT_MEDIA_ITEM).add(COMMAND_STOP);
             if (canRemoteNavigate()) commands.addAll(COMMAND_SEEK_TO_PREVIOUS, COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM, COMMAND_SEEK_TO_NEXT, COMMAND_SEEK_TO_NEXT_MEDIA_ITEM);
             return state.buildUpon().setAvailableCommands(commands.build()).build();
         }
-    }
-
-    @Override
-    public void onTimeshiftChanged() {
-        if (sessionPlayer != null) sessionPlayer.updateCommands();
     }
 
     private void startBrowse(MediaItem item, long startPositionMs) {
@@ -723,7 +704,6 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
             selection.activate(startPositionMs);
             setNavigationCallback(null, null);
             resetSessionActivity();
-            liveMetadata.refresh();
             return true;
         }
         return false;

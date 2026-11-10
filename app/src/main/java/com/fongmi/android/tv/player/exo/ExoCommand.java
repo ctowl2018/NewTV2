@@ -3,12 +3,11 @@ package com.fongmi.android.tv.player.exo;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaChapter;
 import androidx.media3.common.Player;
-import androidx.media3.common.VideoTransform;
-import androidx.media3.common.text.SubtitleOffsets;
-import androidx.media3.common.util.TrackSelectionUtil;
 import androidx.media3.ui.PlayerView;
 
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.compat.SubtitleOffsets;
+import com.fongmi.android.tv.player.track.TrackCycler;
 import com.fongmi.android.tv.setting.SpeedSetting;
 
 import java.util.List;
@@ -16,6 +15,7 @@ import java.util.List;
 public final class ExoCommand {
 
     private static final long CHAPTER_RESTART_THRESHOLD_MS = 5_000;
+    private static final float MAX_VIDEO_SCALE = 4.0f;
 
     public enum Result {
         APPLIED, UNAVAILABLE, UNSUPPORTED
@@ -40,16 +40,17 @@ public final class ExoCommand {
         switch (parsed.property) {
             case "video-scale-x", "video-scale-y" -> {
                 if (playerView == null || playerView.getPlayer() != player || playerView.getVideoSurfaceView() == null) return Result.UNAVAILABLE;
-                VideoTransform current = playerView.getVideoTransform();
+                android.view.View surface = playerView.getVideoSurfaceView();
                 boolean horizontal = parsed.property.equals("video-scale-x");
-                float scale = (float) propertyValue(parsed, horizontal ? current.scaleX : current.scaleY);
-                playerView.setVideoTransform(new VideoTransform(horizontal ? scale : current.scaleX,
-                        horizontal ? current.scaleY : scale, current.panX, current.panY));
+                float scale = (float) propertyValue(parsed, horizontal ? surface.getScaleX() : surface.getScaleY());
+                if (horizontal) surface.setScaleX(scale);
+                else surface.setScaleY(scale);
             }
             case "video-aspect-override" -> {
-                if (playerView == null || playerView.getPlayer() != player || playerView.getVideoSurfaceView() == null) return Result.UNAVAILABLE;
-                float aspectRatio = (float) propertyValue(parsed, playerView.getVideoAspectRatioOverride());
-                playerView.setVideoAspectRatioOverride(aspectRatio);
+                if (playerView == null || playerView.getPlayer() != player) return Result.UNAVAILABLE;
+                android.view.View frame = playerView.findViewById(androidx.media3.ui.R.id.exo_content_frame);
+                if (!(frame instanceof androidx.media3.ui.AspectRatioFrameLayout layout)) return Result.UNAVAILABLE;
+                layout.setAspectRatio((float) propertyValue(parsed, 0));
             }
             case "seek" -> {
                 if (!player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) || !player.isCurrentMediaItemSeekable()) return Result.UNAVAILABLE;
@@ -100,14 +101,14 @@ public final class ExoCommand {
     private static Result executeAudioTrack(Player player, Parsed parsed) {
         boolean applied;
         if (parsed.mode.equals("cycle")) {
-            applied = TrackSelectionUtil.cycleTrack(player, C.TRACK_TYPE_AUDIO, !parsed.reverse, true);
+            applied = TrackCycler.cycle(player, C.TRACK_TYPE_AUDIO, !parsed.reverse, true);
         } else if (parsed.mode.equals("cycle-values")) {
-            applied = TrackSelectionUtil.cycleTrack(player, C.TRACK_TYPE_AUDIO, parsed.trackIds, !parsed.reverse, false);
+            applied = TrackCycler.cycle(player, C.TRACK_TYPE_AUDIO, parsed.trackIds, !parsed.reverse, false);
         } else {
             applied = switch (parsed.trackIds.get(0)) {
-                case "no" -> TrackSelectionUtil.setTrackTypeDisabled(player, C.TRACK_TYPE_AUDIO, true);
-                case "auto" -> TrackSelectionUtil.resetTrackSelection(player, C.TRACK_TYPE_AUDIO);
-                default -> TrackSelectionUtil.selectTrack(player, C.TRACK_TYPE_AUDIO, parsed.trackIds.get(0));
+                case "no" -> TrackCycler.setTrackTypeDisabled(player, C.TRACK_TYPE_AUDIO, true);
+                case "auto" -> TrackCycler.resetTrackSelection(player, C.TRACK_TYPE_AUDIO);
+                default -> TrackCycler.selectTrack(player, C.TRACK_TYPE_AUDIO, parsed.trackIds.get(0));
             };
         }
         return applied ? Result.APPLIED : Result.UNAVAILABLE;
@@ -279,7 +280,7 @@ public final class ExoCommand {
         Parsed parsed = parseNumeric(property, "set", text);
         if (parsed == null) return null;
         double value = parsed.number;
-        if (isVideoScale(property) && ((float) value <= 0 || value > VideoTransform.MAX_SCALE)) return null;
+        if (isVideoScale(property) && ((float) value <= 0 || value > MAX_VIDEO_SCALE)) return null;
         if (property.equals("speed") && ((float) value < SpeedSetting.MIN || (float) value > SpeedSetting.MAX)) return null;
         if (property.equals("volume") && (value < 0 || value > 100)) return null;
         if ((property.equals("sub-delay") || property.equals("audio-delay")) && !isMillis(value * 1000)) return null;

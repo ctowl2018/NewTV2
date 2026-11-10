@@ -22,7 +22,6 @@ import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.Sniffer;
-import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.utils.UriUtil;
 
 import java.util.HashMap;
@@ -42,7 +41,7 @@ public final class ExternalPlayback {
     private ExternalPlayback() {
     }
 
-    public static void open(FragmentActivity activity, Intent source, Consumer<String> onLive) {
+    public static void open(FragmentActivity activity, Intent source) {
         Uri uri = getSourceUri(source);
         if (uri == null) {
             openSharedText(activity, source);
@@ -52,7 +51,7 @@ public final class ExternalPlayback {
             openText(activity, uri.toString(), source);
             return;
         }
-        openFile(activity, uri, source, onLive);
+        openFile(activity, uri, source);
     }
 
     private static void openSharedText(FragmentActivity activity, Intent source) {
@@ -66,21 +65,19 @@ public final class ExternalPlayback {
         }
     }
 
-    private static void openFile(FragmentActivity activity, Uri uri, Intent source, Consumer<String> onLive) {
+    private static void openFile(FragmentActivity activity, Uri uri, Intent source) {
         if (ContentResolver.SCHEME_FILE.equalsIgnoreCase(uri.getScheme())) {
             PermissionUtil.requestFile(activity, granted -> {
-                if (granted) startFile(activity, uri, source, onLive);
+                if (granted) startFile(activity, uri, source);
                 else finishForwarded(activity, source);
             });
         } else {
-            startFile(activity, uri, source, onLive);
+            startFile(activity, uri, source);
         }
     }
 
-    private static void startFile(FragmentActivity activity, Uri uri, Intent source, Consumer<String> onLive) {
-        if (FileChooser.isLiveSource(new Intent(source).setDataAndType(uri, source.getType()))) {
-            FileChooser.getFileUri(uri, file -> onLive.accept(UrlUtil.toLocalUrl(file)), () -> finishForwarded(activity, source));
-        } else if (FileChooser.persistReadPermission(source, uri)) {
+    private static void startFile(FragmentActivity activity, Uri uri, Intent source) {
+        if (FileChooser.persistReadPermission(source, uri)) {
             start(activity, SiteApi.LOCAL, uri.toString(), FileUtil.getDisplayName(uri), source);
         } else {
             finishForwarded(activity, source);

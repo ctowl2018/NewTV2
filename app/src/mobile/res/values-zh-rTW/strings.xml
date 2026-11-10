@@ -6,7 +6,6 @@
 
     <!-- Nav -->
     <string name="nav_vod">點播</string>
-    <string name="nav_live">直播</string>
     <string name="nav_setting">設定</string>
 
     <!-- Menu -->
@@ -67,8 +66,6 @@
     <string name="dialog_action_delete_backup">刪除備份</string>
     <string name="dialog_action_site_search">搜尋</string>
     <string name="dialog_action_site_change">換源</string>
-    <string name="dialog_action_live_password">密碼保護</string>
-    <string name="dialog_action_live_boot">開機啟動</string>
     <string name="dialog_action_toggle_hint">%1$s：%2$s，長按套用全部</string>
     <string name="dialog_action_bulk_result">已批次設定%1$s：%2$s</string>
     <string name="dialog_action_scan">掃描 QR Code</string>

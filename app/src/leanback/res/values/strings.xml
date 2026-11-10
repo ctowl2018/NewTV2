@@ -2,7 +2,6 @@
 
     <!-- Home -->
     <string name="home_vod">Vod</string>
-    <string name="home_live">Live</string>
     <string name="home_search">Search</string>
     <string name="home_keep">Keep</string>
     <string name="home_push">Connect</string>

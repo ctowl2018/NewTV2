@@ -6,7 +6,6 @@ import android.text.TextUtils;
 import android.util.LruCache;
 
 import androidx.annotation.Nullable;
-import androidx.media3.exoplayer.libass.LibassFontFile;
 
 import com.fongmi.android.tv.utils.FileUtil;
 import com.github.catvod.utils.Crypto;
@@ -15,6 +14,8 @@ import com.github.catvod.utils.Path;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.security.DigestOutputStream;
@@ -203,7 +204,7 @@ public final class ExternalFont {
     }
 
     private static String requireFamilyName(File file) throws IOException {
-        String familyName = LibassFontFile.getFamilyName(file);
+        String familyName = readFamilyName(file);
         if (TextUtils.isEmpty(familyName)) throw new IOException("Font family name is missing");
         return familyName;
     }
@@ -375,10 +376,68 @@ public final class ExternalFont {
     @Nullable
     private static String readFamilyName(File file) {
         try {
-            return LibassFontFile.getFamilyName(file);
+            return readFontFamilyName(file);
         } catch (IOException | RuntimeException e) {
             return null;
         }
+    }
+
+    /**
+     * 读取 TrueType/OpenType 的 name 表取字体族名（替代 media3 私有分支的 LibassFontFile）。
+     * 优先 nameID=4（完整名），退化到 nameID=1（族名）；都取不到时返回 null。
+     */
+    @Nullable
+    private static String readFontFamilyName(File file) throws IOException {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            int version = raf.readInt();
+            if (version != 0x00010000 && version != 0x4F54544F && version != 0x74727565) return null;
+            int numTables = raf.readUnsignedShort();
+            raf.skipBytes(6);
+            long nameOffset = -1;
+            for (int i = 0; i < numTables; i++) {
+                int tag = raf.readInt();
+                raf.skipBytes(4);
+                long offset = raf.readInt() & 0xFFFFFFFFL;
+                raf.readInt();
+                if (tag == 0x6E616D65) {
+                    nameOffset = offset;
+                    break;
+                }
+            }
+            if (nameOffset < 0) return null;
+            raf.seek(nameOffset);
+            raf.readUnsignedShort();
+            int count = raf.readUnsignedShort();
+            int stringOffset = raf.readUnsignedShort();
+            String family = null;
+            for (int i = 0; i < count; i++) {
+                int platformId = raf.readUnsignedShort();
+                int encodingId = raf.readUnsignedShort();
+                raf.readUnsignedShort();
+                int nameId = raf.readUnsignedShort();
+                int length = raf.readUnsignedShort();
+                int offset = raf.readUnsignedShort();
+                if (nameId != 1 && nameId != 4) continue;
+                long recordEnd = nameOffset + 6 + (long) (i + 1) * 12;
+                String text = readNameString(raf, nameOffset + stringOffset + offset, length, platformId, encodingId);
+                raf.seek(recordEnd);
+                if (TextUtils.isEmpty(text)) continue;
+                if (nameId == 4) return text;
+                if (family == null) family = text;
+            }
+            return family;
+        }
+    }
+
+    @Nullable
+    private static String readNameString(RandomAccessFile raf, long position, int length, int platformId, int encodingId) throws IOException {
+        if (length <= 0 || length > 512) return null;
+        byte[] data = new byte[length];
+        raf.seek(position);
+        raf.readFully(data);
+        if (platformId == 3 || platformId == 0) return new String(data, StandardCharsets.UTF_16BE).trim();
+        if (platformId == 1 && encodingId == 0) return new String(data, StandardCharsets.ISO_8859_1).trim();
+        return new String(data, StandardCharsets.UTF_8).trim();
     }
 
     @Nullable

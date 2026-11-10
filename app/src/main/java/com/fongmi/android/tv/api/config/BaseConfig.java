@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 abstract class BaseConfig {
 
     public static final int VOD = 0;
-    public static final int LIVE = 1;
     public static final int WALL = 2;
 
     private final AtomicInteger taskId = new AtomicInteger(0);

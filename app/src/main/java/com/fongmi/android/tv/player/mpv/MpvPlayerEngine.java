@@ -1,65 +1,31 @@
 package com.fongmi.android.tv.player.mpv;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
-import androidx.media3.common.DiscMenuController;
-import androidx.media3.common.Format;
-import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionOverride;
-import androidx.media3.common.Tracks;
-import androidx.media3.common.text.SubtitleContent;
-import androidx.media3.common.text.SubtitleOffsets;
-import androidx.media3.common.text.SubtitleSelectionState;
-import androidx.media3.mpvplayer.MpvDecoderMode;
-import androidx.media3.mpvplayer.MpvPlayer;
 
-import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.bean.Sub;
-import com.fongmi.android.tv.player.effect.PlayerEffect;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
-import com.fongmi.android.tv.player.exo.ExoMediaSourceFactory;
-import com.fongmi.android.tv.player.media.ConcatenatingUrl;
-import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
-import com.fongmi.android.tv.server.LogSession;
-import com.fongmi.android.tv.setting.SubtitleSetting;
 
-import org.json.JSONException;
-
-import java.util.List;
-
-public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
-
-    private final MpvErrorMessageProvider provider;
-    private final MpvPlayerEffect effect;
-    private final MpvScriptSession scripts;
-    private final MpvPlayer player;
-    private final Runnable updateLog = this::updateLogLevel;
-    private final Runnable logListener = () -> App.post(updateLog);
+/**
+ * MPV 引擎占位实现（lite 构建）。
+ *
+ * <p>MPV 属于可选运行时：默认引擎是 EXO，引擎数由 {@code PlayerSetting#getEngineCount()}
+ * 限定为 1。本构建不提供 MPV —— 现有 lib-mpvplayer AAR 与上游 HEAD 的 MPV 代码不同代
+ * （缺 {@code setDataSourceFactory} / {@code setStartupScripts} / {@code setLogListener} /
+ * 二级字幕 / 解码器模式等 API），硬接只会得到运行期必然失败的引擎。
+ *
+ * <p>保留该类型是为了让"引擎选择 / 脚本按钮"等既有 UI 仍有编译目标，
+ * 运行期永远走不到这里（{@link #isAvailable()} 恒为 false）。
+ */
+public class MpvPlayerEngine implements PlayerEngine {
 
     public MpvPlayerEngine(Player.Listener listener) {
-        List<MpvScripts.Item> scriptItems = MpvUtil.readScripts();
-        this.player = MpvUtil.buildPlayer(listener);
-        this.scripts = new MpvScriptSession(player, scriptItems);
-        this.provider = new MpvErrorMessageProvider();
-        this.effect = new MpvPlayerEffect(player);
-        this.player.setAudioOutputListener(effect::applyAudioEffect);
-        this.player.addListener(this);
-        applySecondarySubtitleMode(SubtitleSetting.getSecondaryMode());
-        LogSession.get().addListener(logListener);
-        updateLogLevel();
-    }
-
-    private void updateLogLevel() {
-        player.setVerboseLoggingEnabled(LogSession.get().isRunning());
     }
 
     public static boolean isAvailable() {
-        return MpvUtil.isAvailable();
+        return false;
     }
 
     @Override
@@ -69,177 +35,42 @@ public class MpvPlayerEngine implements PlayerEngine, Player.Listener {
 
     @Override
     public Player getPlayer() {
-        return player;
-    }
-
-    @Override
-    public DiscMenuController getDiscMenuController() {
-        return player;
+        return null;
     }
 
     @Override
     public int getAudioChannelCount() {
-        return player.getAudioChannelCount();
-    }
-
-    @Override
-    public PlayerEffect getEffect() {
-        return effect;
+        return 0;
     }
 
     @Override
     public void release() {
-        LogSession.get().removeListener(logListener);
-        App.removeCallbacks(updateLog);
-        scripts.release();
-        player.removeListener(this);
-        player.setAudioOutputListener(null);
-        player.release();
-    }
-
-    @Override
-    public void applySubtitleStyle() {
-        MpvUtil.applySubtitleStyle(player);
-    }
-
-    public boolean runScript(MpvScripts.Item item) {
-        return scripts.run(item);
-    }
-
-    public MpvScriptSession.Status getScriptStatus(String id) {
-        return scripts.status(id);
-    }
-
-    public List<String> getScriptBindings() throws JSONException {
-        return scripts.bindings();
-    }
-
-    public void reloadScripts(boolean reloadStartupScripts, String reloadButtonId) {
-        scripts.reload(MpvUtil.readScripts(), reloadStartupScripts, reloadButtonId);
-    }
-
-    @Override
-    public SubtitleSelectionState getSubtitleSelectionState() {
-        return player.getSubtitleSelectionState();
-    }
-
-    @Override
-    public SubtitleContent getSubtitleContent(TrackSelectionOverride selection) {
-        return player.getSubtitleContentForSelection(selection);
-    }
-
-    @Override
-    public SubtitleOffsets getSubtitleOffsets() {
-        return player.getSubtitleOffsets();
-    }
-
-    @Override
-    public void setSubtitleOffsets(SubtitleOffsets offsets) {
-        player.setSubtitleOffsets(offsets);
-    }
-
-    @Override
-    public boolean supportsSubtitleOffsets() {
-        return true;
-    }
-
-    @Override
-    public void setSubtitleContentEnabled(boolean enabled) {
-        player.setSubtitleContentEnabled(enabled);
-    }
-
-    @Override
-    public boolean supportsSubtitleTranscript() {
-        return true;
-    }
-
-    @Override
-    public boolean canRetrySubtitleContent(Format format) {
-        return player.canRetrySubtitleContent(format);
-    }
-
-    @Override
-    public void retrySubtitleContent(Format format) {
-        player.retrySubtitleContent(format);
-    }
-
-    @Override
-    public void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        int mode = SubtitleSetting.getSecondaryMode();
-        applySecondarySubtitleMode(mode);
-        if (mode != SubtitleSetting.SECONDARY_MODE_DEFAULT) player.setSecondaryTextTrackSelectionOverride(selection);
-    }
-
-    @Override
-    public void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        player.setSecondaryTextTrackAutoSelectionEnabled(false);
-        player.setSecondaryTextTrackSelectionOverride(selection);
-    }
-
-    @Override
-    public void prepareForNewMedia() {
-        applySecondarySubtitleMode(SubtitleSetting.getSecondaryMode());
-    }
-
-    @Override
-    public boolean addSubtitle(Sub sub) {
-        if (sub == null || sub.isEmpty() || player.getCurrentMediaItem() == null) return false;
-        if (player.getPlaybackState() == Player.STATE_IDLE || player.getPlaybackState() == Player.STATE_ENDED) return false;
-        return player.addSubtitle(MediaItemFactory.buildSubConfig(sub));
-    }
-
-    @Override
-    public List<DecoderMode> getSupportedDecoderModes(@C.TrackType int trackType) {
-        return trackType == C.TRACK_TYPE_VIDEO ? List.of(DecoderMode.AUTO, DecoderMode.HARDWARE, DecoderMode.FFMPEG) : List.of();
-    }
-
-    @Override
-    @Nullable
-    public DecoderMode getDecoderMode(@C.TrackType int trackType) {
-        if (trackType != C.TRACK_TYPE_VIDEO) return null;
-        return player.getVideoDecoderMode().toCommonDecoderMode();
-    }
-
-    @Override
-    public void setDecoderMode(@C.TrackType int trackType, DecoderMode mode) {
-        if (!getSupportedDecoderModes(trackType).contains(mode)) return;
-        player.setVideoDecoderMode(MpvDecoderMode.fromCommonDecoderMode(mode));
-    }
-
-    @Override
-    public void onTracksChanged(@NonNull Tracks tracks) {
-        effect.applyVideoEffect();
     }
 
     @Override
     public boolean setMediaItem(PlaySpec spec, long startPositionMs) {
-        effect.applyVideoEffect();
-        effect.clearAudioEffect();
-        player.setDiscDataSourceFactory(ExoMediaSourceFactory.createDataSourceFactory(spec.getHeaders(), spec.getAuth()));
-        MediaItem item = MediaItemFactory.from(spec);
-        String url = item.localConfiguration.uri.toString();
-        if (ConcatenatingUrl.matches(url)) item = item.buildUpon().setUri(ConcatenatingUrl.toEdl(url)).build();
-        player.setMediaItem(item, startPositionMs);
-        return true;
+        return false;
     }
 
     @Override
     public void stop() {
-        player.stop();
+    }
+
+    @Override
+    public void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
+    }
+
+    @Override
+    public void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
     }
 
     @Override
     public String getErrorMessage(PlaybackException e) {
-        return provider.get(e);
+        return String.valueOf(e.getMessage());
     }
 
     @Override
     public ErrorAction handleError(PlaybackException e) {
         return ErrorAction.FATAL;
-    }
-
-    private void applySecondarySubtitleMode(int mode) {
-        if (mode == SubtitleSetting.SECONDARY_MODE_DEFAULT) player.resetSecondaryTextTrackSelection();
-        else player.setSecondaryTextTrackAutoSelectionEnabled(mode == SubtitleSetting.SECONDARY_MODE_AUTO);
     }
 }

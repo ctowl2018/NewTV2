@@ -95,13 +95,6 @@ public class Config {
         return item == null ? create(0) : item;
     }
 
-    public static Config live() {
-        String url = Prefers.getString("config_1");
-        Config item = TextUtils.isEmpty(url) ? null : AppDatabase.get().getConfigDao().find(url, 1);
-        if (item == null) item = AppDatabase.get().getConfigDao().findOne(1);
-        return item == null ? create(1) : item;
-    }
-
     public static Config wall() {
         Config item = AppDatabase.get().getConfigDao().findOne(2);
         return item == null ? create(2) : item;

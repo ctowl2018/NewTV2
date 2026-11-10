@@ -93,7 +93,6 @@ public class Action implements Process {
         String path = params.get("path");
         if (TextUtils.isEmpty(type)) return;
         switch (type) {
-            case "live" -> RefreshEvent.live();
             case "detail" -> RefreshEvent.detail();
             case "player" -> RefreshEvent.player();
             case "category" -> RefreshEvent.category();

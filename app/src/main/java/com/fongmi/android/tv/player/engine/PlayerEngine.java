@@ -2,19 +2,18 @@ package com.fongmi.android.tv.player.engine;
 
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
-import androidx.media3.common.DiscMenuController;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionOverride;
-import androidx.media3.common.text.SubtitleContent;
-import androidx.media3.common.text.SubtitleOffsets;
-import androidx.media3.common.text.SubtitleSelectionState;
 import androidx.media3.ui.PlayerView;
 
 import com.fongmi.android.tv.bean.Sub;
+import com.fongmi.android.tv.player.compat.DecoderMode;
+import com.fongmi.android.tv.player.compat.SubtitleContent;
+import com.fongmi.android.tv.player.compat.SubtitleOffsets;
+import com.fongmi.android.tv.player.compat.SubtitleSelectionState;
 import com.fongmi.android.tv.player.effect.PlayerEffect;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.google.gson.JsonObject;
@@ -22,11 +21,6 @@ import com.google.gson.JsonObject;
 import java.util.List;
 
 public interface PlayerEngine {
-
-    @Nullable
-    default DiscMenuController getDiscMenuController() {
-        return null;
-    }
 
     Type getType();
 

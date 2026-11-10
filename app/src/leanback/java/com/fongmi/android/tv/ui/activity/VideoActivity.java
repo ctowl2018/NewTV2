@@ -20,7 +20,6 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.leanback.widget.OnChildViewHolderSelectedListener;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.C;
-import androidx.media3.common.DiscMenuState;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.ui.PlayerSeekView;
@@ -1079,15 +1078,25 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private void onEnding() {
         long position = player().getPosition();
         long duration = player().getDuration();
-        if (player().canSetEnding(position, duration)) setEnding(duration - position);
+        if (player().canSetEnding(position, duration)) setEnding(position);
     }
 
     private void onEndingAdd() {
-        setEnding(Math.max(0, Math.max(0, mHistory.getEnding()) + 1000));
+        long duration = player().getDuration();
+        long base = mHistory == null ? 0 : mHistory.getEnding();
+        if (base <= 0) base = duration;
+        if (base <= 0) return;
+        long next = base + 1000;
+        setEnding(duration > 0 ? Math.min(next, duration) : next);
     }
 
     private void onEndingSub() {
-        setEnding(Math.max(0, Math.max(0, mHistory.getEnding()) - 1000));
+        long duration = player().getDuration();
+        long base = mHistory == null ? 0 : mHistory.getEnding();
+        if (base <= 0) base = duration;
+        if (base <= 0) return;
+        long next = Math.max(0, base - 1000);
+        setEnding(duration > 0 ? Math.min(next, duration) : next);
     }
 
     private boolean onEndingReset() {
@@ -1381,14 +1390,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     protected void onReclaim() {
         mVod.refresh();
-    }
-
-    @Override
-    public void onDiscMenuStateChanged(@NonNull DiscMenuState state) {
-        if (!isNativePlaybackCurrent()) return;
-        super.onDiscMenuStateChanged(state);
-        updateDiscMenuVisibility();
-        if (isDiscMenuTransition()) hideProgress();
     }
 
     private void updateDiscMenuVisibility() {

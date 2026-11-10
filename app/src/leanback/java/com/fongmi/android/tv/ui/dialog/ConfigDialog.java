@@ -12,7 +12,6 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.bean.Config;
@@ -42,11 +41,6 @@ public class ConfigDialog extends BaseAlertDialog {
 
     public ConfigDialog vod() {
         type = 0;
-        return this;
-    }
-
-    public ConfigDialog live() {
-        type = 1;
         return this;
     }
 
@@ -102,7 +96,6 @@ public class ConfigDialog extends BaseAlertDialog {
     private String getUrl() {
         return switch (type) {
             case 0 -> VodConfig.getUrl();
-            case 1 -> LiveConfig.getUrl();
             case 2 -> WallConfig.getUrl();
             default -> "";
         };

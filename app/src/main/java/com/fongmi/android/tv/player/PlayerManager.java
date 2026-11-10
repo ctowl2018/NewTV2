@@ -7,9 +7,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
-import androidx.media3.common.DiscMenuController;
-import androidx.media3.common.DiscMenuState;
 import androidx.media3.common.Format;
 import androidx.media3.common.MediaChapter;
 import androidx.media3.common.MediaEdition;
@@ -21,10 +18,7 @@ import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
-import androidx.media3.common.text.SubtitleContent;
-import androidx.media3.common.text.SubtitleOffsets;
-import androidx.media3.common.text.SubtitleSelectionState;
-import androidx.media3.exoplayer.iso.IsoDiscPreparation;
+import androidx.media3.common.VideoSize;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.danmaku.DanmakuConfig;
 
@@ -36,6 +30,10 @@ import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.impl.ParseCallback;
+import com.fongmi.android.tv.player.compat.DecoderMode;
+import com.fongmi.android.tv.player.compat.SubtitleContent;
+import com.fongmi.android.tv.player.compat.SubtitleOffsets;
+import com.fongmi.android.tv.player.compat.SubtitleSelectionState;
 import com.fongmi.android.tv.player.effect.PlayerEffectManager;
 import com.fongmi.android.tv.player.effect.audio.AudioEffectBands;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
@@ -44,10 +42,9 @@ import com.fongmi.android.tv.player.exo.ExoCommand;
 import com.fongmi.android.tv.player.exo.ExoPlayerEngine;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
-import com.fongmi.android.tv.player.mpv.MpvPlayerEngine;
+import com.fongmi.android.tv.player.mpv.MpvUtil;
 import com.fongmi.android.tv.player.mpv.MpvScriptSession;
 import com.fongmi.android.tv.player.mpv.MpvScripts;
-import com.fongmi.android.tv.player.mpv.MpvUtil;
 import com.fongmi.android.tv.player.parse.ParseJob;
 import com.fongmi.android.tv.player.track.TrackUtil;
 import com.fongmi.android.tv.server.LogSession;
@@ -75,7 +72,6 @@ public class PlayerManager implements ParseCallback {
     private final PlayerEffectManager effects;
     private final Runnable runnable;
     private final Callback callback;
-    private final TimeshiftPlayback timeshift;
     private PendingPreload pendingPreload;
     private PendingPreload queuedPreload;
     private PlayerEngine engine;
@@ -105,11 +101,9 @@ public class PlayerManager implements ParseCallback {
         this.effects = new PlayerEffectManager(() -> engine);
         this.danmakuEnabled = DanmakuSetting.isShow();
         this.player = engine.getPlayer();
-        this.timeshift = new TimeshiftPlayback(this);
     }
 
     public void release() {
-        timeshift.clear();
         App.removeCallbacks(runnable);
         stopParse();
         clearSpeedPressState();
@@ -121,10 +115,6 @@ public class PlayerManager implements ParseCallback {
 
     public Player getPlayer() {
         return player;
-    }
-
-    public TimeshiftPlayback getTimeshift() {
-        return timeshift;
     }
 
     @Nullable
@@ -158,17 +148,12 @@ public class PlayerManager implements ParseCallback {
         Log.i("TV-Playback", "player=" + playerId + " event=playbackAttempt playbackId=" + playbackId + " attempt=" + playbackAttempt);
     }
 
-    @Nullable
-    public DiscMenuController getDiscMenuController() {
-        return engine != null ? engine.getDiscMenuController() : null;
-    }
-
     public boolean isDiscMenuAvailable() {
-        return !isEmpty() && player.getDiscMenuState().availability == DiscMenuState.AVAILABILITY_AVAILABLE;
+        return false;
     }
 
     public boolean runMpvScript(MpvScripts.Item item) {
-        return engine instanceof MpvPlayerEngine mpv && mpv.runScript(item);
+        return false;
     }
 
     public ExoCommand.Result runExoCommand(MpvScripts.Item item, PlayerView playerView) {
@@ -177,15 +162,14 @@ public class PlayerManager implements ParseCallback {
     }
 
     public MpvScriptSession.Status getMpvScriptStatus(String id) {
-        return engine instanceof MpvPlayerEngine mpv ? mpv.getScriptStatus(id) : null;
+        return null;
     }
 
     public List<String> getMpvScriptBindings() throws JSONException {
-        return engine instanceof MpvPlayerEngine mpv ? mpv.getScriptBindings() : List.of();
+        return List.of();
     }
 
     public void reloadMpvScripts(boolean reloadStartupScripts, String reloadButtonId) {
-        if (engine instanceof MpvPlayerEngine mpv) mpv.reloadScripts(reloadStartupScripts, reloadButtonId);
     }
 
     private void setPlayer(Player player) {
@@ -283,7 +267,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public boolean canPreloadNext() {
-        return PreloadSetting.shouldPreloadNextEpisode() && engine != null && engine.getType() == PlayerEngine.Type.EXO && !player.isCurrentMediaItemLive() && !player.getDiscMenuState().navigationPlaybackOngoing && (spec == null || !IsoDiscPreparation.isIso(MediaItemFactory.from(spec)));
+        return PreloadSetting.shouldPreloadNextEpisode() && engine != null && engine.getType() == PlayerEngine.Type.EXO && !player.isCurrentMediaItemLive() && (spec == null || !MediaItemFactory.isIso(MediaItemFactory.from(spec)));
     }
 
     public boolean isPortrait() {
@@ -295,7 +279,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public boolean isLive() {
-        return player.getCurrentMediaItem() != null && (timeshift.isActive() || player.isCurrentMediaItemLive());
+        return player.getCurrentMediaItem() != null && player.isCurrentMediaItemLive();
     }
 
     public boolean isVod() {
@@ -303,7 +287,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public boolean canSeek() {
-        return timeshift.isActive() || !isLive() && player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM);
+        return !isLive() && player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM);
     }
 
     public boolean haveTrack(int type) {
@@ -339,7 +323,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public long getPosition() {
-        return timeshift.isActive() ? timeshift.getPosition() : player.getCurrentPosition();
+        return player.getCurrentPosition();
     }
 
     public String getSizeText() {
@@ -414,7 +398,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public long getDuration() {
-        if (timeshift.isActive()) return timeshift.getDuration();
         long duration = engine.getOriginalDurationMs();
         return duration == C.TIME_UNSET ? player.getDuration() : duration;
     }
@@ -437,7 +420,11 @@ public class PlayerManager implements ParseCallback {
     public void setSub(Sub sub) {
         if (sub == null || sub.isEmpty()) return;
         if (spec != null) spec.setSub(sub);
-        if (engine.addSubtitle(sub)) play();
+        boolean added = engine.addSubtitle(sub);
+        // 外挂字幕的两种落地方式差异很大：能运行时加就只 play()，否则要整条重启。
+        // 现场排障时先看这行，能区分"字幕导致的失败"和"重启导致的失败"。
+        Log.i("TV-Playback", "event=setSub name=" + sub.getName() + " url=" + sub.getUrl() + " format=" + sub.getFormat() + " runtimeAdd=" + added + " path=" + (added ? "play" : "restart"));
+        if (added) play();
         else startCurrent();
     }
 
@@ -616,7 +603,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void stop() {
-        timeshift.clear();
         endSpeedPress();
         pendingPreload = null;
         queuedPreload = null;
@@ -625,7 +611,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void clearMediaItems() {
-        timeshift.clear();
         endSpeedPress();
         clearPreload();
         player.clearMediaItems();
@@ -638,7 +623,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void prepareForReplacement() {
-        timeshift.clear();
         endSpeedPress();
         reset();
         clearPreload();
@@ -654,15 +638,13 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void replay(long positionMs) {
-        if (timeshift.isActive()) timeshift.seekTo(positionMs);
-        else if (positionMs == C.TIME_UNSET) player.seekToDefaultPosition();
+        if (positionMs == C.TIME_UNSET) player.seekToDefaultPosition();
         else player.seekTo(positionMs);
         player.play();
     }
 
     public void seekTo(long time) {
-        if (timeshift.isActive()) timeshift.seekTo(time);
-        else player.seekTo(time);
+        player.seekTo(time);
     }
 
     public long getTextOffsetMs() {
@@ -752,7 +734,7 @@ public class PlayerManager implements ParseCallback {
         if (spec == null || spec.getUrl() == null) return;
         endSpeedPress();
         PlayerEngine.Type previousType = engine.getType();
-        boolean live = player.isCurrentMediaItemLive() && player.isCurrentMediaItemDynamic() && !timeshift.isReplaying();
+        boolean live = player.isCurrentMediaItemLive() && player.isCurrentMediaItemDynamic();
         PlaybackSnapshot snapshot = PlaybackSnapshot.capture(this);
         spec.setIsoEditionIndex(snapshot.selectedIsoEditionIndex());
         ensureEngine(spec.checkUa());
@@ -861,7 +843,6 @@ public class PlayerManager implements ParseCallback {
         boolean newContent = newMedia && (current == null || !TextUtils.equals(current.mediaId, spec.getKey()));
         boolean playWhenReady = player.getPlayWhenReady();
         ensureEngine(spec.checkUa());
-        if (newMedia) timeshift.start(spec);
         if (newContent) resetPlaybackSettings();
         beginPlaybackAttempt(newMedia);
         if (newMedia) engine.prepareForNewMedia();
@@ -897,25 +878,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     private void startCurrent(long startPositionMs) {
-        if (timeshift.isActive()) timeshift.seekTo(startPositionMs);
-        else setMediaItem(Constant.TIMEOUT_PLAY, startPositionMs, false);
-    }
-
-    void applyTimeshift(String url, String format, Map<String, String> headers) {
-        boolean playWhenReady = player.getPlayWhenReady();
-        spec.setUrl(url);
-        spec.setFormat(format);
-        spec.setHeaders(new HashMap<>(headers));
-        setMediaItem(Constant.TIMEOUT_PLAY, C.TIME_UNSET, false);
-        player.setPlayWhenReady(playWhenReady);
-    }
-
-    void onTimeshiftChanged() {
-        callback.onTimeshiftChanged();
-    }
-
-    void onTimeshiftError() {
-        Notify.show(R.string.error_play_url);
+        setMediaItem(Constant.TIMEOUT_PLAY, startPositionMs, false);
     }
 
     private void startPreloadIfReady() {
@@ -936,7 +899,7 @@ public class PlayerManager implements ParseCallback {
     public Uri getSelectedDanmakuUri() {
         Danmaku item = spec != null ? spec.getSelectedDanmaku() : null;
         Uri uri = item == null ? null : item.getUri();
-        return timeshift.isReplaying() && LiveDanmaku.isLive(uri) ? null : uri;
+        return uri;
     }
 
     public void setDanmaku(Danmaku item) {
@@ -978,9 +941,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     public interface Callback {
-
-        default void onTimeshiftChanged() {
-        }
 
         default void onPreloadError(Object tag) {
         }
@@ -1084,7 +1044,7 @@ public class PlayerManager implements ParseCallback {
 
         private static int getSelectedIsoEditionIndex(PlayerManager manager, Player player) {
             int selectedIsoEditionIndex = C.INDEX_UNSET;
-            if (manager.spec != null && IsoDiscPreparation.isIso(MediaItemFactory.from(manager.spec))) {
+            if (manager.spec != null && MediaItemFactory.isIso(MediaItemFactory.from(manager.spec))) {
                 for (MediaEdition edition : player.getCurrentMediaEditions()) {
                     if (edition.selected) {
                         selectedIsoEditionIndex = edition.index;
@@ -1132,14 +1092,6 @@ public class PlayerManager implements ParseCallback {
         }
 
         @Override
-        public void onDiscMenuStateChanged(@NonNull DiscMenuState state) {
-            if (state.phase == DiscMenuState.PHASE_OPENING) {
-                App.removeCallbacks(runnable);
-                clearPreload();
-            }
-        }
-
-        @Override
         public void onTracksChanged(@NonNull Tracks tracks) {
             if (tracks.isEmpty()) return;
             boolean initialize = !initTrack;
@@ -1165,7 +1117,8 @@ public class PlayerManager implements ParseCallback {
         @Override
         public void onPlayerError(@NonNull PlaybackException e) {
             PlaybackLog.recordError(PlaybackLog.capture(PlayerManager.this), e);
-            if (LogSession.get().isRunning()) Log.e("TV-Playback", "player=" + Integer.toHexString(System.identityHashCode(player)) + " event=playerError playbackId=" + playbackId + " attempt=" + playbackAttempt + " code=" + e.getErrorCodeName());
+            // 始终输出：以前只在 LogSession 开启时才打，用户"没有任何反馈"时无从排查。
+            Log.e("TV-Playback", "player=" + Integer.toHexString(System.identityHashCode(player)) + " event=playerError playbackId=" + playbackId + " attempt=" + playbackAttempt + " code=" + e.getErrorCodeName() + " msg=" + e.getMessage() + " engine=" + (engine == null ? "null" : engine.getType()) + " url=" + (spec == null ? "null" : spec.getUrl()), e);
             if (spec == null) return;
             clearPreload();
             if (engine.getType() == PlayerEngine.Type.MPV && e.errorCode == PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED && !mpvDrmExoFallback) {

@@ -25,7 +25,6 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
-import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.api.node.NodeRuntime;
@@ -164,7 +163,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void checkAction(Intent intent) {
         if (Intent.ACTION_SEND.equals(intent.getAction()) || Intent.ACTION_VIEW.equals(intent.getAction())) {
-            ExternalPlayback.open(this, intent, this::loadLive);
+            // 直播已移除：外部推送的直播源不再处理，点播源不受影响。
+            ExternalPlayback.open(this, intent);
         } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String keyword = intent.getStringExtra(SearchManager.QUERY);
             if (!TextUtils.isEmpty(keyword)) SearchActivity.start(this, keyword);
@@ -230,7 +230,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void initConfig() {
         VodConfig.get().init().load(getCallback());
-        LiveConfig.get().init().load();
         WallConfig.get().init();
     }
 
@@ -264,23 +263,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putBoolean(STATE_ACTION_HANDLED, pendingAction == null);
         super.onSaveInstanceState(outState);
-    }
-
-    private void loadLive(String url) {
-        if (isFinishing() || isDestroyed()) return;
-        LiveConfig.load(Config.find(url, 1), new Callback() {
-            @Override
-            public void success() {
-                if (getIntent().getBooleanExtra(ExternalPlayback.FORWARD_RESULT, false)) startActivityForResult(new Intent(HomeActivity.this, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()), ExternalPlayback.REQUEST_CODE);
-                else LiveActivity.start(getActivity());
-            }
-
-            @Override
-            public void error(String msg) {
-                Notify.show(msg);
-                if (getIntent().getBooleanExtra(ExternalPlayback.FORWARD_RESULT, false)) finish();
-            }
-        });
     }
 
     private void setFocus() {
@@ -321,7 +303,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private void setFunc() {
         List<Func> items = new ArrayList<>();
         items.add(Func.create(R.string.home_vod));
-        if (LiveConfig.hasUrl()) items.add(Func.create(R.string.home_live));
         items.add(Func.create(R.string.home_search));
         items.add(Func.create(R.string.home_keep));
         items.add(Func.create(R.string.home_push));
@@ -379,9 +360,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             case COMMON:
                 setFunc();
                 break;
-            case BOOT:
-                LiveActivity.start(this);
-                break;
         }
     }
 
@@ -437,7 +415,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public void onItemClick(Func item) {
         if (item.getResId() == R.string.home_vod) VodActivity.start(this, mResult);
-        else if (item.getResId() == R.string.home_live) LiveActivity.start(this);
         else if (item.getResId() == R.string.home_keep) KeepActivity.start(this);
         else if (item.getResId() == R.string.home_push) LocalConnectDialog.show(this, "push");
         else if (item.getResId() == R.string.home_search) SearchActivity.start(this);
@@ -538,7 +515,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public static void releaseResources() {
         if (isRunning() || PlaybackService.isRunning()) return;
         DLNARendererService.stop(App.get());
-        LiveConfig.get().clear();
         VodConfig.get().destroy();
         OkHttp.get().clear();
         Source.get().exit();

@@ -4,11 +4,8 @@ import static com.fongmi.android.tv.player.engine.PlayerEngine.Type.EXO;
 import static com.fongmi.android.tv.player.engine.PlayerEngine.Type.MPV;
 
 import androidx.media3.common.Player;
-import androidx.media3.exoplayer.hls.CmgConfiguration;
-import androidx.media3.mpvplayer.media.MpvDrmSupport;
 
 import com.fongmi.android.tv.player.exo.ExoPlayerEngine;
-import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.player.mpv.MpvPlayerEngine;
 import com.fongmi.android.tv.setting.PlayerSetting;
@@ -35,8 +32,16 @@ public final class PlayerEngineFactory {
         return engine != null && engine.getType() == resolve(spec) && !engine.needsRebuild();
     }
 
+    public static boolean canPreload(PlaySpec spec) {
+        return true;
+    }
+
+    /**
+     * 下一集能否复用当前引擎做后台预加载。
+     * lite 构建去掉了 CMG 识别与私有 MediaSource，判断收敛为「引擎类型一致且可复用」。
+     */
     public static boolean canPreload(PlayerEngine engine, PlaySpec spec) {
-        return !isCmg(spec) && engine.getType() == resolve(spec) && engine.canReuseForPreload();
+        return engine != null && engine.getType() == resolve(spec) && engine.canReuseForPreload();
     }
 
     private static PlayerEngine.Type resolve(PlaySpec spec) {
@@ -48,14 +53,10 @@ public final class PlayerEngineFactory {
     }
 
     static boolean requiresExo(PlaySpec spec) {
-        return isCmg(spec) || "smb".equals(UriUtil.scheme(spec.getUrl())) || (spec.getDrm() != null && !MpvDrmSupport.supports(MediaItemFactory.from(spec)));
-    }
-
-    private static boolean isCmg(PlaySpec spec) {
-        return CmgConfiguration.fromMediaUri(spec.getUri()) != null;
+        return "smb".equals(UriUtil.scheme(spec.getUrl())) || spec.getDrm() != null;
     }
 
     private static boolean isMpvReady() {
-        return PlayerSetting.isMpv() && MpvPlayerEngine.isAvailable();
+        return false;
     }
 }

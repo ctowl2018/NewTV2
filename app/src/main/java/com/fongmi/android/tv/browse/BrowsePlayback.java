@@ -17,14 +17,12 @@ public final class BrowsePlayback {
     private final String mediaId;
     private final Result result;
     private final History history;
-    private final String channelName;
     private final long resumePositionMs;
 
-    BrowsePlayback(String mediaId, Result result, @Nullable History history, @Nullable String channelName) {
+    BrowsePlayback(String mediaId, Result result, @Nullable History history) {
         this.mediaId = mediaId;
         this.result = result;
         this.history = history;
-        this.channelName = channelName;
         this.resumePositionMs = history != null && history.getPosition() > 0 ? history.getPosition() : C.TIME_UNSET;
     }
 
@@ -40,7 +38,7 @@ public final class BrowsePlayback {
         boolean same = history.getVodFlag().equals(bookmark.getVodFlag()) && history.getEpisodeUrl().equals(bookmark.getEpisodeUrl());
         history.setPosition(same ? bookmark.getPosition() : C.TIME_UNSET);
         history.setDuration(same ? bookmark.getDuration() : C.TIME_UNSET);
-        return item.buildUpon().setTag(new BrowsePlayback(playback.mediaId, playback.result, history, null)).build();
+        return item.buildUpon().setTag(new BrowsePlayback(playback.mediaId, playback.result, history)).build();
     }
 
     @Nullable
@@ -71,14 +69,12 @@ public final class BrowsePlayback {
 
     @Nullable
     public Boolean isKept() {
-        if (history != null) return Keep.find(history.getCid(), history.getKey()) != null;
-        return channelName == null ? null : Keep.exist(channelName);
+        return history == null ? null : Keep.find(history.getCid(), history.getKey()) != null;
     }
 
     public boolean toggleKeep() {
-        if (history != null) toggleVodKeep();
-        else if (channelName != null) toggleLiveKeep();
-        else return false;
+        if (history == null) return false;
+        toggleVodKeep();
         return true;
     }
 
@@ -94,17 +90,6 @@ public final class BrowsePlayback {
             keep.setVodPic(history.getVodPic());
             keep.setSiteName(history.getSiteName());
             keep.setCreateTime(System.currentTimeMillis());
-            keep.save();
-        }
-    }
-
-    private void toggleLiveKeep() {
-        if (Keep.exist(channelName)) {
-            Keep.delete(channelName);
-        } else {
-            Keep keep = new Keep();
-            keep.setKey(channelName);
-            keep.setType(1);
             keep.save();
         }
     }

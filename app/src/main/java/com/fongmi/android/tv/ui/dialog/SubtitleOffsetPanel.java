@@ -5,12 +5,12 @@ import android.view.View;
 import androidx.appcompat.app.AlertDialog;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
-import androidx.media3.common.text.SubtitleOffsets;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ViewSettingSliderBinding;
 import com.fongmi.android.tv.databinding.ViewSubtitleOffsetBinding;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.compat.SubtitleOffsets;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.SliderUtil;
 import com.fongmi.android.tv.utils.SubtitleOffsetUtil;

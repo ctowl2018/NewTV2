@@ -3,14 +3,14 @@ const SPIDER_METHODS = [
     ['categoryContent', '["","1",true,{}]', 'categoryContent(tid, pg, filter, extend)'],
     ['searchContent', '["",false,"1"]', 'searchContent(key, quick, pg)'],
     ['detailContent', '[[""]]', 'detailContent(ids)'], ['playerContent', '["","",[]]', 'playerContent(flag, id, vipFlags)'],
-    ['action', '[""]', 'action(action)'], ['liveContent', '[""]', 'liveContent(url)'],
+    ['action', '[""]', 'action(action)'],
     ['manualVideoCheck', '[]', 'manualVideoCheck()'], ['isVideoFormat', '[""]', 'isVideoFormat(url)'], ['proxy', '[{}]', 'proxy(params)']
 ];
 
 const SPIDER_PARAMETERS = {
     homeContent: [['filter', 'boolean']], homeVideoContent: [], categoryContent: [['tid', 'string'], ['pg', 'string'], ['filter', 'boolean'], ['extend', 'object']],
     searchContent: [['key', 'string'], ['quick', 'boolean'], ['pg', 'string']], detailContent: [['ids', 'array']], playerContent: [['flag', 'string'], ['id', 'string'], ['vipFlags', 'array']],
-    action: [['action', 'string']], liveContent: [['url', 'string']], manualVideoCheck: [], isVideoFormat: [['url', 'string']], proxy: [['params', 'object']]
+    action: [['action', 'string']], manualVideoCheck: [], isVideoFormat: [['url', 'string']], proxy: [['params', 'object']]
 };
 
 const SPIDER_SYMBOLS = {
@@ -421,7 +421,7 @@ function spiderValidate(method, text) {
     const issues = [];
     let truncated = false;
     const add = (path, code) => {if (issues.length < 100) issues.push({path, code}); else truncated = true;};
-    if (method === 'action' || method === 'liveContent') return {checked: false, issues};
+    if (method === 'action') return {checked: false, issues};
     let result;
     try {
         result = JSON.parse(text);

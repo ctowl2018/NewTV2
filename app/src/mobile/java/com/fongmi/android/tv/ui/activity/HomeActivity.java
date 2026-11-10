@@ -20,7 +20,6 @@ import androidx.viewbinding.ViewBinding;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
-import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.api.node.NodeRuntime;
@@ -110,12 +109,12 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
 
     @Override
     protected void initEvent() {
-        mBinding.navigation.findViewById(R.id.live).setOnLongClickListener(this::addShortcut);
     }
 
     private void checkAction(Intent intent) {
         if (Intent.ACTION_SEND.equals(intent.getAction()) || Intent.ACTION_VIEW.equals(intent.getAction())) {
-            ExternalPlayback.open(this, intent, this::loadLive);
+            // 直播已移除：外部推送的直播源不再处理
+            ExternalPlayback.open(this, intent);
         } else if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
             String keyword = intent.getStringExtra(SearchManager.QUERY);
             if (!TextUtils.isEmpty(keyword)) SearchActivity.start(this, keyword);
@@ -163,7 +162,6 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
 
     private void initConfig() {
         VodConfig.get().init().load(getCallback());
-        LiveConfig.get().init().load();
         WallConfig.get().init();
     }
 
@@ -183,39 +181,9 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         };
     }
 
-    private void loadLive(String url) {
-        if (isFinishing() || isDestroyed()) return;
-        LiveConfig.load(Config.find(url, 1), new Callback() {
-            @Override
-            public void success() {
-                if (getIntent().getBooleanExtra(ExternalPlayback.FORWARD_RESULT, false)) startActivityForResult(new Intent(HomeActivity.this, LiveActivity.class).putExtra("empty", LiveConfig.isEmpty()), ExternalPlayback.REQUEST_CODE);
-                else openLive();
-            }
-
-            @Override
-            public void error(String msg) {
-                Notify.show(msg);
-                if (getIntent().getBooleanExtra(ExternalPlayback.FORWARD_RESULT, false)) finish();
-            }
-        });
-    }
-
     private void setNavigation() {
         mBinding.navigation.getMenu().findItem(R.id.vod).setVisible(true);
         mBinding.navigation.getMenu().findItem(R.id.setting).setVisible(true);
-        mBinding.navigation.getMenu().findItem(R.id.live).setVisible(LiveConfig.hasUrl());
-    }
-
-    private boolean openLive() {
-        LiveActivity.start(this);
-        return false;
-    }
-
-    private boolean addShortcut(View view) {
-        ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(this, getString(R.string.nav_live)).setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher)).setIntent(new Intent(Intent.ACTION_VIEW, null, this, LiveActivity.class)).setShortLabel(getString(R.string.nav_live)).build();
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, new Intent(this, ShortcutReceiver.class).setAction(ShortcutReceiver.ACTION), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        ShortcutManagerCompat.requestPinShortcut(this, info, pendingIntent.getIntentSender());
-        return true;
     }
 
     public void change(int position) {
@@ -231,9 +199,6 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
                 break;
             case COMMON:
                 setNavigation();
-                break;
-            case BOOT:
-                LiveActivity.start(this);
                 break;
         }
     }
@@ -253,7 +218,6 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.setting) return mManager.change(1);
         if (item.getItemId() == R.id.vod) return mManager.change(0);
-        if (item.getItemId() == R.id.live) return openLive();
         return false;
     }
 
@@ -303,7 +267,6 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
 
     public static void releaseResources() {
         if (isRunning() || PlaybackService.isRunning()) return;
-        LiveConfig.get().clear();
         VodConfig.get().destroy();
         OkHttp.get().clear();
         Source.get().exit();

@@ -3,12 +3,12 @@ package com.fongmi.android.tv.ui.dialog;
 import android.view.View;
 
 import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogDecoderModeBinding;
 import com.fongmi.android.tv.databinding.ViewDecoderModeRowBinding;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.compat.DecoderMode;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.google.android.material.button.MaterialButton;
 

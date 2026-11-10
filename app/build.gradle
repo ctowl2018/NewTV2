@@ -94,13 +94,31 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+
+    packaging {
+        jniLibs {
+            pickFirsts.add("lib/*/libc++_shared.so")
+        }
+    }
 }
 
 AbiApkPackaging.configure(project, SingleArtifact.APK.INSTANCE)
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.aar"])
+    // lib-decoder-ffmpeg 已排除：其 libffmpeg.so 与 classes.jar 版本不一致
+    // （so 期望 6 个 int 的 ffmpegInitialize，类只有 5 个），JNI_OnLoad 注册必失败，
+    // debug 下 CheckJNI 直接 abort。该 AAR 还带 31MB 无法加载的 so，纯占体积。
+    implementation fileTree(dir: "libs", include: ["*.aar"], exclude: ["lib-decoder-ffmpeg-release.aar"])
     implementation project(':catvod')
+    // ASS/SSA 特效字幕：libass 的 media3 扩展。
+    // 私有 media3 AAR 走 flatDir，必须排除 media3 组，否则与 lib-*.aar 产生 duplicate class。
+    implementation("io.github.peerless2012:ass-media:0.5.1") {
+        exclude group: 'androidx.media3'
+    }
+    // ass-kt 在 ass-media 的 POM 里是 runtime scope，但 AssHandler#getRender() 返回其 AssRender，
+    // 编译期必须能看到，所以显式声明为 compile 依赖（同一 GAV 不会重复打包）。
+    implementation "io.github.peerless2012:ass-kt:0.5.1"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.2.0"
     implementation libs.appcompat
     implementation libs.lifecycle.service
     implementation libs.media

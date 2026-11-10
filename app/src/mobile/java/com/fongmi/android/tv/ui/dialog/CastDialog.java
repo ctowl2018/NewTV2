@@ -48,10 +48,6 @@ public class CastDialog extends DeviceDialog {
         return createInternal(player, player.isVod());
     }
 
-    public static CastDialog createLive(PlayerManager player) {
-        return createInternal(player, false);
-    }
-
     private static CastDialog createInternal(PlayerManager player, boolean app) {
         CastDialog dialog = new CastDialog();
         dialog.fm = app;

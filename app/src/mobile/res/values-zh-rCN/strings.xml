@@ -6,7 +6,6 @@
 
     <!-- Nav -->
     <string name="nav_vod">点播</string>
-    <string name="nav_live">直播</string>
     <string name="nav_setting">设置</string>
 
     <!-- Menu -->
@@ -67,8 +66,6 @@
     <string name="dialog_action_delete_backup">删除备份</string>
     <string name="dialog_action_site_search">搜索</string>
     <string name="dialog_action_site_change">换源</string>
-    <string name="dialog_action_live_password">密码保护</string>
-    <string name="dialog_action_live_boot">开机启动</string>
     <string name="dialog_action_toggle_hint">%1$s：%2$s，长按应用到全部</string>
     <string name="dialog_action_bulk_result">已批量设置%1$s：%2$s</string>
     <string name="dialog_action_scan">扫描二维码</string>

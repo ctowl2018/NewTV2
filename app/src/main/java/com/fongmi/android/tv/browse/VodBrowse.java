@@ -286,7 +286,7 @@ class VodBrowse {
         history.setVodFlag(entry.flagName);
         history.setVodRemarks(episode.getName());
         history.setEpisodeUrl(episode.getUrl());
-        return BrowseTree.stream(new BrowsePlayback(mediaId, result, history, null), title, episode.getName(), entry.vodPic);
+        return BrowseTree.stream(new BrowsePlayback(mediaId, result, history), title, episode.getName(), entry.vodPic);
     }
 
     @Nullable

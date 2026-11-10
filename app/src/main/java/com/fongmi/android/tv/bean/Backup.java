@@ -19,8 +19,6 @@ public class Backup {
 
     @SerializedName("site")
     private List<Site> site;
-    @SerializedName("live")
-    private List<Live> live;
     @SerializedName("keep")
     private List<Keep> keep;
     @SerializedName("config")
@@ -34,7 +32,6 @@ public class Backup {
         Backup backup = new Backup();
         backup.setPrefers(Prefers.getPrefers().getAll());
         backup.setSite(AppDatabase.get().getSiteDao().findAll());
-        backup.setLive(AppDatabase.get().getLiveDao().findAll());
         backup.setKeep(AppDatabase.get().getKeepDao().findAll());
         backup.setConfig(AppDatabase.get().getConfigDao().findAll());
         backup.setHistory(AppDatabase.get().getHistoryDao().findAll());
@@ -54,7 +51,6 @@ public class Backup {
     public void restore() {
         AppDatabase.get().clearAllTables();
         AppDatabase.get().getSiteDao().insertOrUpdate(getSite());
-        AppDatabase.get().getLiveDao().insertOrUpdate(getLive());
         AppDatabase.get().getKeepDao().insertOrUpdate(getKeep());
         AppDatabase.get().getConfigDao().insertOrUpdate(getConfig());
         AppDatabase.get().getHistoryDao().insertOrUpdate(getHistory());
@@ -67,14 +63,6 @@ public class Backup {
 
     public void setSite(List<Site> site) {
         this.site = site;
-    }
-
-    public List<Live> getLive() {
-        return live == null ? Collections.emptyList() : live;
-    }
-
-    public void setLive(List<Live> live) {
-        this.live = live;
     }
 
     public List<Keep> getKeep() {

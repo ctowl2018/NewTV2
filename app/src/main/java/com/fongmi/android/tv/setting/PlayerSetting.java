@@ -27,7 +27,7 @@ public class PlayerSetting {
     }
 
     public static int getEngineCount() {
-        return RuntimeModule.MPV.isInstalled() ? ENGINE_MPV + 1 : ENGINE_EXO + 1;
+        return 1;
     }
 
     public static void putEngine(int engine) {

@@ -8,7 +8,6 @@ import android.os.SystemClock;
 import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
 import androidx.media3.common.Format;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -16,6 +15,7 @@ import androidx.media3.common.Tracks;
 import androidx.media3.exoplayer.audio.AudioSink;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.player.compat.DecoderMode;
 import com.fongmi.android.tv.setting.DecodeSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.google.gson.JsonArray;

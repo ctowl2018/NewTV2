@@ -6,7 +6,6 @@
 
     <!-- Nav -->
     <string name="nav_vod">Vod</string>
-    <string name="nav_live">Live</string>
     <string name="nav_setting">Setting</string>
 
     <!-- Menu -->
@@ -67,8 +66,6 @@
     <string name="dialog_action_delete_backup">Delete backup</string>
     <string name="dialog_action_site_search">Search</string>
     <string name="dialog_action_site_change">Source switching</string>
-    <string name="dialog_action_live_password">Password protection</string>
-    <string name="dialog_action_live_boot">Start on boot</string>
     <string name="dialog_action_toggle_hint">%1$s: %2$s. Long press to apply to all.</string>
     <string name="dialog_action_bulk_result">Bulk setting applied — %1$s: %2$s</string>
     <string name="dialog_action_scan">Scan QR code</string>

@@ -3,9 +3,7 @@ package com.fongmi.android.tv.api.loader;
 import android.net.Uri;
 import android.text.TextUtils;
 
-import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
-import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.bean.Site;
 import com.github.catvod.Proxy;
 import com.github.catvod.crawler.Spider;
@@ -147,9 +145,7 @@ public class BaseLoader {
     public Spider getSpider(String key) {
         if (SpiderTestSession.isKey(key)) return SpiderTestSession.require(key);
         Site site = VodConfig.get().getSite(key);
-        Live live = LiveConfig.get().getLive(key);
         if (!site.isEmpty()) return site.spider();
-        if (!live.isEmpty()) return live.spider();
         return new SpiderNull();
     }
 
@@ -188,8 +184,7 @@ public class BaseLoader {
             return;
         }
         Site site = VodConfig.get().getSite(key);
-        Live live = LiveConfig.get().getLive(key);
-        requireRuntime(!site.isEmpty() ? site.getApi() : live.getApi());
+        requireRuntime(site.getApi());
     }
 
     private void requireRuntime(String api) {

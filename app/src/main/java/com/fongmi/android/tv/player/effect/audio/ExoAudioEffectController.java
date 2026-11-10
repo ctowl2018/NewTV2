@@ -2,20 +2,18 @@ package com.fongmi.android.tv.player.effect.audio;
 
 import android.os.Build;
 
-import androidx.media3.common.audio.AudioEffectParameters;
-import androidx.media3.common.audio.AudioEffectProcessor;
 import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.audio.AudioEqualizerController;
 
-import com.fongmi.android.tv.App;
-
+/**
+ * EXO 侧音频效果总控：优先系统 EQ（API 28+），失败或低版本回退到软件 EQ。
+ */
 public final class ExoAudioEffectController {
 
     private final AudioEqualizerController equalizer;
     private final AudioEffectProcessor processor;
 
     public ExoAudioEffectController() {
-        this.equalizer = new AudioEqualizerController(App.get());
+        this.equalizer = new AudioEqualizerController();
         this.processor = new AudioEffectProcessor();
     }
 
@@ -23,21 +21,21 @@ public final class ExoAudioEffectController {
         return processor;
     }
 
-    public boolean apply(ExoPlayer player, AudioEffectParameters config) {
+    public boolean apply(ExoPlayer player, AudioEffectConfig config) {
         if (config.hasEffect()) return applyEffect(player, config);
         release();
         return true;
     }
 
-    private boolean applyEffect(ExoPlayer player, AudioEffectParameters config) {
+    private boolean applyEffect(ExoPlayer player, AudioEffectConfig config) {
         boolean softwareEqualizer = config.hasBands() && Build.VERSION.SDK_INT < Build.VERSION_CODES.P;
         boolean success = applyEqualizer(player, config, softwareEqualizer);
-        if (success) processor.setParameters(config, softwareEqualizer);
-        else processor.resetParameters();
+        if (success) processor.setConfig(config, softwareEqualizer);
+        else processor.resetSettings();
         return success;
     }
 
-    private boolean applyEqualizer(ExoPlayer player, AudioEffectParameters config, boolean softwareEqualizer) {
+    private boolean applyEqualizer(ExoPlayer player, AudioEffectConfig config, boolean softwareEqualizer) {
         if (!softwareEqualizer && config.hasBands()) return equalizer.apply(player, config);
         equalizer.release();
         return true;
@@ -45,6 +43,6 @@ public final class ExoAudioEffectController {
 
     public void release() {
         equalizer.release();
-        processor.resetParameters();
+        processor.resetSettings();
     }
 }

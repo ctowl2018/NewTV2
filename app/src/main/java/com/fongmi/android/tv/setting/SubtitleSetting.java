@@ -326,7 +326,6 @@ public class SubtitleSetting {
         subtitleView.setStyle(getStyle());
         subtitleView.setApplyEmbeddedStyles(!isStyleForced());
         subtitleView.setApplyEmbeddedFontSizes(true);
-        subtitleView.setBitmapSubtitleBrightness(getBitmapBrightness());
         if (isScaleApplied()) subtitleView.setTextSizeScale(getAppliedScale());
         if (isPositionSet()) subtitleView.setBottomPosition(getPosition() / 100.0f);
     }

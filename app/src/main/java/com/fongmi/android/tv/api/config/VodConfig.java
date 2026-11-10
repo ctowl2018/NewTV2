@@ -169,7 +169,6 @@ public class VodConfig extends BaseConfig {
 
     private void parseConfig(Config config, JsonObject object) {
         initList(object);
-        initLive(config, object);
         initWall(config, object);
         initSite(config, object);
         initParse(config, object);
@@ -187,13 +186,6 @@ public class VodConfig extends BaseConfig {
         setFlags(Json.safeListString(object, "flags"));
         setHosts(Json.safeListString(object, "hosts"));
         setAds(Json.safeListString(object, "ads"));
-    }
-
-    private void initLive(Config config, JsonObject object) {
-        if (Json.isEmpty(object, "lives")) return;
-        Config temp = Config.find(config, LIVE).save();
-        boolean sync = LiveConfig.get().needSync(config.getUrl());
-        if (sync) LiveConfig.get().config(temp.update()).parse(object);
     }
 
     private void initWall(Config config, JsonObject object) {

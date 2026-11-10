@@ -30,7 +30,7 @@ public class Source {
     private int active;
 
     public Source() {
-        extractors = List.of(new Push(), new Video(), new WebView(), new Strm(), new Thunder(), new TVBus(), new YouTube());
+        extractors = List.of(new Push(), new Video(), new WebView(), new Strm(), new Thunder(), new YouTube());
     }
 
     public static Source get() {

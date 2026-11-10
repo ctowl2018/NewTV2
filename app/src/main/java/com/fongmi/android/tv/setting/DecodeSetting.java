@@ -2,10 +2,11 @@ package com.fongmi.android.tv.setting;
 
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
-import androidx.media3.common.DecoderMode;
 import androidx.media3.common.DolbyVisionOutputPolicy;
 
 import com.github.catvod.utils.Prefers;
+
+import com.fongmi.android.tv.player.compat.DecoderMode;
 
 public class DecodeSetting {
 

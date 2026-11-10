@@ -13,7 +13,6 @@ import androidx.media3.common.VideoTransform;
 import androidx.media3.ui.PlayerView;
 
 import com.fongmi.android.tv.App;
-import com.fongmi.android.tv.setting.LiveSetting;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 
@@ -185,8 +184,8 @@ public final class TouchInput extends BaseInput<TouchInput.Listener> implements 
         float dx = e2.getX() - e1.getX();
         float dy = e2.getY() - e1.getY();
         double angle = Math.toDegrees(Math.atan2(Math.abs(dy), Math.abs(dx)));
-        if (angle > 70 && e1.getY() - e2.getY() > FLING_DISTANCE_PX) animateVerticalFling(LiveSetting.isInvert() ? 24 : -24, listener::onFlingUp);
-        else if (angle > 70 && e2.getY() - e1.getY() > FLING_DISTANCE_PX) animateVerticalFling(LiveSetting.isInvert() ? -24 : 24, listener::onFlingDown);
+        if (angle > 70 && e1.getY() - e2.getY() > FLING_DISTANCE_PX) animateVerticalFling(-24, listener::onFlingUp);
+        else if (angle > 70 && e2.getY() - e1.getY() > FLING_DISTANCE_PX) animateVerticalFling(24, listener::onFlingDown);
     }
 
     private void animateVerticalFling(int distance, Runnable action) {
