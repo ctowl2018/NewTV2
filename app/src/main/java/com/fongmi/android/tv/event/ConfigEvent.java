@@ -12,15 +12,11 @@ public record ConfigEvent(Type type) {
         EventBus.getDefault().post(new ConfigEvent(Type.VOD));
     }
 
-    public static void wall() {
-        EventBus.getDefault().post(new ConfigEvent(Type.WALL));
-    }
-
     public boolean isVod() {
         return type == Type.VOD;
     }
 
     public enum Type {
-        COMMON, VOD, WALL
+        COMMON, VOD
     }
 }

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「播放设置」浮层内容：与倍速 / 选集菜单同一套单列列表样式（44dp 行、同一焦点框、15sp）。
+
+  11 个隐性按钮全部收纳于此。其中「解码 / 标题 / 章节 / 主菜单 / 播放核心 / 刷新 /
+  重播 / 循环」已按用户裁定隐藏（visibility=gone，节点保留以维持原有状态同步与转发能力），
+  常显的只有三项必要的播放选项：画面比例 / 视轨 / 解析。
+  面板本身不实现播放逻辑：每个入口只转发到控制条 hidden 容器里同名按钮的 performClick()，
+  对话框、状态同步、错误提示全部沿用原有实现。
+
+  焦点链由 PanelSheet.relink() 在每次打开时按可见行重串：
+  左右封口在本行、上下按行序走位、首行上 / 末行下自封口。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minWidth="220dp"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        style="@style/PlaybackSheetTitleRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/sheetPanelTitle"
+            style="@style/PlaybackSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setting_more" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/sheetRows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelDecoder"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/decoder_action" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelScale"
+            style="@style/SheetPanelRow"
+            android:text="@string/play_scale" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelVideo"
+            style="@style/SheetPanelRow"
+            android:text="@string/play_track_video" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelEdition"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_edition" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelChapter"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_chapter" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelDiscMenu"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_disc_menu" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelParse"
+            style="@style/SheetPanelRow"
+            android:text="@string/parse" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelPlayer"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/player" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelReset"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_reset" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelReplay"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_replay" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/panelRepeat"
+            style="@style/SheetPanelRow"
+            android:visibility="gone"
+            android:text="@string/play_repeat" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

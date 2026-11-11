@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 播放页浮层滑块 / 轨道配色（移植自 tv-latest 控制条体系） -->
+    <color name="control_scrubber">#E97022</color>
+    <color name="control_scrubber_halo">#4DE97022</color>
+    <color name="control_track_played">#CCFFFFFF</color>
+    <color name="control_track_unplayed">#33FFFFFF</color>
+</resources>

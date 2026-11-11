@@ -42,6 +42,18 @@
             android:layout_gravity="bottom"
             android:visibility="gone" />
 
+        <!--
+          播放页浮层通用宿主（选集 / 倍速 / 播放设置 / 字幕 / 音轨 / 弹幕共用）。
+          宽高与 leftMargin/bottomMargin 由 VideoSheet 按锚点按钮位置实时回写，
+          这里只把对齐设为左下角。
+        -->
+        <include
+            android:id="@+id/sheet"
+            layout="@layout/view_video_sheet"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start" />
+
         <include
             android:id="@+id/progress"
             layout="@layout/view_progress"

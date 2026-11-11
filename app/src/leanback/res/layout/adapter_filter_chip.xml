@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕搜索的分类 / 来源筛选胶囊条目。宽高由 drawable 的内边距撑开（7dp × 12dp）。 -->
+<com.google.android.material.textview.MaterialTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/text"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/selector_filter_chip"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:singleLine="true"
+    android:textColor="@color/selector_filter_chip_text"
+    android:textSize="12sp"
+    tools:text="剧集 161" />

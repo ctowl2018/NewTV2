@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  浮层列表「行」的底色选择器（选集 / 倍速）。
+
+  焦点框已上移到列表容器的唯一 overlay（见 view_sheet_list.xml 与 SheetList.syncSelectionFrame），
+  行本身不再声明 state_focused，否则滚动/复用时会残留过期的焦点态，出现「框停在初始位置」。
+  这里只保留当前项（activated）与常态；两者当前都是透明底，保留选择器是为了后续可独立调整。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/shape_chip_activated" android:state_activated="true" />
+    <item android:drawable="@drawable/shape_chip_normal" />
+</selector>

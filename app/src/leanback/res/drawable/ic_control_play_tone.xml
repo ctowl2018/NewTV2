@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放按钮 · 聚焦 / 粘性选中态（橙 #E97022 + 奶油 #FFDDAB 折光）。
+  三角 31×36dp，几何与 ic_control_play_white 完全一致。
+
+  抗锯齿说明：这里刻意不用 clip-path 裁「铺满 viewport 的渐变矩形」。
+  VectorDrawable 的 clip-path 最终走 Canvas.clipPath()，非矩形裁剪是像素级硬裁、
+  不带 ANTI_ALIAS，斜边会呈 1px 台阶；聚焦时 ControlFocusEffect 还会把按钮放大 1.48 倍，
+  台阶被同步放大，肉眼就是「选中态锯齿」。改为把渐变直接画在形状路径本身上，
+  所有边界由 drawPath 的抗锯齿 Paint 绘制。折光四边形本就完全落在三角形内部，无需裁剪。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+  <!-- 橙色主体：路径即三角形本体，渐变坐标沿用原 viewport 绝对坐标 -->
+  <path android:pathData="M8.5,6 L8.5,42 L39.5,24 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#E97022"
+          android:endX="0"
+          android:endY="42"
+          android:startColor="#FB9350"
+          android:startX="0"
+          android:startY="6"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+  <!-- 奶油折光：沿三角上边缘的窄带，完全位于三角形内，去掉 clip 后视觉等价 -->
+  <path android:pathData="M8.5,9.24 L8.5,6 L39.5,24 L29.58,29.4 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#FFD69E"
+          android:endX="39.5"
+          android:endY="0"
+          android:startColor="#FFF5DC"
+          android:startX="8.5"
+          android:startY="0"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+</vector>

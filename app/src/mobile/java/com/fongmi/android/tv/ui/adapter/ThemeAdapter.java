@@ -9,7 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.databinding.AdapterThemeBinding;
-import com.fongmi.android.tv.setting.Setting;
 import com.github.bassaer.library.MDColor;
 
 public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> {
@@ -52,8 +51,7 @@ public class ThemeAdapter extends RecyclerView.Adapter<ThemeAdapter.ViewHolder> 
     private GradientDrawable getCircle(int color) {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
-        if (color == 0) circle.setColor(Setting.getWallColor());
-        else if (color == -1) circle.setColor(MDColor.GREY_500);
+        if (color == -1) circle.setColor(MDColor.GREY_500);
         else circle.setColor(color);
         return circle;
     }

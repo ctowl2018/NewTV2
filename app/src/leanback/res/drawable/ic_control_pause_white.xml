@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  暂停按钮 · 未聚焦态（纯白 #FFFFFF）。
+  两根竖条的路径与圆角半径与 ic_control_pause_tone 完全一致，
+  只是把橙 + 奶油的折光渐变换成单一纯白填充；聚焦时仍使用 ic_control_pause_tone。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+  <!-- 左条 -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M10.1,7 H16.9 A2.6,2.6 0 0 1 19.5,9.6 V38.4 A2.6,2.6 0 0 1 16.9,41 H10.1 A2.6,2.6 0 0 1 7.5,38.4 V9.6 A2.6,2.6 0 0 1 10.1,7 Z" />
+  <!-- 右条 -->
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M31.1,7 H37.9 A2.6,2.6 0 0 1 40.5,9.6 V38.4 A2.6,2.6 0 0 1 37.9,41 H31.1 A2.6,2.6 0 0 1 28.5,38.4 V9.6 A2.6,2.6 0 0 1 31.1,7 Z" />
+</vector>

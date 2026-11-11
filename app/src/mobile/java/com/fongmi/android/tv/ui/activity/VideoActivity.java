@@ -273,7 +273,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     }
 
     private int getScale() {
-        return mHistory != null && mHistory.getScale() != -1 ? Math.clamp(mHistory.getScale(), PlayerSetting.MIN_SCALE, PlayerSetting.MAX_SCALE) : PlayerSetting.getScale();
+        return mHistory != null && mHistory.getScale() != -1 ? Math.clamp(mHistory.getScale(), PlayerSetting.MIN_SCALE, PlayerSetting.MAX_SCALE) : PlayerSetting.MIN_SCALE;
     }
 
     private void setScale(int scale) {
@@ -442,7 +442,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     }
 
     private void setVideoView() {
-        PlayerEngineDialog.setText(mBinding.control.action.player);
         mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
         mBinding.video.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> mPiP.update(this, view));
     }
@@ -465,11 +464,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
             mFrameParams.height = (int) animation.getAnimatedValue();
             mBinding.video.setLayoutParams(mFrameParams);
         });
-    }
-
-    private void setPlaybackMode() {
-        if (isWebPlaybackActive()) return;
-        PlaybackAction.setPlaybackMode(player(), mBinding.control.action.player);
     }
 
     private void setViewModel() {
@@ -1496,13 +1490,11 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
 
     @Override
     protected void onPrepare() {
-        setPlaybackMode();
         checkControl();
     }
 
     @Override
     protected void onDecodeChanged() {
-        setPlaybackMode();
     }
 
     @Override
@@ -1677,8 +1669,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
     protected void onWebPlaybackChanged(boolean active) {
         PlaybackAction.setWebPlaybackMode(active, mBinding.control.action.player, mBinding.control.action.decoder, mBinding.control.action.reset, mBinding.control.action.replay, mBinding.control.action.repeat, mBinding.control.action.speed, mBinding.control.action.scale, mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.danmaku, mBinding.control.action.edition, mBinding.control.action.chapter, mBinding.control.action.opening, mBinding.control.action.ending);
         if (!active) {
-            setPlaybackMode();
-            setTrackVisible();
+                setTrackVisible();
             setMediaOptionVisible();
             mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
         }

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  浮层列表的单行条目。
+
+  外层 FrameLayout 负责行高（44dp），文字用 gravity=center 垂直居中。
+
+  选中框不画在行上，而是由列表容器的唯一 overlay 绘制（见 view_sheet_list.xml 与
+  SheetList.syncSelectionFrame）：行会被 RecyclerView 回收，行级 focus 背景在滚动/复用后
+  容易残留过期状态，看起来像「框停在初始位置」。行现在只保留当前项/常态底色
+  （selector_sheet_row），焦点框跟随聚焦行并钳制在容器内。
+
+  关键（修选中框越界/被裁剪）：文字（= 实际聚焦的视图）用 match_parent 撑满整行高度，
+  而不是 wrap_content。否则聚焦视图只有文字那么高，滚动对齐时会把「文字」贴到内容边界，
+  而选中框按整行定位，多出的部分越出内容裁剪区被切掉（列表首/末行框顶部被裁）。
+  FrameLayout 垂直 padding 固定 0（避免随焦点态变化导致文字跳动），水平 padding 仅定文字内缩。
+
+  「当前项」用 activated 标色（@color/selector_sheet_text），不用 selected：
+  文字的左右往复跑马灯由 PingPongMarqueeTextView 按「实际溢出宽度」自行判断启停，
+  与选中 / 焦点状态无关，短标题静止、长标题才会滚动。
+
+  「正在播放」指示器（三根起伏的小竖条）放在文字左侧的固定槽位里：
+  未播放的行由代码置 INVISIBLE 占位，所以所有行的文字左边缘仍然对齐；
+  没有任何播放行的列表（倍速）整块 GONE，不占宽度。槽位不参与文字宽度测量，
+  但由 VideoActivity 在计算浮层宽度时按 SHEET_PLAYING_SLOT_DP 额外预留。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:addStatesFromChildren="true"
+    android:background="@drawable/selector_sheet_row"
+    android:clipChildren="false"
+    android:clickable="false"
+    android:focusable="false"
+    android:paddingStart="12dp"
+    android:paddingTop="0dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="0dp">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:addStatesFromChildren="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.fongmi.android.tv.ui.custom.PlayingIndicatorView
+            android:id="@+id/sheetItemPlaying"
+            android:layout_width="10dp"
+            android:layout_height="12dp"
+            android:layout_marginEnd="6dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.PingPongMarqueeTextView
+            android:id="@+id/sheetItemText"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:singleLine="true"
+            android:textColor="@color/selector_sheet_text"
+            android:textSize="15sp"
+            tools:text="第 12 集" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</FrameLayout>

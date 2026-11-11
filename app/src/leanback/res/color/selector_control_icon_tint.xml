@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  控制条图标着色：常态纯白，聚焦时切换为品牌橙（与进度条滑块同色）。
+  播放 / 暂停按钮不引用本选择器，保持自身橙 + 奶油的原始配色。
+
+  state_activated = 「本按钮正开着浮层」：浮层打开后焦点会进入浮层内部，此时仍要保持橙色，
+  不能因为失焦变白。业务开关（弹幕开/关等）用的是 state_selected，两者互不干扰。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/control_scrubber" android:state_focused="true" />
+    <item android:color="@color/control_scrubber" android:state_activated="true" />
+    <item android:color="@color/white" />
+</selector>

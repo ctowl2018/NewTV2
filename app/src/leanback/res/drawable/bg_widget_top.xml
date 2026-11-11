@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  全屏播放页顶部信息条的压暗层：顶部最深、向下渐隐，保证白字在亮画面上依然可读。
+
+  angle=270 → 渐变自「顶」指向「底」：startColor 落在顶边。
+  #66000000 = 40% 不透明度的纯黑（最深处），#00000000 = 完全透明。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <gradient
+        android:angle="270"
+        android:endColor="#00000000"
+        android:startColor="#66000000"
+        android:type="linear" />
+
+</shape>

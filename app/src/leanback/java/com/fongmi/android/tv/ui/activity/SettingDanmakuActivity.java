@@ -39,6 +39,7 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
         mBinding.danmakuApiText.setText(getApiStatus());
         mBinding.danmakuAutoText.setText(Setting.getSwitch(DanmakuSetting.isAuto()));
         mBinding.danmakuLoadText.setText(Setting.getSwitch(DanmakuSetting.isLoad()));
+        mBinding.danmakuHeatText.setText(Setting.getSwitch(DanmakuSetting.isHeatmap()));
         mBinding.danmakuSpiderText.setText(Setting.getSwitch(DanmakuSetting.isSpiderFirst()));
         updateApiVisibility();
     }
@@ -48,6 +49,7 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
         mBinding.danmakuApi.setOnClickListener(this::onDanmakuApi);
         mBinding.danmakuAuto.setOnClickListener(this::setDanmakuAuto);
         mBinding.danmakuLoad.setOnClickListener(this::setDanmakuLoad);
+        mBinding.danmakuHeat.setOnClickListener(this::setDanmakuHeat);
         mBinding.danmakuSpider.setOnClickListener(this::setDanmakuSpider);
     }
 
@@ -60,7 +62,14 @@ public class SettingDanmakuActivity extends BaseActivity implements DanmakuListe
     private void updateApiVisibility() {
         boolean load = DanmakuSetting.isLoad();
         mBinding.danmakuApi.setVisibility(load ? View.VISIBLE : View.GONE);
+        // 热力图只对已加载的弹幕有意义，关掉弹幕加载时连同这一行一起收起
+        mBinding.danmakuHeat.setVisibility(load ? View.VISIBLE : View.GONE);
         updateAutoVisibility();
+    }
+
+    private void setDanmakuHeat(View view) {
+        DanmakuSetting.putHeatmap(!DanmakuSetting.isHeatmap());
+        mBinding.danmakuHeatText.setText(Setting.getSwitch(DanmakuSetting.isHeatmap()));
     }
 
     private void updateAutoVisibility() {

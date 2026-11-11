@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕开关两态：开启用“弹幕+勾”，关闭用“弹幕+斜线”，与弹幕面板右上角图标一致 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_control_danmaku_on" android:state_selected="true" />
+    <item android:drawable="@drawable/ic_control_danmaku_off" />
+</selector>

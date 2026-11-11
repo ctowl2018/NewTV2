@@ -18,7 +18,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
-import androidx.media3.common.VideoSize;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.danmaku.DanmakuConfig;
 
@@ -42,7 +41,6 @@ import com.fongmi.android.tv.player.exo.ExoCommand;
 import com.fongmi.android.tv.player.exo.ExoPlayerEngine;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
-import com.fongmi.android.tv.player.mpv.MpvUtil;
 import com.fongmi.android.tv.player.mpv.MpvScriptSession;
 import com.fongmi.android.tv.player.mpv.MpvScripts;
 import com.fongmi.android.tv.player.parse.ParseJob;
@@ -50,7 +48,6 @@ import com.fongmi.android.tv.player.track.TrackUtil;
 import com.fongmi.android.tv.server.LogSession;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.DecodeSetting;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.utils.Notify;
@@ -89,7 +86,6 @@ public class PlayerManager implements ParseCallback {
     private boolean browseItemReady;
     private boolean danmakuEnabled;
     private boolean refreshAttempted;
-    private boolean mpvDrmExoFallback;
     private boolean initTrack;
     private final List<Track> pendingTrackRestore = new ArrayList<>();
 
@@ -343,7 +339,7 @@ public class PlayerManager implements ParseCallback {
         if (getDecoderMode(trackType) == null || !getSupportedDecoderModes(trackType).contains(mode)) return;
         changeDecoder(() -> {
             engine.setDecoderMode(trackType, mode);
-            DecodeSetting.putDecoderMode(getEngine(), trackType, mode);
+            DecodeSetting.putDecoderMode(trackType, mode);
         });
     }
 
@@ -380,17 +376,6 @@ public class PlayerManager implements ParseCallback {
 
     public boolean supportsVideoSharpness() {
         return effects.supportsVideoSharpness();
-    }
-
-    public int getEngine() {
-        return isMpvEngine() ? PlayerSetting.ENGINE_MPV : PlayerSetting.ENGINE_EXO;
-    }
-
-    public void setEngine(int targetEngine) {
-        if (targetEngine == PlayerSetting.ENGINE_MPV && !MpvUtil.checkInstalled()) return;
-        PlayerSetting.putEngine(targetEngine);
-        if (isEmpty() || PlayerEngineFactory.matches(engine, spec)) return;
-        restartCurrent();
     }
 
     public String getPositionTime(long delta) {
@@ -445,6 +430,11 @@ public class PlayerManager implements ParseCallback {
         callback.onDanmakuConfigChanged(config);
     }
 
+    /** 当前播放器的弹幕显隐（不写全局设置），供控制条按钮读取选中态。 */
+    public boolean isDanmakuEnabled() {
+        return danmakuEnabled;
+    }
+
     public void setDanmakuEnabled(boolean enabled) {
         if (danmakuEnabled == enabled) return;
         danmakuEnabled = enabled;
@@ -477,18 +467,6 @@ public class PlayerManager implements ParseCallback {
 
     public boolean supportsSubtitleTranscript() {
         return engine != null && engine.supportsSubtitleTranscript();
-    }
-
-    public void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        if (engine == null) return;
-        engine.setSecondarySubtitleSelection(selection);
-        clearPendingTrackRestore(C.TRACK_TYPE_TEXT, Track.ROLE_SECONDARY);
-        if (selection == null) {
-            Track.delete(getKey(), C.TRACK_TYPE_TEXT, Track.ROLE_SECONDARY);
-            return;
-        }
-        Track track = TrackUtil.fromSelection(player.getCurrentTracks(), selection, Track.ROLE_SECONDARY);
-        if (track != null) track.key(getKey()).save();
     }
 
     public void sendDanmaku(String text) {
@@ -536,34 +514,9 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void setTrack(Track track) {
-        if (track.isSecondary()) setSecondaryTrack(track);
-        else setPrimaryTrack(track);
-    }
-
-    private void setSecondaryTrack(Track track) {
-        TrackSelectionOverride selection = track.isSelected() ? TrackUtil.findSelection(player, track) : null;
-        if (track.isSelected() && selection == null) return;
-        engine.restoreSecondarySubtitleSelection(selection);
-        track.key(getKey()).save();
-        clearPendingTrackRestore(track.getType(), track.getRole());
-    }
-
-    private void setPrimaryTrack(Track track) {
-        TrackSelectionOverride secondary = track.getType() == C.TRACK_TYPE_TEXT && !track.isSelected()
-                ? getSubtitleSelectionState().activeSecondarySelection : null;
-        Track promoted = secondary == null ? null : TrackUtil.fromSelection(player.getCurrentTracks(), secondary, Track.ROLE_PRIMARY);
-        Track secondaryOff = secondary == null ? null : TrackUtil.fromSelection(player.getCurrentTracks(), secondary, Track.ROLE_SECONDARY);
         if (!TrackUtil.setTrackSelection(player, track)) return;
-        if (promoted != null && secondaryOff != null) {
-            secondaryOff.setSelected(false);
-            secondaryOff.key(getKey()).save();
-            promoted.key(getKey()).save();
-            clearPendingTrackRestore(C.TRACK_TYPE_TEXT, Track.ROLE_PRIMARY);
-            clearPendingTrackRestore(C.TRACK_TYPE_TEXT, Track.ROLE_SECONDARY);
-            return;
-        }
         track.key(getKey()).save();
-        clearPendingTrackRestore(track.getType(), track.getRole());
+        clearPendingTrackRestore(track.getType());
     }
 
     public void setVideoSetting(int preset) {
@@ -588,10 +541,6 @@ public class PlayerManager implements ParseCallback {
 
     public void previewAudioSetting(boolean original) {
         effects.previewAudioSetting(original);
-    }
-
-    private boolean isMpvEngine() {
-        return engine != null && engine.getType() == PlayerEngine.Type.MPV;
     }
 
     public void play() {
@@ -720,25 +669,13 @@ public class PlayerManager implements ParseCallback {
         callback.onError(engine.getErrorMessage(e));
     }
 
-    private void fallbackToExoForDrm() {
-        mpvDrmExoFallback = true;
-        PlaybackSnapshot snapshot = PlaybackSnapshot.capture(this);
-        replaceEngine(PlayerEngineFactory.create(PlayerEngine.Type.EXO, listener));
-        engine.prepareForNewMedia();
-        beginPlaybackAttempt(false);
-        engine.start(spec.checkUa(), snapshot.positionMs());
-        snapshot.restorePlayerState(this);
-    }
-
     private void restartCurrent() {
         if (spec == null || spec.getUrl() == null) return;
         endSpeedPress();
-        PlayerEngine.Type previousType = engine.getType();
-        boolean live = player.isCurrentMediaItemLive() && player.isCurrentMediaItemDynamic();
         PlaybackSnapshot snapshot = PlaybackSnapshot.capture(this);
         spec.setIsoEditionIndex(snapshot.selectedIsoEditionIndex());
         ensureEngine(spec.checkUa());
-        startCurrent(live && previousType != engine.getType() ? C.TIME_UNSET : snapshot.positionMs());
+        startCurrent(snapshot.positionMs());
         snapshot.restorePlayerState(this);
     }
 
@@ -748,10 +685,6 @@ public class PlayerManager implements ParseCallback {
     }
 
     private void ensureEngine(PlaySpec spec) {
-        if (mpvDrmExoFallback) {
-            if (engine.getType() != PlayerEngine.Type.EXO || engine.needsRebuild()) replaceEngine(PlayerEngineFactory.create(PlayerEngine.Type.EXO, listener));
-            return;
-        }
         if (PlayerEngineFactory.matches(engine, spec)) return;
         replaceEngine(PlayerEngineFactory.create(spec, listener));
     }
@@ -838,7 +771,6 @@ public class PlayerManager implements ParseCallback {
     private void startMediaItem(long timeout, long startPositionMs, boolean newMedia, boolean prepare) {
         endSpeedPress();
         if (newMedia && refreshAttempted) spec.refresh();
-        if (newMedia) mpvDrmExoFallback = false;
         MediaItem current = player.getCurrentMediaItem();
         boolean newContent = newMedia && (current == null || !TextUtils.equals(current.mediaId, spec.getKey()));
         boolean playWhenReady = player.getPlayWhenReady();
@@ -976,32 +908,18 @@ public class PlayerManager implements ParseCallback {
 
     private void restoreTrackSelection() {
         pendingTrackRestore.clear();
-        List<Track> tracks = Track.find(getKey());
-        Track secondary = tracks.stream().filter(Track::isSecondary).findFirst().orElse(null);
-        if (secondary != null) engine.restoreSecondarySubtitleSelection(null);
-        pendingTrackRestore.addAll(TrackUtil.setTrackSelection(player, tracks));
-        if (secondary != null && secondary.isSelected()) {
-            TrackSelectionOverride selection = TrackUtil.findSelection(player, secondary);
-            if (selection != null) engine.restoreSecondarySubtitleSelection(selection);
-            else pendingTrackRestore.add(secondary);
-        }
+        Track.delete(getKey(), Track.ROLE_LEGACY_SECONDARY);
+        pendingTrackRestore.addAll(TrackUtil.setTrackSelection(player, Track.find(getKey())));
     }
 
     private void retryPendingTrackSelection() {
         List<Track> pending = new ArrayList<>(pendingTrackRestore);
         pendingTrackRestore.clear();
-        for (Track track : pending) if (!track.isSecondary() && !TrackUtil.setTrackSelection(player, track)) pendingTrackRestore.add(track);
-        for (Track track : pending) if (track.isSecondary()) restoreSecondaryTrack(track);
+        for (Track track : pending) if (!TrackUtil.setTrackSelection(player, track)) pendingTrackRestore.add(track);
     }
 
-    private void restoreSecondaryTrack(Track track) {
-        TrackSelectionOverride selection = TrackUtil.findSelection(player, track);
-        if (selection == null) pendingTrackRestore.add(track);
-        else engine.restoreSecondarySubtitleSelection(selection);
-    }
-
-    private void clearPendingTrackRestore(int type, int role) {
-        pendingTrackRestore.removeIf(track -> track.getType() == type && track.getRole() == role);
+    private void clearPendingTrackRestore(int type) {
+        pendingTrackRestore.removeIf(track -> track.getType() == type);
     }
 
     private long getPreviousDuration(int mediaItemIndex) {
@@ -1121,10 +1039,6 @@ public class PlayerManager implements ParseCallback {
             Log.e("TV-Playback", "player=" + Integer.toHexString(System.identityHashCode(player)) + " event=playerError playbackId=" + playbackId + " attempt=" + playbackAttempt + " code=" + e.getErrorCodeName() + " msg=" + e.getMessage() + " engine=" + (engine == null ? "null" : engine.getType()) + " url=" + (spec == null ? "null" : spec.getUrl()), e);
             if (spec == null) return;
             clearPreload();
-            if (engine.getType() == PlayerEngine.Type.MPV && e.errorCode == PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED && !mpvDrmExoFallback) {
-                fallbackToExoForDrm();
-                return;
-            }
             PlayerEngine.ErrorAction action = engine.handleError(e);
             if (action != PlayerEngine.ErrorAction.RECOVERED) App.removeCallbacks(runnable);
             switch (action) {

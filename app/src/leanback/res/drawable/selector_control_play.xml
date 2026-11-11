@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放 / 暂停按钮的双态图标：
+  未聚焦 → 纯白（#FFFFFF）；聚焦 → 沿用原有的橙 + 奶油折光渐变，保持现有样式不变。
+  只切换 drawable 的颜色版本，几何、尺寸、padding 与原来完全相同。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_control_play_tone" android:state_focused="true" />
+    <item android:drawable="@drawable/ic_control_play_tone" android:state_activated="true" />
+    <item android:drawable="@drawable/ic_control_play_white" />
+</selector>

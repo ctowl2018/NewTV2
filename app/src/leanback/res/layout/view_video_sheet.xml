@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放页浮层的通用容器（选集 / 倍速 / 播放设置 / 字幕 / 音轨 / 弹幕共用）。
+
+  宽高由 VideoSheet 按「锚点按钮位置 + 内容实测尺寸」回写；这里只负责形状、内边距与裁剪。
+  裁剪必须打开：列表可滚动时越界行会被画到圆角之外（菜单框外面浮着几行文字），
+  钳到容器矩形内才是「框内滚动」。上下左右 12dp 留白，让内缩的焦点框稳妥落在圆角玻璃内、
+  首尾行也不贴边框。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sheetRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/shape_video_sheet"
+    android:clickable="true"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:focusable="false"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:visibility="gone">
+
+    <FrameLayout
+        android:id="@+id/sheetContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

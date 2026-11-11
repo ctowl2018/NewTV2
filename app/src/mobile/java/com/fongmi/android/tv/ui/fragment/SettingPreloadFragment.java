@@ -10,7 +10,6 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.FragmentSettingPreloadBinding;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseFragment;
@@ -57,7 +56,7 @@ public class SettingPreloadFragment extends BaseFragment {
 
     private void setVisible() {
         boolean preload = PreloadSetting.isEnabled();
-        boolean exoPreload = preload && PlayerSetting.isExo();
+        boolean exoPreload = preload;
         mBinding.preloadTime.setVisibility(preload ? View.VISIBLE : View.GONE);
         mBinding.preloadNext.setVisibility(exoPreload ? View.VISIBLE : View.GONE);
         mBinding.preloadDecoder.setVisibility(exoPreload && PreloadSetting.isNextEpisodeEnabled() ? View.VISIBLE : View.GONE);

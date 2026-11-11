@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  弹幕搜索 —— 播放页 VideoSheet 浮层的内容页（与「选择弹幕」TrackSheet 完全同构）。
+
+  【为什么不再是 dialog】
+  以前是 BottomSheetDialogFragment：design_bottom_sheet 会被 BottomSheetBehavior 在每次
+  onLayoutChild 时用不透明的 MaterialShapeDrawable 覆盖背景，window 层的透明 / dim 设置与
+  内容 padding 都碰不到中间那一层，所以无论怎么调都拿不到浮层那块 60% 玻璃。
+  现在把内容直接塞进 view_video_sheet.xml 的 sheetContent，与选集 / 倍速 / 选择弹幕共用
+  同一个 shape_video_sheet 玻璃容器、同一套展开动效、同一套焦点锁定，视觉与交互天然一致。
+
+  【容器层】view_video_sheet.xml 的根已有 12dp 四周内边距，本布局**不再自己补**，
+  标题行（PlaybackSheetTitleRow 的 12dp start）因此实际左边距仍是 12 + 12 = 24dp，
+  与 view_sheet_track.xml 一致；搜索行 / 筛选行 / 结果列表各自再带 12dp，合计 24dp。
+  这与上一个版本「弹幕搜索弹窗」调整后的边距完全相同，观感不变。
+
+  结构：标题行 → 搜索行 → 类型筛选 → 来源筛选 → 分隔线 → 结果。
+  两行筛选各自是一行可横向滚动的胶囊；当前结果里只有一个可选值时会整行隐藏。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- 标题行：与「选择弹幕」浮层同一套标题规范（style 见 values/styles.xml），
+         标题 + 结果计数 + 弹幕接口设置 -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        style="@style/PlaybackSheetTitleRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/title"
+            style="@style/PlaybackSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/danmaku_search" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/summary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:textColor="@color/white_40"
+            android:textSize="12sp"
+            tools:text="共 203 条" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/setting"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/dialog_action_search_settings"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="7dp"
+            android:src="@drawable/ic_danmaku_setting" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 搜索行：输入框 + 搜索按钮（遥控器上比依赖输入法回车更可靠） -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <com.fongmi.android.tv.ui.custom.CustomEditText
+            android:id="@+id/keyword"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_danmaku_search_field"
+            android:hint="@string/search_keyword"
+            android:imeOptions="actionSearch"
+            android:inputType="textCapWords|textAutoCorrect|textAutoComplete"
+            android:maxLength="255"
+            android:nextFocusRight="@id/search"
+            android:paddingHorizontal="14dp"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textColorHint="@color/white_40"
+            android:textSize="14sp" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/search"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/danmaku_search_action"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusLeft="@id/keyword"
+            android:padding="8dp"
+            android:src="@drawable/ic_action_search" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 类型筛选：归一后的「剧集 / 电影 / 动漫 / 综艺 / 纪录 / 其他」 -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/typeRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:text="@string/danmaku_filter_type"
+            android:textColor="@color/white_40"
+            android:textSize="11sp" />
+
+        <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+            android:id="@+id/typeFilter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:overScrollMode="never"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/adapter_filter_chip" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 来源筛选：弹幕实际来自哪个平台（爱奇艺 / 腾讯视频 / 优酷 / 哔哩哔哩 …） -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/sourceRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:text="@string/danmaku_filter_source"
+            android:textColor="@color/white_40"
+            android:textSize="11sp" />
+
+        <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+            android:id="@+id/sourceFilter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:overScrollMode="never"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/adapter_filter_chip" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="8dp"
+        android:background="#1FFFFFFF"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginVertical="16dp"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:indicatorColor="?attr/colorPrimary"
+        app:indicatorSize="32dp"
+        app:trackThickness="2dp"
+        tools:visibility="visible" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingVertical="24dp"
+        android:textColor="@color/white_40"
+        android:textSize="13sp"
+        android:visibility="gone"
+        tools:text="没有找到匹配的弹幕"
+        tools:visibility="visible" />
+
+    <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+        android:id="@+id/recycler"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="never"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="6dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:maxHeight="170dp"
+        tools:listitem="@layout/adapter_danmaku_search"
+        tools:visibility="visible" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

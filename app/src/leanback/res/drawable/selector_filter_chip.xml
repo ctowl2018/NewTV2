@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕搜索筛选胶囊：聚焦 > 选中 > 常态。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/shape_filter_chip_focused" android:state_focused="true" />
+    <item android:drawable="@drawable/shape_filter_chip_selected" android:state_selected="true" />
+    <item android:drawable="@drawable/shape_filter_chip_normal" />
+</selector>

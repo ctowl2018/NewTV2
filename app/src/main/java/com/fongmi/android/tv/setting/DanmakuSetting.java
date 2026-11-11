@@ -38,6 +38,8 @@ public class DanmakuSetting {
     private static final int MAX_MAX_SCROLL_LINES = 20;
     private static final int MIN_MAX_FIXED_LINES = 0;
     private static final int MAX_MAX_FIXED_LINES = 10;
+    private static final int DEFAULT_MAX_TOP_LINES = 4;
+    private static final float DEFAULT_LINE_SPACING = 1.8f;
 
     public static boolean isLoad() {
         return Prefers.getBoolean("danmaku_load");
@@ -46,6 +48,20 @@ public class DanmakuSetting {
     public static void putLoad(boolean danmakuLoad) {
         Prefers.put("danmaku_load", danmakuLoad);
         if (danmakuLoad) putShow(true);
+    }
+
+    /**
+     * 「在进度条上显示弹幕热力图」开关，默认关闭。
+     *
+     * <p>关掉后只是不画密度条（也不再为它额外占高度），弹幕本身照常加载与显示；
+     * 播放页每次 onResume 都会重新读取，改完设置回到播放页立即生效。
+     */
+    public static boolean isHeatmap() {
+        return Prefers.getBoolean("danmaku_heatmap", false);
+    }
+
+    public static void putHeatmap(boolean heatmap) {
+        Prefers.put("danmaku_heatmap", heatmap);
     }
 
     public static boolean isAuto() {
@@ -119,7 +135,7 @@ public class DanmakuSetting {
     }
 
     public static int getStyleMode() {
-        return Prefers.getInt("danmaku_style_mode", DanmakuConfig.STYLE_STROKE);
+        return Prefers.getInt("danmaku_style_mode", DanmakuConfig.STYLE_SHADOW);
     }
 
     public static void putStyleMode(int value) {
@@ -215,7 +231,7 @@ public class DanmakuSetting {
     }
 
     public static int getMaxTopLines() {
-        return Math.clamp(Prefers.getInt("danmaku_max_top_lines", 0), MIN_MAX_FIXED_LINES, MAX_MAX_FIXED_LINES);
+        return Math.clamp(Prefers.getInt("danmaku_max_top_lines", DEFAULT_MAX_TOP_LINES), MIN_MAX_FIXED_LINES, MAX_MAX_FIXED_LINES);
     }
 
     public static void putMaxTopLines(int value) {
@@ -231,7 +247,7 @@ public class DanmakuSetting {
     }
 
     public static float getLineSpacing() {
-        return Math.clamp(Prefers.getFloat("danmaku_line_spacing", 1.4f), MIN_LINE_SPACING, MAX_LINE_SPACING);
+        return Math.clamp(Prefers.getFloat("danmaku_line_spacing", DEFAULT_LINE_SPACING), MIN_LINE_SPACING, MAX_LINE_SPACING);
     }
 
     public static void putLineSpacing(float value) {
@@ -314,7 +330,7 @@ public class DanmakuSetting {
         putTransparency(config.transparency);
         putTextBold(config.textBold);
         putFont(null);
-        putStyleMode(config.styleMode);
+        putStyleMode(DanmakuConfig.STYLE_SHADOW);
         putShadowTransparency(config.shadowTransparency);
         putStrokeWidthMultiplier(config.strokeWidthMultiplier);
         putProjectionOffsetX(config.projectionOffsetXMultiplier);
@@ -334,9 +350,9 @@ public class DanmakuSetting {
         putMaxOnScreen(config.maxOnScreen);
         putScrollAreaRatio(config.scrollAreaRatio);
         putScrollGapRatio(config.scrollGapRatio);
-        putLineSpacing(config.lineSpacing);
+        putLineSpacing(DEFAULT_LINE_SPACING);
         putMaxScrollLines(config.maxScrollLines);
-        putMaxTopLines(config.maxTopLines);
+        putMaxTopLines(DEFAULT_MAX_TOP_LINES);
         putMaxBottomLines(config.maxBottomLines);
     }
 

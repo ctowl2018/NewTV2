@@ -1,152 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  点播控制条按钮行（完整对齐 tv-latest 的 12 图标按钮形态）。
+
+  直接展示（固定顺序）：播放/暂停、上集、下集、选集 │ 弹幕、字幕、音轨、倍速、调试、播放设置 …… 片头、片尾
+    · 「下集」与「弹幕」之间用 1dp 竖线分组；
+    · 「片头 / 片尾」永远贴最右侧，顺序不可变，用弹性留白把这一组推过去；
+    · 图标按钮统一 50x40dp 槽位，播放键 60x48dp 稍大一档；
+    · 「上集 / 下集 / 选集」作为集数分组收紧。
+
+  其余 11 个按钮（解码、画面比例、视轨、版本、章节、主菜单、解析、播放器引擎、刷新、重播、循环）
+  全部收进「播放设置」浮层，这里只保留在 hidden 容器中（visibility=gone）：
+  它们仍承接 VideoActivity 的点击、可见性与文案同步（例如画面比例的文字、循环选中态），
+  删除会导致这些逻辑失效 —— 只隐藏，不删除。
+  焦点顺序：不在 XML 里逐个写 nextFocusLeft/Right，改由 VideoActivity.relinkControlFocus()
+  在运行时按「当前可见且可聚焦」的按钮顺序统一重串：两端自封口、上回进度条、下自封口。
+  这样动态隐藏 / 调序时不会留下指向 gone 视图的死链。
+-->
 <com.fongmi.android.tv.ui.custom.CustomHorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:fillViewport="true"
     android:scrollbars="none">
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/next"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:nextFocusLeft="@id/ending"
-            android:text="@string/play_next" />
+        <!-- 播放 / 暂停 -->
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/playPause"
+            style="@style/ControlPlaySlot"
+            android:contentDescription="@string/play_pause"
+            android:src="@drawable/selector_control_play" />
 
-        <com.google.android.material.textview.MaterialTextView
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/prev"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_prev" />
+            style="@style/ControlIconSlot"
+            android:layout_width="46dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="0dp"
+            android:contentDescription="@string/play_prev"
+            android:src="@drawable/ic_control_prev" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/parse"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/parse"
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/next"
+            style="@style/ControlIconSlot"
+            android:layout_width="46dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="0dp"
+            android:contentDescription="@string/play_next"
+            android:src="@drawable/ic_control_next" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/episodes"
+            style="@style/ControlIconSlot"
+            android:layout_width="46dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="2dp"
+            android:contentDescription="@string/play_episodes"
+            android:src="@drawable/ic_control_episode" />
+
+        <View style="@style/ControlDivider" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/danmaku"
+            style="@style/ControlIconSlot"
+            android:contentDescription="@string/danmaku"
+            android:src="@drawable/selector_control_danmaku"
             android:visibility="gone"
+            app:tint="@color/selector_control_danmaku_tint"
             tools:visibility="visible" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/player"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_exo" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/decoder"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/decoder_action" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/reset"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_reset" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/replay"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_replay" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/repeat"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_repeat" />
-
-        <com.fongmi.android.tv.ui.custom.CustomUpDownView
-            android:id="@+id/speed"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:fontFeatureSettings="tnum"
-            android:text="@string/play_speed" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/scale"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_scale" />
 
         <com.fongmi.android.tv.ui.custom.CustomUpDownView
             android:id="@+id/text"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:tag="3"
-            android:text="@string/play_track_text" />
+            style="@style/ControlSlot"
+            android:contentDescription="@string/play_track_text"
+            android:drawableStart="@drawable/ic_control_subtitle"
+            android:drawablePadding="0dp"
+            android:drawableTint="@color/selector_control_icon_tint"
+            android:tag="3" />
 
-        <com.google.android.material.textview.MaterialTextView
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/audio"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:tag="1"
-            android:text="@string/play_track_audio" />
+            style="@style/ControlIconSlot"
+            android:contentDescription="@string/play_track_audio"
+            android:src="@drawable/ic_control_audio"
+            android:tag="1" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/video"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:tag="2"
-            android:text="@string/play_track_video" />
+        <com.fongmi.android.tv.ui.custom.CustomUpDownView
+            android:id="@+id/speed"
+            style="@style/ControlSlot"
+            android:contentDescription="@string/play_speed"
+            android:drawableStart="@drawable/ic_control_speed"
+            android:drawablePadding="0dp"
+            android:drawableTint="@color/selector_control_icon_tint"
+            android:fontFeatureSettings="tnum" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/danmaku"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/danmaku"
-            android:visibility="gone"
-            tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/debug"
+            style="@style/ControlIconSlot"
+            android:contentDescription="@string/player_debug"
+            android:src="@drawable/ic_action_debug" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/edition"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_edition"
-            android:visibility="gone"
-            tools:visibility="visible" />
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/panelBtn"
+            style="@style/ControlIconSlot"
+            android:contentDescription="@string/setting_player"
+            android:src="@drawable/ic_control_panel" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/chapter"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_chapter"
-            android:visibility="gone"
-            tools:visibility="visible" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/disc_menu"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:text="@string/play_disc_menu"
-            android:visibility="gone"
-            tools:visibility="visible" />
+        <View style="@style/ControlDivider" />
 
         <com.fongmi.android.tv.ui.custom.CustomUpDownView
             android:id="@+id/opening"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
+            style="@style/ControlTextSlot"
+            android:contentDescription="@string/play_op"
             android:text="@string/play_op" />
 
         <com.fongmi.android.tv.ui.custom.CustomUpDownView
             android:id="@+id/ending"
-            style="@style/Control"
-            android:layout_marginEnd="8dp"
-            android:nextFocusRight="@id/next"
+            style="@style/ControlTextSlot"
+            android:contentDescription="@string/play_ed"
             android:text="@string/play_ed" />
 
-        <com.fongmi.android.tv.ui.custom.PlaybackButtonsView
+        <!--
+          以下 11 个按钮不再直接显示，仅用于「播放设置」浮层的转发与状态读取；
+          VideoActivity 仍会对它们做点击绑定、可见性与文案同步。
+        -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/hidden"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:nextFocusLeft="@id/ending"
-            android:nextFocusRight="@id/next" />
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:ignore="UnusedAttribute">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/decoder"
+                style="@style/Control"
+                android:text="@string/decoder_action" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/scale"
+                style="@style/Control"
+                android:text="@string/play_scale" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/video"
+                style="@style/Control"
+                android:tag="2"
+                android:text="@string/play_track_video" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/edition"
+                style="@style/Control"
+                android:text="@string/play_edition" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/chapter"
+                style="@style/Control"
+                android:text="@string/play_chapter" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/disc_menu"
+                style="@style/Control"
+                android:text="@string/play_disc_menu" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/parse"
+                style="@style/Control"
+                android:text="@string/parse" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/player"
+                style="@style/Control"
+                android:text="@string/play_exo" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/reset"
+                style="@style/Control"
+                android:text="@string/play_reset" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/replay"
+                style="@style/Control"
+                android:text="@string/play_replay" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/repeat"
+                style="@style/Control"
+                android:text="@string/play_repeat" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 </com.fongmi.android.tv.ui.custom.CustomHorizontalScrollView>

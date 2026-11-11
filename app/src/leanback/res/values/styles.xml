@@ -10,6 +10,8 @@
 
     <style name="Theme.Base" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/white</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:colorBackground">@color/app_background</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowTranslucentStatus">true</item>
         <item name="android:windowTranslucentNavigation">true</item>
@@ -25,7 +27,7 @@
     <style name="Theme.App" parent="Theme.Base" />
 
     <style name="Theme.Crash" parent="Theme.Base">
-        <item name="android:windowBackground">@color/grey_800</item>
+        <item name="android:windowBackground">@color/app_background</item>
         <item name="android:windowDisablePreview">true</item>
     </style>
 
@@ -142,6 +144,121 @@
     <style name="MpvScriptItem">
         <item name="android:background">@drawable/selector_chip</item>
         <item name="android:focusableInTouchMode">true</item>
+    </style>
+
+
+    <!-- ===== 移植自 tv-latest：播放页浮层 / 控制条槽位样式 ===== -->
+    <style name="ControlSlot">
+        <item name="android:layout_width">50dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginStart">3dp</item>
+        <item name="android:layout_marginEnd">3dp</item>
+        <item name="android:background">@drawable/selector_chip</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:nextFocusUp">@id/exo_progress</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="ControlIconSlot" parent="ControlSlot">
+        <item name="android:padding">8dp</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:tint">@color/selector_control_icon_tint</item>
+    </style>
+
+    <style name="ControlPlaySlot">
+        <item name="android:layout_width">60dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:layout_marginEnd">2dp</item>
+        <item name="android:background">@drawable/selector_chip</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:nextFocusUp">@id/exo_progress</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:scaleType">fitCenter</item>
+    </style>
+
+    <style name="ControlTextSlot" parent="ControlSlot">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:textColor">@color/selector_control_text</item>
+        <item name="android:minWidth">58dp</item>
+        <item name="android:layout_marginStart">2dp</item>
+        <item name="android:layout_marginEnd">2dp</item>
+        <item name="android:paddingStart">9dp</item>
+        <item name="android:paddingEnd">9dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="ControlDivider">
+        <item name="android:layout_width">1dp</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:layout_marginStart">5dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:background">#33FFFFFF</item>
+        <item name="android:focusable">false</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="ControlPanelChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:background">@drawable/selector_sheet_chip</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">96dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="SheetPanelRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:background">@drawable/selector_sheet_chip</item>
+        <item name="android:clickable">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minWidth">220dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/selector_sheet_text</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="PlaybackSheetTitle">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="PlaybackSheetTitleRow">
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingBottom">8dp</item>
     </style>
 
 </resources>

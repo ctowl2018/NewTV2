@@ -9,6 +9,7 @@ import androidx.media3.ui.danmaku.DanmakuConfig;
 import androidx.media3.ui.danmaku.DanmakuController;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import okhttp3.OkHttpClient;
@@ -40,6 +41,8 @@ public final class DanmakuPlayerViewController {
     public void bind(@Nullable PlayerView playerView) {
         this.playerView = playerView;
         this.controller = playerView == null ? null : playerView.getDanmakuController();
+        // 挂上热力图统计用的委托解析器（内部保证同一个控制器只注册一次）
+        DanmakuHeat.attach(controller);
         apply();
     }
 
@@ -54,6 +57,9 @@ public final class DanmakuPlayerViewController {
     }
 
     public void setDataSource(@Nullable Uri uri) {
+        // 换集 / 换源：上一集的热力分布不再适用，先清空；同一地址重绑不清，
+        // 否则会把刚解析完成的数据自己抹掉（重绑在恢复播放时很常见）。
+        if (!Objects.equals(source, uri)) DanmakuHeat.clear();
         this.source = uri;
         if (playerView != null) playerView.setDanmakuSource(uri);
     }

@@ -13,6 +13,7 @@
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/player"
+            android:visibility="gone"
             style="@style/Control"
             android:layout_marginEnd="8dp"
             android:nextFocusLeft="@id/video"

@@ -9,6 +9,7 @@ import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -27,25 +28,39 @@ import com.fongmi.android.tv.ui.custom.CustomKeyboard;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.ui.dialog.LocalConnectDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
+import com.fongmi.android.tv.utils.HotRank;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.fongmi.android.tv.utils.ZhuToPin;
 import com.github.catvod.net.OkHttp;
 import com.google.android.flexbox.FlexDirection;
 import com.google.android.flexbox.FlexboxLayoutManager;
-import com.google.common.net.HttpHeaders;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Response;
 
 public class SearchActivity extends BaseActivity implements WordAdapter.OnClickListener, RecordAdapter.OnClickListener, CustomKeyboard.Callback {
 
+    private static final int HOT_LIMIT = 10;
+
     private ActivitySearchBinding mBinding;
     private RecordAdapter mRecordAdapter;
     private WordAdapter mWordAdapter;
+    private WordAdapter mMovieAdapter;
+    private WordAdapter mTvAdapter;
+    private WordAdapter mVarietyAdapter;
+
+    /** 联想词序号：请求晚到时直接丢弃，避免旧结果覆盖新输入。 */
+    private int mSuggestSeq;
+
+    private interface HotSaver {
+
+        void save(String result);
+    }
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, SearchActivity.class));
@@ -106,6 +121,18 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         mBinding.wordRecycler.setHasFixedSize(false);
         mBinding.wordRecycler.setLayoutManager(new FlexboxLayoutManager(this, FlexDirection.ROW));
         mBinding.wordRecycler.setAdapter(mWordAdapter = new WordAdapter(this));
+        mBinding.movieWordRecycler.setItemAnimator(null);
+        mBinding.movieWordRecycler.setHasFixedSize(false);
+        mBinding.movieWordRecycler.setLayoutManager(new FlexboxLayoutManager(this, FlexDirection.ROW));
+        mBinding.movieWordRecycler.setAdapter(mMovieAdapter = new WordAdapter(this));
+        mBinding.tvWordRecycler.setItemAnimator(null);
+        mBinding.tvWordRecycler.setHasFixedSize(false);
+        mBinding.tvWordRecycler.setLayoutManager(new FlexboxLayoutManager(this, FlexDirection.ROW));
+        mBinding.tvWordRecycler.setAdapter(mTvAdapter = new WordAdapter(this));
+        mBinding.varietyWordRecycler.setItemAnimator(null);
+        mBinding.varietyWordRecycler.setHasFixedSize(false);
+        mBinding.varietyWordRecycler.setLayoutManager(new FlexboxLayoutManager(this, FlexDirection.ROW));
+        mBinding.varietyWordRecycler.setAdapter(mVarietyAdapter = new WordAdapter(this));
         mBinding.recordRecycler.setHasFixedSize(false);
         mBinding.recordRecycler.setLayoutManager(new FlexboxLayoutManager(this, FlexDirection.ROW));
         mBinding.recordRecycler.setAdapter(mRecordAdapter = new RecordAdapter(this));
@@ -126,32 +153,81 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         else getSuggest(text);
     }
 
+    /**
+     * 热播三分类：先渲染缓存，缓存过期才刷新。
+     *
+     * <p>榜单是低频数据，没必要每次进搜索页都打三次请求；15 分钟内只读缓存。
+     * 任一请求失败都静默降级为缓存内容，不弹提示、不清空已有数据。
+     */
     private void getHot() {
-        mBinding.word.setText(R.string.search_hot);
-        mWordAdapter.setItems(Word.objectFrom(Setting.getHot()).getData());
-        OkHttp.newCall("https://api.web.360kan.com/v1/rank?cat=1", Map.of(HttpHeaders.REFERER, "https://www.360kan.com/rank/general")).enqueue(getCallback(true));
+        mSuggestSeq++;
+        mBinding.word.setVisibility(View.GONE);
+        mBinding.wordRecycler.setVisibility(View.GONE);
+        bindHot(mMovieAdapter, mBinding.movieWordRecycler, mBinding.movieWord, Setting.getHotMovie());
+        bindHot(mTvAdapter, mBinding.tvWordRecycler, mBinding.tvWord, Setting.getHotTv());
+        bindHot(mVarietyAdapter, mBinding.varietyWordRecycler, mBinding.varietyWord, Setting.getHotVariety());
+        if (!Setting.isHotExpired()) return;
+        requestRank(HotRank.MOVIE, mMovieAdapter, mBinding.movieWordRecycler, mBinding.movieWord, Setting::putHotMovie);
+        requestRank(HotRank.TV, mTvAdapter, mBinding.tvWordRecycler, mBinding.tvWord, Setting::putHotTv);
+        requestRank(HotRank.VARIETY, mVarietyAdapter, mBinding.varietyWordRecycler, mBinding.varietyWord, Setting::putHotVariety);
+    }
+
+    private void bindHot(WordAdapter adapter, RecyclerView list, TextView label, String json) {
+        List<Word.Data> data = limit(Word.objectFrom(json).getData());
+        adapter.setItems(data);
+        boolean show = !data.isEmpty();
+        label.setVisibility(show ? View.VISIBLE : View.GONE);
+        list.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private List<Word.Data> limit(List<Word.Data> data) {
+        return new ArrayList<>(data.subList(0, Math.min(data.size(), HOT_LIMIT)));
+    }
+
+    private void requestRank(int cat, WordAdapter adapter, RecyclerView list, TextView label, HotSaver saver) {
+        HotRank.fetch(cat, result -> {
+            if (TextUtils.isEmpty(result)) return;
+            App.post(() -> {
+                if (!empty()) return;
+                Setting.putHotTime();
+                saver.save(result);
+                bindHot(adapter, list, label, result);
+            });
+        });
     }
 
     private void getSuggest(String text) {
+        int seq = ++mSuggestSeq;
         mBinding.word.setText(R.string.search_suggest);
-        OkHttp.newCall("https://suggest.video.iqiyi.com/?if=mobile&key=" + Uri.encode(ZhuToPin.get(text))).enqueue(getCallback(false));
-    }
-
-    private Callback getCallback(boolean hot) {
-        return new Callback() {
+        mBinding.word.setVisibility(View.VISIBLE);
+        hideHotGroups();
+        OkHttp.newCall("https://suggest.video.iqiyi.com/?if=mobile&key=" + Uri.encode(ZhuToPin.get(text))).enqueue(new Callback() {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 String result = response.body().string();
                 if (TextUtils.isEmpty(result)) return;
-                App.post(() -> setAdapter(result, hot));
+                App.post(() -> applySuggest(seq, result));
             }
-        };
+        });
     }
 
-    private void setAdapter(String result, boolean save) {
-        if (!save && empty()) return;
-        if (save) Setting.putHot(result);
-        mWordAdapter.setItems(Word.objectFrom(result).getData());
+    private void applySuggest(int seq, String result) {
+        if (seq != mSuggestSeq || empty()) return;
+        // AsyncListDiffer 的提交是异步的，这里用解析结果判断可见性，不读 adapter.getItemCount()
+        List<Word.Data> data = Word.objectFrom(result).getData();
+        mWordAdapter.setItems(data);
+        boolean hasWord = !data.isEmpty();
+        mBinding.word.setVisibility(hasWord ? View.VISIBLE : View.GONE);
+        mBinding.wordRecycler.setVisibility(hasWord ? View.VISIBLE : View.GONE);
+    }
+
+    private void hideHotGroups() {
+        mBinding.movieWord.setVisibility(View.GONE);
+        mBinding.movieWordRecycler.setVisibility(View.GONE);
+        mBinding.tvWord.setVisibility(View.GONE);
+        mBinding.tvWordRecycler.setVisibility(View.GONE);
+        mBinding.varietyWord.setVisibility(View.GONE);
+        mBinding.varietyWordRecycler.setVisibility(View.GONE);
     }
 
     @Override
@@ -296,6 +372,42 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         View child = rv.getChildAt(0);
         if (child == null) return false;
         child.requestFocus();
+        return true;
+    }
+
+    /**
+     * 返回键：焦点在搜索框或搜索键盘上时逐字删除，文本已空才退出搜索页。
+     *
+     * <p>不接管 {@code dispatchKeyEvent} 里的返回键：那里返回 true 会吞掉事件，
+     * 之后必须在每个分支自己决定是否 finish；放在 {@code onBackInvoked} 这一层，
+     * 文本非空时删字、为空时直接落到父类 finish，语义只有一处。
+     */
+    @Override
+    protected void onBackInvoked() {
+        if (isSearchInputFocused() && deleteLastChar()) return;
+        super.onBackInvoked();
+    }
+
+    private boolean isSearchInputFocused() {
+        View current = getCurrentFocus();
+        if (current == null) return false;
+        if (current == mBinding.keyword) return true;
+        return mBinding.keyboard.findContainingItemView(current) != null;
+    }
+
+    /** 删掉光标前一个字符；有选区时删选区。没有可删字符时返回 false。 */
+    private boolean deleteLastChar() {
+        Editable text = mBinding.keyword.getText();
+        if (text == null || text.length() == 0) return false;
+        int start = Math.max(mBinding.keyword.getSelectionStart(), 0);
+        int end = Math.max(mBinding.keyword.getSelectionEnd(), 0);
+        if (start != end) {
+            text.delete(Math.min(start, end), Math.max(start, end));
+            return true;
+        }
+        // 光标停在首位时删首字符，保证「还有字符就只删不退」
+        int from = start > 0 ? start - 1 : 0;
+        text.delete(from, Math.min(from + 1, text.length()));
         return true;
     }
 

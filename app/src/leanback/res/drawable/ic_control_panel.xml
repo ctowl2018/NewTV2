@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放设置：按参考图重绘的“螺母”形图标（尖顶六边形外轮廓 + 中心圆孔）。
+  参考图实测比例：六边形宽 44px、描边约 4.3px（≈宽度的 9.8%）；中心圆孔外径 18px（≈宽度的 41%），
+  圆孔描边与六边形同粗；顶点处有小圆角，故使用 strokeLineJoin/strokeLineCap=round。
+  本图标视觉外框 15.6 x 18dp（宽高比与参考图一致），纯白，由 selector_control_icon_tint 着色。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 六边形外轮廓（尖顶，左右两侧为竖边） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,3 L19.79,7.5 L19.79,16.5 L12,21 L4.21,16.5 L4.21,7.5 Z"
+        android:strokeColor="@android:color/white"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.55" />
+
+    <!-- 中心圆孔 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,9.6 A2.4,2.4 0 1 1 12,14.4 A2.4,2.4 0 1 1 12,9.6 Z"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.55" />
+</vector>

@@ -9,7 +9,6 @@ import com.fongmi.android.tv.databinding.DialogDecoderModeBinding;
 import com.fongmi.android.tv.databinding.ViewDecoderModeRowBinding;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.compat.DecoderMode;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.List;
@@ -34,18 +33,13 @@ final class DecoderSettingPanel {
         binding.software.summary.setText(R.string.decoder_mode_software_detail);
         binding.ffmpeg.title.setText(R.string.decoder_mode_ffmpeg);
         binding.ffmpeg.summary.setText(R.string.decoder_mode_ffmpeg_detail);
-        boolean mpv = player.getEngine() == PlayerSetting.ENGINE_MPV;
-        binding.tabGroup.setVisibility(mpv ? View.GONE : View.VISIBLE);
         trackType = C.TRACK_TYPE_VIDEO;
-        if (!mpv) {
-            SettingPanelViews.bindTabs(binding.tabGroup, getTabs(), index -> {
-                trackType = index == 0 ? C.TRACK_TYPE_VIDEO : C.TRACK_TYPE_AUDIO;
-                showModes();
-            });
-            PlaybackDialogFocus.selectFirstTab(binding.getRoot(), binding.tabGroup, binding.tabVideo);
-        }
+        SettingPanelViews.bindTabs(binding.tabGroup, getTabs(), index -> {
+            trackType = index == 0 ? C.TRACK_TYPE_VIDEO : C.TRACK_TYPE_AUDIO;
+            showModes();
+        });
+        PlaybackDialogFocus.selectFirstTab(binding.getRoot(), binding.tabGroup, binding.tabVideo);
         showModes();
-        if (mpv) PlaybackDialogFocus.request(binding.getRoot(), binding.auto.getRoot());
     }
 
     void release() {

@@ -1,18 +1,13 @@
 package com.fongmi.android.tv.ui.activity;
 
-import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.MenuItem;
-import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.pm.ShortcutInfoCompat;
-import androidx.core.content.pm.ShortcutManagerCompat;
-import androidx.core.graphics.drawable.IconCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.fragment.app.Fragment;
 import androidx.viewbinding.ViewBinding;
@@ -21,9 +16,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.VodConfig;
-import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.api.node.NodeRuntime;
-import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.databinding.ActivityHomeBinding;
 import com.fongmi.android.tv.db.BackupManager;
 import com.fongmi.android.tv.event.ConfigEvent;
@@ -33,7 +26,6 @@ import com.fongmi.android.tv.event.StateEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.playback.ExternalPlayback;
-import com.fongmi.android.tv.receiver.ShortcutReceiver;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.base.BaseActivity;
@@ -162,7 +154,6 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
 
     private void initConfig() {
         VodConfig.get().init().load(getCallback());
-        WallConfig.get().init();
     }
 
     private Callback getCallback() {

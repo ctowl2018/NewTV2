@@ -1,6 +1,5 @@
 package com.fongmi.android.tv.setting;
 
-import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 import androidx.media3.common.DolbyVisionOutputPolicy;
 
@@ -10,32 +9,25 @@ import com.fongmi.android.tv.player.compat.DecoderMode;
 
 public class DecodeSetting {
 
-    public static DecoderMode getDecoderMode(int engine, @C.TrackType int trackType) {
-        String key = getDecoderModeKey(engine, trackType);
+    public static DecoderMode getDecoderMode(@C.TrackType int trackType) {
+        String key = getDecoderModeKey(trackType);
         if (key == null) return DecoderMode.AUTO;
         String value = Prefers.getString(key);
-        for (DecoderMode mode : DecoderMode.values()) if (mode.name().equals(value) && isDecoderModeSupported(engine, mode)) return mode;
+        for (DecoderMode mode : DecoderMode.values()) if (mode.name().equals(value)) return mode;
         return DecoderMode.AUTO;
     }
 
-    public static void putDecoderMode(int engine, @C.TrackType int trackType, DecoderMode mode) {
-        String key = getDecoderModeKey(engine, trackType);
-        if (key != null && isDecoderModeSupported(engine, mode)) Prefers.put(key, mode.name());
+    public static void putDecoderMode(@C.TrackType int trackType, DecoderMode mode) {
+        String key = getDecoderModeKey(trackType);
+        if (key != null && mode != null) Prefers.put(key, mode.name());
     }
 
-    @Nullable
-    private static String getDecoderModeKey(int engine, @C.TrackType int trackType) {
-        if (engine == PlayerSetting.ENGINE_MPV) return trackType == C.TRACK_TYPE_VIDEO ? "decode_mpv_video_mode" : null;
-        if (engine != PlayerSetting.ENGINE_EXO) return null;
+    private static String getDecoderModeKey(@C.TrackType int trackType) {
         return switch (trackType) {
             case C.TRACK_TYPE_AUDIO -> "decode_exo_audio_mode";
             case C.TRACK_TYPE_VIDEO -> "decode_exo_video_mode";
             default -> null;
         };
-    }
-
-    private static boolean isDecoderModeSupported(int engine, DecoderMode mode) {
-        return engine != PlayerSetting.ENGINE_MPV || mode != DecoderMode.SOFTWARE;
     }
 
     public static boolean isAudioPassThrough() {
@@ -69,7 +61,7 @@ public class DecodeSetting {
 
     public static void putTunnel(boolean tunnel) {
         Prefers.put("decode_tunnel", tunnel);
-        if (PlayerSetting.isExo() && tunnel) PlayerSetting.putRender(PlayerSetting.RENDER_SURFACE);
+        if (tunnel) PlayerSetting.putRender(PlayerSetting.RENDER_SURFACE);
     }
 
     public static boolean isTunnelingEnabled() {

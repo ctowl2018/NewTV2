@@ -814,6 +814,16 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         boolean live = LiveDanmaku.isLive(uri);
         liveDanmaku.setDataSource(live && getPlayerView().getPlayer() != null ? uri : null);
         danmakuController.setDataSource(live ? null : uri);
+        renderDanmakuTitle();
+    }
+
+    /**
+     * 弹幕来源变化后的标题刷新钩子。
+     *
+     * <p>点播页用它把左上角标题换成「弹幕接口返回的片名」（见 VideoActivity），
+     * 直播 / 其它播放页无需处理，默认空实现。
+     */
+    protected void renderDanmakuTitle() {
     }
 
     private void onDanmakuState(String state, String msg) {

@@ -9,16 +9,7 @@
         layout="@layout/view_setting_slider" />
 
     <include
-        android:id="@+id/brightness"
-        layout="@layout/view_setting_slider"
-        android:visibility="gone" />
-
-    <include
         android:id="@+id/position"
-        layout="@layout/view_setting_slider" />
-
-    <include
-        android:id="@+id/secondaryPosition"
         layout="@layout/view_setting_slider" />
 
 </androidx.appcompat.widget.LinearLayoutCompat>

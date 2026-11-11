@@ -12,7 +12,6 @@ import androidx.viewbinding.ViewBinding;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.FragmentSettingDecodeBinding;
 import com.fongmi.android.tv.setting.DecodeSetting;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -45,9 +44,8 @@ public class SettingDecodeFragment extends BaseFragment {
     }
 
     private void setVisible() {
-        boolean exo = PlayerSetting.isExo();
-        mBinding.aac.setVisibility(exo ? View.VISIBLE : View.GONE);
-        mBinding.tunnel.setVisibility(exo ? View.VISIBLE : View.GONE);
+        mBinding.aac.setVisibility(View.VISIBLE);
+        mBinding.tunnel.setVisibility(View.VISIBLE);
     }
 
     private void refresh() {
@@ -58,7 +56,6 @@ public class SettingDecodeFragment extends BaseFragment {
     }
 
     private void setTunnel(View view) {
-        if (PlayerSetting.isMpv()) return;
         DecodeSetting.putTunnel(!DecodeSetting.isTunnel());
         mBinding.tunnelText.setText(Setting.getSwitch(DecodeSetting.isTunnel()));
     }

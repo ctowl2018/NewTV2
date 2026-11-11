@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 浮层列表条目文字色：当前项纯白，其余 70% 白 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 禁用态：40% 白，父级浮层与子级弹窗共用同一档，避免两处观感不一致 -->
+    <item android:color="@color/white_40" android:state_enabled="false" />
+    <item android:color="@color/white" android:state_activated="true" />
+    <item android:color="@color/white_70" />
+</selector>

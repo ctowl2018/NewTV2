@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  音轨图标：五根圆头竖条组成的波形（中间最高、两侧对称递减）
+  几何比例取自参考图：竖条宽度 : 间距 ≈ 1 : 1.44，高度比 0.30 / 0.70 / 1.00 / 0.70 / 0.30
+  视觉外框 21 x 19.5dp，与相邻字幕（CC）图标的视觉尺寸、垂直居中位置一致；纯白，由 selector_control_icon_tint 着色
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 第 1 根：最矮 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M2.475,10.05 L2.475,13.95"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.95" />
+
+    <!-- 第 2 根 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M7.2375,6.15 L7.2375,17.85"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.95" />
+
+    <!-- 第 3 根：最高 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,3.225 L12,20.775"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.95" />
+
+    <!-- 第 4 根 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M16.7625,6.15 L16.7625,17.85"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.95" />
+
+    <!-- 第 5 根：最矮 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M21.525,10.05 L21.525,13.95"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.95" />
+</vector>

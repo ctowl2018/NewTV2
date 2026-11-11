@@ -10,7 +10,6 @@ import com.fongmi.android.tv.databinding.ViewSettingSliderBinding;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.effect.video.VideoEffectPreset;
 import com.fongmi.android.tv.player.effect.video.VideoEffectProfile;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.VideoSetting;
 import com.fongmi.android.tv.utils.SliderUtil;
 import com.google.android.material.button.MaterialButton;
@@ -42,18 +41,15 @@ final class VideoSettingPanel {
 
     private final DialogVideoSettingBinding binding;
     private final PlayerManager player;
-    private final MpvMotionSettingPanel motionPanel;
     private int currentTab;
     private boolean previewOriginal;
 
     VideoSettingPanel(DialogVideoSettingBinding binding, PlayerManager player) {
         this.binding = binding;
         this.player = player;
-        this.motionPanel = new MpvMotionSettingPanel(binding.mpvMotion, player.getPlayer());
     }
 
     void bind() {
-        motionPanel.bind();
         updatePresetCheck();
         bindSliders();
         SettingPanelViews.bindTabs(binding.tabGroup, getTabs(), this::showTab);
@@ -65,7 +61,6 @@ final class VideoSettingPanel {
     }
 
     void release() {
-        motionPanel.release();
         binding.tabGroup.clearOnButtonCheckedListeners();
         previewOriginal(false);
     }
@@ -189,23 +184,20 @@ final class VideoSettingPanel {
 
     private VideoEffectProfile getCurrentProfile() {
         VideoEffectProfile profile = VideoSetting.getProfile();
-        float shadow = isMpv() ? profile.getShadowLift() : binding.shadow.slider.getValue();
-        float temperature = isMpv() ? profile.getTemperature() : binding.temperature.slider.getValue();
+        float shadow = binding.shadow.slider.getValue();
+        float temperature = binding.temperature.slider.getValue();
         float sharpness = supportsSharpness() ? binding.sharpness.slider.getValue() : profile.getSharpness();
         return VideoEffectProfile.custom(binding.saturation.slider.getValue(), binding.contrast.slider.getValue(), binding.brightness.slider.getValue(), sharpness, shadow, binding.gamma.slider.getValue(), binding.hue.slider.getValue(), temperature);
     }
 
     private void updateControls() {
-        boolean mpv = isMpv();
         boolean sharpnessSupported = supportsSharpness();
         boolean supported = canSetVideoSetting();
         if (!supported) previewOriginal(false);
         boolean checked = VideoSetting.isEnabled();
         boolean enabled = supported && checked;
         updateUnsupported(supported);
-        binding.temperature.getRoot().setVisibility(mpv ? View.GONE : View.VISIBLE);
         binding.sharpness.getRoot().setVisibility(sharpnessSupported ? View.VISIBLE : View.GONE);
-        binding.shadow.getRoot().setVisibility(mpv ? View.GONE : View.VISIBLE);
         applyEnabled(binding.compare, enabled);
         applyEnabled(binding.presetSection, supported);
         applyEnabled(binding.saturation.getRoot(), enabled);
@@ -213,9 +205,9 @@ final class VideoSettingPanel {
         applyEnabled(binding.brightness.getRoot(), enabled);
         applyEnabled(binding.gamma.getRoot(), enabled);
         applyEnabled(binding.hue.getRoot(), enabled);
-        applyEnabled(binding.temperature.getRoot(), enabled && !mpv);
+        applyEnabled(binding.temperature.getRoot(), enabled);
         applyEnabled(binding.sharpness.getRoot(), enabled && sharpnessSupported);
-        applyEnabled(binding.shadow.getRoot(), enabled && !mpv);
+        applyEnabled(binding.shadow.getRoot(), enabled);
     }
 
     private void updateUnsupported(boolean supported) {
@@ -242,12 +234,8 @@ final class VideoSettingPanel {
         return isPlayerAvailable() && player.canSetVideoSetting();
     }
 
-    private boolean isMpv() {
-        return isPlayerAvailable() && player.getEngine() == PlayerSetting.ENGINE_MPV;
-    }
-
     private boolean supportsSharpness() {
-        return !isMpv() || player.supportsVideoSharpness();
+        return !isPlayerAvailable() || player.supportsVideoSharpness();
     }
 
     private int getUnsupportedText() {

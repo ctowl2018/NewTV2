@@ -31,7 +31,6 @@ import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.ui.custom.VodInput;
 import com.fongmi.android.tv.ui.dialog.DecoderSettingDialog;
-import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.SpeedSettingDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
 import com.fongmi.android.tv.utils.Clock;
@@ -58,11 +57,6 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
     private boolean restoring;
     private long position;
     private int scale;
-
-    @Override
-    protected boolean customWall() {
-        return false;
-    }
 
     @Override
     protected ViewBinding getBinding() {
@@ -125,7 +119,6 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
-        mBinding.control.action.player.setOnClickListener(view -> onPlayer());
         mBinding.control.action.decoder.setOnClickListener(view -> onDecoder());
         mBinding.control.action.speed.setOnLongClickListener(view -> onSpeedLong());
         mBinding.video.setOnTouchListener((view, event) -> mInput.onTouchEvent(event));
@@ -133,9 +126,8 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
 
     private void setVideoView() {
         setSeekNextFocusDown(R.id.reset);
-        setScale(scale = PlayerSetting.getScale());
+        setScale(scale = PlayerSetting.MIN_SCALE);
         setActionFocusBoundary(mBinding.control.action.getRoot());
-        PlayerEngineDialog.setText(mBinding.control.action.player);
     }
 
     private String getName() {
@@ -163,7 +155,6 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
     private void restorePlayback() {
         mPlaybackKey = mAction.getCurrentURI();
         if (mRenderer != null) mRenderer.activateDlna(mDlnaOwner, mPlaybackKey);
-        setPlaybackMode();
         setTrackVisible();
         notifyPrepared();
     }
@@ -181,10 +172,6 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
         mPlaybackKey = mAction.getCurrentURI();
         if (mRenderer != null) mRenderer.activateDlna(mDlnaOwner, mPlaybackKey);
         startPlayer(mPlaybackKey, mAction.result(), false, Constant.TIMEOUT_PLAY, buildMetadata());
-    }
-
-    private void setPlaybackMode() {
-        PlayerEngineDialog.setText(mBinding.control.action.player, player());
     }
 
     private void setScale(int scale) {
@@ -211,11 +198,6 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
         if (player().isEmpty()) return;
         position = player().getPosition();
         start();
-    }
-
-    private void onPlayer() {
-        PlayerEngineDialog.show(this);
-        hideControl();
     }
 
     private void onDecoder() {
@@ -355,13 +337,11 @@ public class CastActivity extends PlaybackActivity implements VodInput.Listener 
     @Override
     protected void onPrepare() {
         setPosition();
-        setPlaybackMode();
         notifyPrepared();
     }
 
     @Override
     protected void onDecodeChanged() {
-        setPlaybackMode();
     }
 
     @Override

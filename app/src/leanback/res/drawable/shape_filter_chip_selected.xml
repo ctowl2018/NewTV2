@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕搜索筛选胶囊的「当前生效」态：15% 白底，与常态拉开一档但不过分抢焦点。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <solid android:color="@color/white_15" />
+
+    <corners android:radius="28dp" />
+
+    <padding
+        android:bottom="7dp"
+        android:left="12dp"
+        android:right="12dp"
+        android:top="7dp" />
+
+</shape>

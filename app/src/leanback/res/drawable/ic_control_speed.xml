@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  倍速图标：仪表盘（圆环 + 内弧刻度 + 指向右上的指针），按参考图重绘
+  几何比例取自参考图：外圈直径 60px 描边 5px；内弧半径 19px，跨度 171°→279°（左侧经顶部到正上方）；
+  指针沿 -45° 方向，长约 20px，圆头
+  视觉外框 19 x 19dp，与字幕（20.9x19）/ 音轨（21x19）图标同一视觉高度；
+  纯白，由 selector_control_icon_tint 着色
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 外圈 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,3.275 A8.725,8.725 0 0 1 12,20.725 A8.725,8.725 0 0 1 12,3.275 Z"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.55" />
+
+    <!-- 内弧刻度：左下方起，经顶部到正上方 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6.05,12.94 A6.02,6.02 0 0 1 12.94,6.05"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.55" />
+
+    <!-- 指针：中心指向右上（-45°） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,12 L16.48,7.52"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.55" />
+</vector>

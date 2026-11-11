@@ -6,10 +6,9 @@ import com.github.catvod.utils.Prefers;
 
 public class Setting {
 
-    private static final int MIN_WALL = 0;
-    private static final int MAX_WALL = 4;
-    private static final int MIN_WALL_TYPE = 0;
-    private static final int MAX_WALL_TYPE = 2;
+    /** 热词榜最小刷新间隔：15 分钟。榜单是低频数据，没必要每次进搜索页都打三次请求。 */
+    private static final long HOT_TTL_MS = 15 * 60 * 1000L;
+
     private static final int MIN_SITE_MODE = 0;
     private static final int MAX_SITE_MODE = 1;
     private static final int MIN_SYNC_MODE = 0;
@@ -43,6 +42,10 @@ public class Setting {
         Prefers.put("keyword", keyword);
     }
 
+    /**
+     * 旧版单列表热词缓存，仅供 mobile 变体使用。
+     * TV 搜索页已改为「电影 / 电视剧 / 综艺」三分类，见下面的 getHotMovie 等方法。
+     */
     public static String getHot() {
         return Prefers.getString("hot");
     }
@@ -51,20 +54,37 @@ public class Setting {
         Prefers.put("hot", hot);
     }
 
-    public static int getWall() {
-        return Math.clamp(Prefers.getInt("wall", 1), MIN_WALL, MAX_WALL);
+    public static String getHotMovie() {
+        return Prefers.getString("hot_movie");
     }
 
-    public static void putWall(int wall) {
-        Prefers.put("wall", Math.clamp(wall, MIN_WALL, MAX_WALL));
+    public static void putHotMovie(String hot) {
+        Prefers.put("hot_movie", hot);
     }
 
-    public static int getWallType() {
-        return Math.clamp(Prefers.getInt("wall_type", 0), MIN_WALL_TYPE, MAX_WALL_TYPE);
+    public static String getHotTv() {
+        return Prefers.getString("hot_tv");
     }
 
-    public static void putWallType(int type) {
-        Prefers.put("wall_type", Math.clamp(type, MIN_WALL_TYPE, MAX_WALL_TYPE));
+    public static void putHotTv(String hot) {
+        Prefers.put("hot_tv", hot);
+    }
+
+    public static String getHotVariety() {
+        return Prefers.getString("hot_variety");
+    }
+
+    public static void putHotVariety(String hot) {
+        Prefers.put("hot_variety", hot);
+    }
+
+    /** 上次成功拉取热词的时间，用于节流。 */
+    public static boolean isHotExpired() {
+        return System.currentTimeMillis() - Prefers.getLong("hot_time") > HOT_TTL_MS;
+    }
+
+    public static void putHotTime() {
+        Prefers.put("hot_time", System.currentTimeMillis());
     }
 
     public static int getThemeColor() {
@@ -75,18 +95,8 @@ public class Setting {
         Prefers.put("theme_color", color);
     }
 
-    public static int getWallColor() {
-        return Prefers.getInt("wall_color", 0);
-    }
-
-    public static void putWallColor(int color) {
-        Prefers.put("wall_color", color);
-    }
-
     public static int getDynamicColor() {
-        int color = getThemeColor();
-        if (color == -1) return 0;
-        return color != 0 ? color : getWallColor();
+        return Math.max(getThemeColor(), 0);
     }
 
     public static int getSiteMode() {

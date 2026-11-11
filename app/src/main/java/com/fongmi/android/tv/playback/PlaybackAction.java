@@ -7,15 +7,10 @@ import androidx.media3.common.C;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.player.PlayerManager;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.utils.ResUtil;
 
 public final class PlaybackAction {
-
-    public static void setPlaybackMode(PlayerManager player, TextView engine) {
-        if (engine != null) engine.setText(getEngineText(player));
-    }
 
     public static float toggleSpeed(PlayerManager player, TextView view) {
         float speed = player.toggleSpeed();
@@ -76,15 +71,6 @@ public final class PlaybackAction {
 
     public static void setWebPlaybackMode(boolean active, View... nativeOnlyViews) {
         for (View view : nativeOnlyViews) setVisible(view, !active);
-    }
-
-    public static int getEngine(PlayerManager player) {
-        if (player == null || player.isReleased()) return PlayerSetting.getEngine();
-        return player.getEngine();
-    }
-
-    public static String getEngineText(PlayerManager player) {
-        return ResUtil.getStringArray(R.array.select_engine)[getEngine(player)];
     }
 
     private static boolean hasTextTrack(PlayerManager player) {

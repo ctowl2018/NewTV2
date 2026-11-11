@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  字幕 / 音轨 / 弹幕浮层的内容：标题行 + 右侧动作图标 + 轨道（弹幕）列表。
+
+  由 TrackSheet 统一绑定：动作图标的可见性按类型决定
+    · 字幕：搜索 / 本地文件 / 字幕内容 / 字幕设置
+    · 音轨、视轨：设置
+    · 弹幕：搜索 / 设置（本地文件与弹幕内容按钮已移除）
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        style="@style/PlaybackSheetTitleRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/sheetTrackTitle"
+            style="@style/PlaybackSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            tools:text="选择字幕" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/sheetTrackSearch"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/dialog_action_search_danmaku"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="7dp"
+            android:src="@drawable/ic_action_search"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/sheetTrackChoose"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/dialog_action_load_danmaku"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="7dp"
+            android:src="@drawable/ic_action_choose"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/sheetTrackContent"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/content_title"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="7dp"
+            android:src="@drawable/ic_action_content"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.DialogActionView
+            android:id="@+id/sheetTrackSetting"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/selector_sheet_chip_round"
+            android:contentDescription="@string/subtitle_setting"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="7dp"
+            android:src="@drawable/ic_danmaku_setting"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+        android:id="@+id/sheetTrackRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingBottom="4dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:maxHeight="220dp"
+        tools:listitem="@layout/adapter_track" />
+
+    <!--
+      弹幕快捷调节：字体缩放 / 最大滚动行数，仅弹幕模式显示。
+      单行紧凑排布（标签 + 细滑块 + 当前值），滑块轨道与播放进度条同规格；
+      范围、步长、取值与弹幕设置页完全一致，读写同一份 DanmakuSetting（Prefers）。
+    -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/sheetTrackDanmakuQuick"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="2dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="2dp"
+            android:background="#1FFFFFFF" />
+
+        <!-- 字体缩放 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="76dp"
+                android:text="@string/danmaku_text_size"
+                android:textColor="@color/text"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/textScaleSlider"
+                android:contentDescription="@string/danmaku_text_size"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1"
+                android:focusable="true"
+                android:stepSize="0.1"
+                android:valueFrom="0.5"
+                android:valueTo="3.0"
+                app:haloColor="@color/control_scrubber_halo"
+                app:haloRadius="9dp"
+                app:labelBehavior="gone"
+                app:thumbColor="@color/control_scrubber"
+                app:thumbHeight="10dp"
+                app:thumbRadius="5dp"
+                app:thumbTrackGapSize="0dp"
+                app:thumbWidth="10dp"
+                app:tickVisible="false"
+                app:trackColorActive="@color/control_track_played"
+                app:trackColorInactive="@color/control_track_unplayed"
+                app:trackHeight="2dp"
+                app:trackStopIndicatorSize="0dp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textScaleValue"
+                android:layout_width="34dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="12sp" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!-- 最大滚动行数 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="76dp"
+                android:text="@string/danmaku_max_scroll_lines"
+                android:textColor="@color/text"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/maxScrollLinesSlider"
+                android:contentDescription="@string/danmaku_max_scroll_lines"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_marginHorizontal="6dp"
+                android:layout_weight="1"
+                android:focusable="true"
+                android:stepSize="1"
+                android:valueFrom="0"
+                android:valueTo="20"
+                app:haloColor="@color/control_scrubber_halo"
+                app:haloRadius="9dp"
+                app:labelBehavior="gone"
+                app:thumbColor="@color/control_scrubber"
+                app:thumbHeight="10dp"
+                app:thumbRadius="5dp"
+                app:thumbTrackGapSize="0dp"
+                app:thumbWidth="10dp"
+                app:tickVisible="false"
+                app:trackColorActive="@color/control_track_played"
+                app:trackColorInactive="@color/control_track_unplayed"
+                app:trackHeight="2dp"
+                app:trackStopIndicatorSize="0dp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/maxScrollLinesValue"
+                android:layout_width="34dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="12sp" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

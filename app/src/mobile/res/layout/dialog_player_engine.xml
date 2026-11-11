@@ -18,7 +18,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/player_engine"
+            android:text="@string/player"
             android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
@@ -39,26 +39,6 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         android:paddingBottom="24dp">
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/exo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/shape_accent"
-            android:text="@string/play_exo"
-            android:textColor="@color/selector_control"
-            android:textSize="14sp" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/mpv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/shape_accent"
-            android:text="@string/play_mpv"
-            android:textColor="@color/selector_control"
-            android:textSize="14sp" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/other"

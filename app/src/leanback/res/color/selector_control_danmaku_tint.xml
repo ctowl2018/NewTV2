@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕按钮着色：常态纯白，聚焦或正开着弹幕浮层时品牌橙；开关状态由图标本身（勾 / 斜线）表达。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/control_scrubber" android:state_focused="true" />
+    <item android:color="@color/control_scrubber" android:state_activated="true" />
+    <item android:color="@color/white" />
+</selector>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  字幕图标：圆角方框 + 两行「短-长 / 长-短」字幕条（按参考图重绘）
+  几何比例取自参考图：外框 60x55px、描边 4.5px、圆角 9px；字幕条高 4px，
+  第一行 10px + 20px，第二行 21px + 10px，两行中心在内框上下对称
+  视觉外框 20.9 x 19.0dp，与音轨（21x19）/ 倍速（19x19）图标同一视觉高度；
+  纯白，由 selector_control_icon_tint 着色
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 外框 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M4.675,3.275 L19.325,3.275 A2.35,2.35 0 0 1 21.675,5.625 L21.675,18.375 A2.35,2.35 0 0 1 19.325,20.725 L4.675,20.725 A2.35,2.35 0 0 1 2.325,18.375 L2.325,5.625 A2.35,2.35 0 0 1 4.675,3.275 Z"
+        android:strokeColor="@android:color/white"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.55" />
+
+    <!-- 第一行左（短） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6.08,9.64 L7.82,9.64"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.4" />
+
+    <!-- 第一行右（长） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12.00,9.64 L17.22,9.64"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.4" />
+
+    <!-- 第二行左（长） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M6.08,14.17 L11.65,14.17"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.4" />
+
+    <!-- 第二行右（短） -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M15.49,14.17 L17.22,14.17"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.4" />
+</vector>

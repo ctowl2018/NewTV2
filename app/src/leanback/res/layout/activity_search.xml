@@ -109,14 +109,16 @@
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 
+            <!-- 联想词：有输入时显示，热播三分类常驻时隐藏 -->
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/word"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                android:text="@string/search_hot"
+                android:text="@string/search_suggest"
                 android:textColor="@color/white"
-                android:textSize="24sp" />
+                android:textSize="24sp"
+                android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/wordRecycler"
@@ -126,6 +128,79 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:overScrollMode="never"
+                android:visibility="gone"
+                tools:itemCount="10"
+                tools:listitem="@layout/adapter_search_word" />
+
+            <!-- 热播剧集 -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvWord"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="14dp"
+                android:text="@string/search_hot_tv"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/tvWordRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-6dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:visibility="gone"
+                tools:itemCount="10"
+                tools:listitem="@layout/adapter_search_word" />
+
+            <!-- 热播电影 -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/movieWord"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="14dp"
+                android:text="@string/search_hot_movie"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/movieWordRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-6dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:visibility="gone"
+                tools:itemCount="10"
+                tools:listitem="@layout/adapter_search_word" />
+
+            <!-- 热门综艺 -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/varietyWord"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="14dp"
+                android:text="@string/search_hot_variety"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/varietyWordRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="-6dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:visibility="gone"
                 tools:itemCount="10"
                 tools:listitem="@layout/adapter_search_word" />
 

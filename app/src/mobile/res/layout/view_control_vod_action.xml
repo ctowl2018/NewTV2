@@ -28,7 +28,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/player"
             style="@style/Control"
-            android:text="@string/play_exo" />
+            android:text="@string/player" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/decoder"

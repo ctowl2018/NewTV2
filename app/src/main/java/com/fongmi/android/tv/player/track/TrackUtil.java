@@ -61,30 +61,6 @@ public class TrackUtil {
         return track;
     }
 
-    @Nullable
-    public static Track fromSelection(Tracks tracks, TrackSelectionOverride selection, int role) {
-        if (selection.trackIndices.size() != 1) return null;
-        int selectionIndex = selection.trackIndices.get(0);
-        int ordinal = 0;
-        for (Tracks.Group group : tracks.getGroups()) {
-            if (group.getType() != selection.getType()) continue;
-            for (int i = 0; i < group.length; i++) {
-                if (group.getMediaTrackGroup().equals(selection.mediaTrackGroup) && i == selectionIndex) return createSelectedTrack(group, i, ordinal, role);
-                ordinal++;
-            }
-        }
-        return null;
-    }
-
-    private static Track createSelectedTrack(Tracks.Group group, int index, int ordinal, int role) {
-        Format format = group.getTrackFormat(index);
-        String name = format.label == null ? "" : format.label;
-        Track track = createTrack(group.getType(), name, format, ordinal);
-        track.setRole(role);
-        track.setSelected(true);
-        return track;
-    }
-
     public static void reset(Player player) {
         player.setTrackSelectionParameters(createResetBuilder(player).build());
     }
@@ -172,7 +148,6 @@ public class TrackUtil {
 
     @Nullable
     private static TrackSelectionOverride findRestorationOverride(Tracks tracks, Track track) {
-        if (track.isSecondary()) return null;
         TrackInfo info = find(tracks, track);
         if (info != null) return createOverride(track, info);
         if (track.isSelected() || track.getType() != C.TRACK_TYPE_TEXT) return null;
@@ -192,7 +167,6 @@ public class TrackUtil {
     }
 
     private static void putOverride(Tracks currentTracks, Track track, Map<Integer, TrackSelectionOverride> overridesByType, List<Track> pending) {
-        if (track.isSecondary()) return;
         TrackSelectionOverride override = findRestorationOverride(currentTracks, track);
         if (override == null) {
             pending.add(track);

@@ -6,7 +6,6 @@
 
 
     <!-- Detail -->
-    <string name="detail_title"><xliff:g name="name">%s</xliff:g> : <xliff:g name="name">%s</xliff:g></string>
     <string name="detail_site">Site: <xliff:g name="name">%s</xliff:g></string>
     <string name="detail_year">Year: <xliff:g name="name">%s</xliff:g></string>
     <string name="detail_area">Area: <xliff:g name="name">%s</xliff:g></string>
@@ -27,7 +26,6 @@
     <string name="play_op">OP</string>
     <string name="play_ed">ED</string>
     <string name="play_exo">EXO</string>
-    <string name="play_mpv">MPV</string>
     <string name="play_other">Other</string>
     <string name="play_next">Next</string>
     <string name="play_prev">Prev</string>
@@ -43,13 +41,8 @@
     <string name="play_edition">Title</string>
     <string name="play_chapter">Chapter</string>
     <string name="play_disc_menu">Top menu</string>
-    <string name="play_disc_menu_unavailable">Cannot open this disc menu. For BD-J, install Java from Settings → Modules first.</string>
-    <string name="play_disc_menu_timeout">Disc menu did not open; try again</string>
     <string name="play_scale">Default</string>
-    <string name="play_config">Config</string>
     <string name="play_change">Change</string>
-    <string name="play_invert">Invert</string>
-    <string name="play_across">Across</string>
     <string name="play_reverse">Reverse</string>
     <string name="play_track_text">Text</string>
     <string name="play_track_audio">Audio</string>
@@ -58,7 +51,6 @@
     <string name="play_backward_hint">Reverse play switched</string>
     <string name="play_switch_flag">Switching flag to <xliff:g name="name">%s</xliff:g></string>
     <string name="play_switch_site">Switching site to <xliff:g name="name">%s</xliff:g></string>
-    <string name="play_switch_parse">Switching parse to <xliff:g name="name">%s</xliff:g></string>
 
     <!-- Playback Setting -->
     <string name="setting_tab_offset">Offset</string>
@@ -152,12 +144,9 @@
     <string name="subtitle_reset">Reset</string>
     <string name="subtitle_tab_appearance">Appearance</string>
     <string name="subtitle_tab_adjust">Adjust</string>
-    <string name="subtitle_tab_advanced">Advanced</string>
     <string name="subtitle_offset">Subtitle offset</string>
     <string name="subtitle_size">Size</string>
-    <string name="subtitle_brightness">Subtitle brightness</string>
     <string name="subtitle_position">Position</string>
-    <string name="subtitle_primary_position">Primary position</string>
     <string name="subtitle_style">Style</string>
     <string name="playback_font">Font</string>
     <string name="playback_font_default">System default</string>
@@ -181,15 +170,8 @@
     <string name="subtitle_shadow_strength">Shadow strength</string>
     <string name="subtitle_background">Background</string>
     <string name="subtitle_background_opacity">Background transparency</string>
-    <string name="subtitle_secondary_track">Secondary subtitles</string>
-    <string name="subtitle_secondary_default">Default</string>
-    <string name="subtitle_secondary_off">Off</string>
-    <string name="subtitle_secondary_auto">Auto</string>
-    <string name="subtitle_secondary_select">Select</string>
     <string name="subtitle_primary_role">P</string>
     <string name="subtitle_secondary_role">S</string>
-    <string name="subtitle_secondary_track_select">Secondary subtitle</string>
-    <string name="subtitle_secondary_position">Secondary position</string>
     <string name="subtitle_color_white">White</string>
     <string name="subtitle_color_yellow">Yellow</string>
     <string name="subtitle_color_cyan">Cyan</string>
@@ -261,7 +243,6 @@
 
     <!-- Setting -->
     <string name="setting_vod">Vod</string>
-    <string name="setting_wall">Wallpaper</string>
     <string name="setting_player">Player setting</string>
     <string name="setting_module">Modules</string>
     <string name="setting_danmaku">Danmaku setting</string>
@@ -271,7 +252,6 @@
     <string name="setting_custom">Custom</string>
     <string name="setting_size">Image size</string>
     <string name="setting_doh">DoH</string>
-    <string name="setting_proxy">Proxy</string>
     <string name="setting_cache">Cache</string>
     <string name="setting_backup">Backup</string>
     <string name="setting_restore">Restore</string>
@@ -280,13 +260,11 @@
     <string name="setting_off">Off</string>
     <string name="setting_on">On</string>
 
-    <string name="module_bdj">BD-J</string>
     <string name="module_thunder">Thunder</string>
     <string name="module_version">Version: %1$s</string>
     <string name="module_installing">Installing…</string>
     <string name="module_cancelling">Cancelling…</string>
     <string name="module_cancelled">Cancelled</string>
-    <string name="module_complete">Installed</string>
     <string name="module_failed">Failed: %1$s</string>
     <string name="module_cancel">Cancel</string>
     <string name="module_failed_title">Operation failed</string>
@@ -317,7 +295,6 @@
     <string name="module_remove">Remove</string>
     <string name="module_removing">Removing…</string>
     <string name="module_confirm_remove">Confirm removal in the system dialog</string>
-    <string name="module_removed">Removed</string>
 
     <!-- Backup & Restore -->
     <string name="restore_select">Select backup</string>
@@ -328,14 +305,11 @@
 
     <!-- Player -->
     <string name="player">Player</string>
-    <string name="player_engine">Engine</string>
     <string name="player_debug">Debug</string>
     <string name="player_render">Video output</string>
     <string name="player_libass">libass</string>
     <string name="player_background">Background play</string>
     <string name="player_audio_pass_through">Audio passthrough</string>
-    <string name="player_audio_decode">Audio software decode</string>
-    <string name="player_video_decode">Video software decode</string>
     <string name="player_dolby_vision_output">Dolby Vision</string>
     <string name="player_aac_track">Prefer aac track</string>
     <string name="player_adblock">Remove ads</string>
@@ -351,26 +325,14 @@
     <string name="player_preload_size">Preload size</string>
     <string name="player_preload_time">Preload time</string>
     <string name="player_preload_time_value">%1$d seconds</string>
-    <string name="player_mpv_conf">mpv.conf</string>
-    <string name="player_mpv_gpu_next">gpu-next</string>
-    <string name="player_mpv_vulkan">vulkan</string>
-    <string name="player_motion_restart">Applies the next time you open a video</string>
-    <string name="player_mpv_motion">Frame interpolation (SDR)</string>
-    <string name="player_mpv_motion_unavailable">Interpolation is unavailable in this playback mode</string>
-    <string name="player_mpv_motion_applying">Applying…</string>
-    <string name="player_mpv_motion_target">Target: %1$d fps</string>
-    <string name="player_mpv_motion_capped">Target: %1$.2f fps (display limit)</string>
-    <string name="player_mpv_motion_failed">Unable to change interpolation</string>
-    <string name="player_mpv_conf_priority_hint">Reopen playback to load mpv.conf. Media options, scripts, and controls can change settings afterward; the last write applies. volume is the control volume baseline.</string>
-    <string name="player_mpv_conf_conflict_hint">Player controls manage: %1$s. Media options, scripts, and controls follow the last write; volume is the control volume baseline.</string>
-    <string name="player_mpv_conf_import_success">Loaded mpv.conf. Tap OK to save.</string>
-    <string name="player_mpv_conf_import_failed">Unable to import mpv.conf</string>
-    <string name="player_mpv_conf_save_failed">Unable to save mpv.conf</string>
     <string name="player_ua">User-Agent</string>
 
     <!-- Danmaku -->
     <string name="danmaku_load">Danmaku load</string>
+    <string name="danmaku_heatmap">Show danmaku heatmap on progress bar</string>
     <string name="danmaku_api">Search API</string>
+    <string name="danmaku_api_required">Please configure the danmaku API before searching</string>
+    <string name="danmaku_api_invalid">The danmaku API address is invalid, please check it</string>
     <string name="danmaku_auto_load">Auto search</string>
     <string name="danmaku_spider_first">Spider first</string>
 
@@ -379,10 +341,12 @@
     <string name="search_record">History</string>
     <string name="search_suggest">Suggest</string>
     <string name="search_hot">Hot</string>
+    <string name="search_hot_movie">Popular movies</string>
+    <string name="search_hot_tv">Popular series</string>
+    <string name="search_hot_variety">Popular shows</string>
 
     <!-- Dialog -->
     <string name="dialog_edit">Edit</string>
-    <string name="dialog_import">Import</string>
     <string name="dialog_positive">OK</string>
     <string name="dialog_negative">Cancel</string>
     <string name="dialog_select_edition">Select title</string>
@@ -400,22 +364,16 @@
     <string name="error_play_next">It\'s the last episode!</string>
     <string name="error_play_prev">It\'s the first episode!</string>
     <string name="error_play_parse">Unable to parse url</string>
-    <string name="error_play_drm">This device does not support the required DRM scheme</string>
     <string name="error_play_url">Unable to load url</string>
     <string name="error_episode_missing">Cannot restore the saved episode. Select another episode.</string>
     <string name="error_episode_not_found">Cannot find the requested episode. Select another episode.</string>
-    <string name="error_play_flag">No flag data</string>
     <string name="error_play_timeout">Timed out</string><string name="error_audio_effect_unsupported">Audio settings are unavailable for the current playback mode</string>
-    <string name="bdj_preparing">Preparing BD-J menu</string>
-    <string name="error_bdj_prepare">ISO menu check or BD-J setup failed: %1$s</string>
-    <string name="error_audio_effect_tunnel">Audio settings are unavailable in tunnel mode</string>
     <string name="error_audio_effect_passthrough">Audio settings are unavailable for passthrough audio</string>
     <string name="error_audio_effect_apply">Unable to apply audio settings</string>
     <string name="error_video_effect_unsupported">Video settings are unavailable for the current playback mode</string>
     <string name="error_video_effect_decode">Video settings require hardware video decoding</string>
     <string name="error_video_effect_drm">Video settings are unavailable for DRM video</string>
     <string name="error_video_effect_tunnel">Video settings are unavailable in tunnel mode</string>
-    <string name="error_video_effect_dolby_vision_passthrough">Video settings are unavailable for Dolby Vision passthrough</string>
     <string name="error_detail">No play data</string>
     <string name="error_empty">Nothing here 👀</string>
 
@@ -446,7 +404,6 @@
     <string name="yes">Yes</string>
     <string name="none">None</string>
     <string name="times">times</string>
-    <string name="lines">lines</string>
 
     <string-array name="select_dolby_vision_output">
         <item>Auto</item>
@@ -454,16 +411,7 @@
         <item>Off</item>
     </string-array>
 
-    <string-array name="select_engine">
-        <item>EXO</item>
-        <item>MPV</item>
-    </string-array>
 
-    <string-array name="select_mpv_motion">
-        <item>@string/setting_off</item>
-        <item>60 fps</item>
-        <item>120 fps</item>
-    </string-array>
 
     <string-array name="select_render">
         <item>Surface</item>
@@ -516,11 +464,7 @@
     <string name="content_image_subtitle">[Image subtitle]</string>
     <string name="content_retry">Retry subtitles</string>
     <string name="content_retry_loading">Loading…</string>
-    <string name="subtitle_offset_primary">Primary subtitle delay</string>
-    <string name="subtitle_offset_secondary">Secondary subtitle delay</string>
-    <string name="subtitle_offset_both">Both subtitle delays</string>
     <string name="subtitle_offset_link">Adjust both delays</string>
-    <string name="subtitle_offset_reset">Reset subtitle timing</string>
     <string name="subtitle_offset_limit">Subtitle delay must stay within ±300 seconds.</string>
 
     <string name="decoder_setting">Decoder settings</string>
@@ -566,7 +510,6 @@
     <string name="mpv_script_disabled">Disabled</string>
     <string name="mpv_script_error">MPV operation failed</string>
     <string name="mpv_script_timeout">No response; queued actions cancelled.</string>
-    <string name="mpv_script_unavailable">Start MPV playback first.</string>
     <string name="mpv_script_add_command">Add command button</string>
     <string name="mpv_script_edit_command">Edit command</string>
     <string name="mpv_script_command">MPV command</string>
@@ -596,7 +539,6 @@
     <string name="speed_value_50" translatable="false">5.0</string>
 
     <string name="phone_input">Remote input</string>
-    <string name="log_action">Logs</string>
     <string name="device_open_web">Controls</string>
     <string name="device_view_logs">Logs</string>
     <string name="device_rename">Name device</string>
@@ -614,7 +556,6 @@
     <string name="device_cast_title">Cast to a device</string>
     <string name="device_sync_history_title">Sync history</string>
     <string name="device_sync_keep_title">Sync favorites</string>
-    <string name="error_mpv_runtime">MPV is unavailable. Using ExoPlayer: %1$s</string>
     <string name="transfer_paused">Paused</string>
     <string name="transfer_resume">Continue</string>
     <string name="transfer_detail">%1$s/s · %2$s remaining</string>
@@ -631,5 +572,36 @@
     <string name="dialog_max_length">Enter at most %1$d characters</string>
     <string name="dialog_min_choices">Select at least %1$d options</string>
     <string name="dialog_max_choices">Select at most %1$d options</string>
+
+    <!-- 移植自 tv-latest：播放设置浮层 / 弹幕搜索 -->
+    <string name="setting_more">More settings</string>
+    <string name="play_pause">Play/Pause</string>
+    <string name="play_episodes">Episodes</string>
+    <string name="danmaku_search">Danmaku search</string>
+    <string name="danmaku_search_action">Search</string>
+    <string name="danmaku_filter_all">All</string>
+    <string name="danmaku_filter_type">Type</string>
+    <string name="danmaku_filter_source">Source</string>
+    <string name="danmaku_group_drama">Series</string>
+    <string name="danmaku_group_movie">Movie</string>
+    <string name="danmaku_group_anime">Anime</string>
+    <string name="danmaku_group_variety">Variety</string>
+    <string name="danmaku_group_documentary">Documentary</string>
+    <string name="danmaku_group_other">Other</string>
+    <string name="danmaku_platform_qiyi">iQIYI</string>
+    <string name="danmaku_platform_qq">Tencent</string>
+    <string name="danmaku_platform_youku">Youku</string>
+    <string name="danmaku_platform_renren">Renren</string>
+    <string name="danmaku_platform_migu">Migu</string>
+    <string name="danmaku_platform_bilibili">Bilibili</string>
+    <string name="danmaku_platform_imgo">Mango TV</string>
+    <string name="danmaku_platform_leshi">LeShi</string>
+    <string name="danmaku_platform_sohu">Sohu</string>
+    <string name="danmaku_search_count">%1$d items</string>
+    <string name="danmaku_search_count_filtered">%1$d / %2$d items</string>
+    <string name="danmaku_search_empty">No matching danmaku found</string>
+    <string name="danmaku_search_empty_filter">Nothing matches the current filter</string>
+
+    <string name="danmaku_disabled_hint">Danmaku is disabled. Enable it in settings first.</string>
 
 </resources>

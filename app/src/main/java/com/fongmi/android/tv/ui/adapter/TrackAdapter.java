@@ -1,19 +1,14 @@
 package com.fongmi.android.tv.ui.adapter;
 
-import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.StringRes;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.databinding.AdapterTrackBinding;
-import com.google.android.material.color.MaterialColors;
-import com.google.android.material.textview.MaterialTextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,18 +57,6 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.ViewHolder> 
         holder.binding.getRoot().setSelected(selected);
         holder.binding.text.setText(item.track().getName());
         holder.binding.text.setSelected(selected || holder.itemView.hasFocus());
-        bindRole(holder.binding.role, item.role());
-    }
-
-    private static void bindRole(MaterialTextView view, @StringRes int role) {
-        view.setVisibility(role == 0 ? View.GONE : View.VISIBLE);
-        if (role == 0) return;
-        boolean primary = role == R.string.subtitle_primary_role;
-        int container = primary ? com.google.android.material.R.attr.colorPrimaryContainer : com.google.android.material.R.attr.colorTertiaryContainer;
-        int content = primary ? com.google.android.material.R.attr.colorOnPrimaryContainer : com.google.android.material.R.attr.colorOnTertiaryContainer;
-        view.setText(role);
-        view.setTextColor(MaterialColors.getColor(view, content));
-        view.setBackgroundTintList(ColorStateList.valueOf(MaterialColors.getColor(view, container)));
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -93,6 +76,6 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.ViewHolder> 
         }
     }
 
-    public record TrackItem(Track track, @StringRes int role) {
+    public record TrackItem(Track track) {
     }
 }

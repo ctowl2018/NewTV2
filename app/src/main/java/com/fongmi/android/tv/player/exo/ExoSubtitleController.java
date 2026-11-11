@@ -12,7 +12,6 @@ import com.fongmi.android.tv.player.compat.SubtitleSelectionState;
 import com.fongmi.android.tv.player.subtitle.AssSubtitleSupport;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 
-import java.util.List;
 
 /**
  * 字幕控制。
@@ -74,16 +73,10 @@ final class ExoSubtitleController {
             if (group.getType() != C.TRACK_TYPE_TEXT) continue;
             for (int index = 0; index < group.length; index++) {
                 if (!group.isTrackSelected(index)) continue;
-                return new SubtitleSelectionState(new TrackSelectionOverride(group.getMediaTrackGroup(), index), null, List.of(), null, false);
+                return new SubtitleSelectionState(new TrackSelectionOverride(group.getMediaTrackGroup(), index));
             }
         }
         return SubtitleSelectionState.EMPTY;
-    }
-
-    void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-    }
-
-    void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
     }
 
     void prepareForNewMedia() {

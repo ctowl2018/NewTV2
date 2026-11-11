@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹幕搜索筛选胶囊的文字色：生效中 / 聚焦为纯白，其余 60% 白。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/white" android:state_selected="true" />
+    <item android:color="@color/white" android:state_focused="true" />
+    <item android:color="@color/white_60" />
+</selector>

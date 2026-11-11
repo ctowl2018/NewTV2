@@ -8,39 +8,99 @@
         android:id="@+id/top"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
+        android:background="@drawable/bg_widget_top"
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="28dp"
         android:visibility="gone"
         tools:visibility="visible">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/title"
-            style="@style/Shadow"
+        <!-- 片名与当前集数同一行，中间用「：」分隔（集数由代码拼到 subtitle 文本前） -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/titleRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:layout_toStartOf="@+id/clock"
-            android:ellipsize="marquee"
-            android:singleLine="true"
-            android:textColor="@color/white"
-            android:textSize="20sp"
-            tools:text="慶餘年第一季" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/subtitle"
-            style="@style/Shadow"
+            <!-- 宽度由代码按「整行 − 集数」分配：短片名不会把集数顶到右侧时钟旁 -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/title"
+                style="@style/Shadow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFeatureSettings="tnum"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="慶餘年第一季" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/subtitle"
+                style="@style/Shadow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFeatureSettings="tnum"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="：第1集"
+                tools:visibility="visible" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!--
+          弹幕标题（两行）：仅在「当前选中弹幕来自弹幕接口且已成功获取」时启用，
+          与上面的 titleRow 互斥显示。
+          结构与弹幕搜索结果条目一致：主行大标题「剧名 · 集数 分集标题」，副行「年份 · 类型 · 平台」。
+        -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/danmakuRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/title"
-            android:layout_alignStart="@+id/title"
             android:layout_marginEnd="16dp"
             android:layout_toStartOf="@+id/clock"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:textColor="@color/white_80"
-            android:textSize="16sp"
+            android:orientation="vertical"
             android:visibility="gone"
-            tools:text="第1集"
-            tools:visibility="visible" />
+            tools:visibility="gone">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/danmakuTitle"
+                style="@style/Shadow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="小城良方 · 第3集 摸鱼败将" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/danmakuSubtitle"
+                style="@style/Shadow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="@color/white_60"
+                android:textSize="14sp"
+                tools:text="2026 · 国产剧 · 爱奇艺" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/clock"

@@ -18,12 +18,23 @@
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal">
+    <!--
+      两个时间文字上的 translationY=0.5dp 是「行高补偿」，不是视觉间距：
+      LeanbackTimeBar 为了让热力图与条身之间留出 1dp 间隙，在自己的测量高度上方追加了 1dp
+      （HEAT_EXTRA_DP）。本行是 wrap_content + center_vertical，行高因此从 26dp 长到 27dp，
+      居中的文字随行高被抬高 0.5dp；补 half 的平移正好把文字压回条身中线（14dp 处）。
+
+      用 translationY 而不是 layout_marginTop：平移不参与测量，位移量就是字面值，
+      不会因 LinearLayout 对「居中 + margin」的换算而变成半个或一个 margin 的不确定值。
+      改 LeanbackTimeBar.HEAT_EXTRA_DP 时必须同步改成它的一半。
+    -->
 
     <TextView
         android:id="@id/exo_position"
         style="@style/ExoStyledControls.TimeText.Position"
         android:fontFeatureSettings="tnum"
-        android:paddingHorizontal="0dp" />
+        android:paddingHorizontal="0dp"
+        android:translationY="0.5dp" />
 
     <com.fongmi.android.tv.ui.custom.LeanbackTimeBar
         android:id="@id/exo_progress"
@@ -41,6 +52,7 @@
         android:id="@id/exo_duration"
         style="@style/ExoStyledControls.TimeText.Position"
         android:fontFeatureSettings="tnum"
-        android:paddingHorizontal="0dp" />
+        android:paddingHorizontal="0dp"
+        android:translationY="0.5dp" />
 
 </LinearLayout>

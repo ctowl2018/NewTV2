@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  弹幕搜索筛选胶囊的聚焦态：1.5dp 纯白描边 + 15% 白底。
+
+  与浮层条目一样用「白描边」表达焦点，但这里不做内缩：胶囊本身只有约 30dp 高，
+  内缩 2dp 会把文字挤窄；筛选行距弹层边缘还有 12dp，描边直接画在胶囊边缘也不会被裁。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <solid android:color="@color/white_15" />
+
+    <corners android:radius="28dp" />
+
+    <stroke
+        android:width="1.5dp"
+        android:color="@color/white" />
+
+    <padding
+        android:bottom="7dp"
+        android:left="12dp"
+        android:right="12dp"
+        android:top="7dp" />
+
+</shape>

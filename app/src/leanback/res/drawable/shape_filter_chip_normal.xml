@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  弹幕搜索「分类 / 来源」筛选胶囊的常态：极淡白底 + 28dp 圆角，与首页类型胶囊同一套胶囊语言。
+  三个状态（常态 / 选中 / 聚焦）必须保持完全一致的内边距，否则切换筛选时文字会横向跳动。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <solid android:color="@color/white_05" />
+
+    <corners android:radius="28dp" />
+
+    <padding
+        android:bottom="7dp"
+        android:left="12dp"
+        android:right="12dp"
+        android:top="7dp" />
+
+</shape>

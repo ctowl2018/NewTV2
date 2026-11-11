@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  弹幕搜索结果条目：两行结构化展示。
+
+  接口返回的原始标题是一条 60 字左右的复合串
+  （「剧名(年份)【类型】from 数据源 - 【平台】 集数 分集标题」），直接铺一行只能靠跑马灯来回滚，
+  根本读不出「这是第几集、来自哪个平台」。这里拆成：
+    主行：剧名 · 集数 分集标题     （白色 15sp，溢出时横向跑马灯）
+    副行：年份 · 类型 · 平台       （50% 白 12sp，短，超出直接截断）
+  主行改用 PingPongMarqueeTextView：由 DanmakuSearchAdapter 只放行「当前选中（焦点）行」，
+  且仅在文字宽超过可见宽度时启动，左右往复、两端自然掉头；其余行与短标题都保持静态。
+  副行仍是 ellipsize=end（信息量低，不值得让它滚）。
+  浮层加宽后大多数剧名能完整显示，真正超长的结果才会滚。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/selector_sheet_chip"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="9dp">
+
+    <com.fongmi.android.tv.ui.custom.PingPongMarqueeTextView
+        android:id="@+id/primary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="15sp"
+        tools:text="小城良方 · 第1集 亮仔变老铁" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:textColor="@color/white_50"
+        android:textSize="12sp"
+        tools:text="2026 · 国产剧 · 爱奇艺" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

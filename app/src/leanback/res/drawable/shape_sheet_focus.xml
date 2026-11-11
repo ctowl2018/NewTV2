@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放页浮层（倍速 / 选集 / 字幕 / 音轨 / 弹幕 / 播放设置）统一的「焦点框」：
+
+  把白色描边 + 极淡白底整体内缩 2dp 画在条目内部，而不是压在条目边缘。
+  这样无论焦点落在浮层首行还是末行，焦点框都完整落在弹层圆角玻璃之内：
+  既不会被裁剪，也不会溢出到弹层之外；各浮层共用这一套，键盘导航时焦点态清晰且风格一致。
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="2dp">
+
+    <shape android:shape="rectangle">
+        <corners android:radius="6dp" />
+        <solid android:color="#1AFFFFFF" />
+        <stroke
+            android:width="1.5dp"
+            android:color="@color/white" />
+    </shape>
+
+</inset>

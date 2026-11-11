@@ -323,11 +323,6 @@ public final class WebActivity extends BaseActivity implements BrowserWebView.Br
     }
 
     @Override
-    protected boolean customWall() {
-        return false;
-    }
-
-    @Override
     protected void onBackInvoked() {
         if (isSpiderPage()) {
             webView.evaluateJavascript("(() => { if (typeof window.spiderBack !== 'function') return false; window.spiderBack(); return true; })()", handled -> {

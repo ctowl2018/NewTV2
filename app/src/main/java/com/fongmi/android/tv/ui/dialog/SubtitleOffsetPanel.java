@@ -1,11 +1,5 @@
 package com.fongmi.android.tv.ui.dialog;
 
-import android.view.View;
-
-import androidx.appcompat.app.AlertDialog;
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.Player;
-
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ViewSettingSliderBinding;
 import com.fongmi.android.tv.databinding.ViewSubtitleOffsetBinding;
@@ -14,10 +8,8 @@ import com.fongmi.android.tv.player.compat.SubtitleOffsets;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.SliderUtil;
 import com.fongmi.android.tv.utils.SubtitleOffsetUtil;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Locale;
-import java.util.Objects;
 
 final class SubtitleOffsetPanel {
 
@@ -25,7 +17,6 @@ final class SubtitleOffsetPanel {
 
     private final ViewSubtitleOffsetBinding binding;
     private final PlayerManager player;
-    private AlertDialog resetDialog;
 
     SubtitleOffsetPanel(ViewSubtitleOffsetBinding binding, PlayerManager player) {
         this.binding = binding;
@@ -33,18 +24,11 @@ final class SubtitleOffsetPanel {
     }
 
     void bind() {
-        boolean secondary = hasSecondary();
-        boolean restoreFocus = !secondary && (binding.secondaryOffset.getRoot().hasFocus() || binding.linkOffsetsRow.hasFocus());
-        binding.secondaryOffset.getRoot().setVisibility(secondary ? View.VISIBLE : View.GONE);
-        binding.linkOffsetsRow.setVisibility(secondary ? View.VISIBLE : View.GONE);
-        if (!secondary) binding.linkOffsets.setChecked(false);
-        bindSlider(binding.timeOffset, secondary ? R.string.subtitle_offset_primary : R.string.subtitle_offset, true);
-        bindSlider(binding.secondaryOffset, R.string.subtitle_offset_secondary, false);
+        bindSlider(binding.timeOffset, R.string.subtitle_offset);
         updateValues();
-        if (restoreFocus) binding.timeOffset.slider.requestFocus();
     }
 
-    private void bindSlider(ViewSettingSliderBinding item, int title, boolean primary) {
+    private void bindSlider(ViewSettingSliderBinding item, int title) {
         item.title.setText(title);
         item.slider.setContentDescription(item.title.getText());
         item.slider.clearOnChangeListeners();
@@ -52,18 +36,17 @@ final class SubtitleOffsetPanel {
         item.slider.setValueTo(SubtitleOffsetUtil.MAX_OFFSET_MS);
         item.slider.setStepSize(STEP_MS);
         item.slider.setLabelFormatter(this::format);
-        item.slider.setEnabled(isAvailable() && (primary || hasSecondary()));
+        item.slider.setEnabled(isAvailable());
         item.slider.addOnChangeListener((slider, value, fromUser) -> {
-            if (fromUser) setOffset(Math.round(value), primary);
+            if (fromUser) setOffset(Math.round(value));
         });
     }
 
-    private void setOffset(long valueMs, boolean primary) {
-        if (!isAvailable() || !primary && !hasSecondary()) return;
+    private void setOffset(long valueMs) {
+        if (!isAvailable()) return;
         SubtitleOffsets previous = player.getSubtitleOffsets();
-        boolean linked = hasSecondary() && binding.linkOffsets.isChecked();
-        long deltaMs = valueMs - (primary ? previous.primaryMs : previous.secondaryMs);
-        SubtitleOffsets next = SubtitleOffsetUtil.shift(previous, deltaMs, primary || linked, !primary || linked);
+        long deltaMs = valueMs - previous.primaryMs;
+        SubtitleOffsets next = SubtitleOffsetUtil.shift(previous, deltaMs, true, false);
         if (next != null) player.setSubtitleOffsets(next);
         else Notify.show(R.string.subtitle_offset_limit);
         updateValues();
@@ -72,7 +55,6 @@ final class SubtitleOffsetPanel {
     private void updateValues() {
         SubtitleOffsets offsets = isAvailable() ? player.getSubtitleOffsets() : SubtitleOffsets.ZERO;
         updateValue(binding.timeOffset, offsets.primaryMs);
-        updateValue(binding.secondaryOffset, offsets.secondaryMs);
     }
 
     private void updateValue(ViewSettingSliderBinding item, long valueMs) {
@@ -86,44 +68,16 @@ final class SubtitleOffsetPanel {
 
     void reset() {
         if (!isAvailable()) return;
-        if (!hasSecondary()) {
-            reset(true, false);
-            return;
-        }
-        if (resetDialog != null) return;
-        Player source = player.getPlayer();
-        MediaItem media = player.getCurrentMediaItem();
-        var selection = player.getSubtitleSelectionState();
-        String[] choices = {
-                binding.getRoot().getContext().getString(R.string.subtitle_offset_primary),
-                binding.getRoot().getContext().getString(R.string.subtitle_offset_secondary),
-                binding.getRoot().getContext().getString(R.string.subtitle_offset_both)
-        };
-        resetDialog = new MaterialAlertDialogBuilder(binding.getRoot().getContext()).setTitle(R.string.subtitle_offset_reset).setItems(choices, (dialog, which) -> {
-            if (isAvailable() && source == player.getPlayer() && Objects.equals(media, player.getCurrentMediaItem()) && selection.equals(player.getSubtitleSelectionState())) reset(which != 1, which != 0);
-            else bind();
-        }).setNegativeButton(R.string.dialog_negative, null).create();
-        resetDialog.setOnDismissListener(dialog -> resetDialog = null);
-        resetDialog.show();
-    }
-
-    void resetAll() {
-        reset(true, true);
-    }
-
-    private void reset(boolean primary, boolean secondary) {
-        if (!isAvailable()) return;
         SubtitleOffsets previous = player.getSubtitleOffsets();
-        player.setSubtitleOffsets(new SubtitleOffsets(primary ? 0 : previous.primaryMs, secondary ? 0 : previous.secondaryMs));
+        player.setSubtitleOffsets(new SubtitleOffsets(0, previous.secondaryMs));
         updateValues();
     }
 
-    void release() {
-        if (resetDialog != null) resetDialog.dismiss();
+    void resetAll() {
+        reset();
     }
 
-    private boolean hasSecondary() {
-        return isAvailable() && player.getSubtitleSelectionState().activeSecondarySelection != null;
+    void release() {
     }
 
     private boolean isAvailable() {

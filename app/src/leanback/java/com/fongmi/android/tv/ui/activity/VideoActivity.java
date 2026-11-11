@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.activity;
 
 import android.annotation.SuppressLint;
+import android.animation.TimeInterpolator;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
@@ -8,12 +9,16 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.style.ClickableSpan;
+import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.PathInterpolator;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
@@ -21,6 +26,7 @@ import androidx.leanback.widget.OnChildViewHolderSelectedListener;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
 import androidx.media3.ui.PlayerSeekView;
 import androidx.media3.ui.PlayerView;
@@ -35,6 +41,7 @@ import com.fongmi.android.tv.api.DanmakuApi;
 import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Danmaku;
+import com.fongmi.android.tv.bean.DanmakuTitle;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
@@ -48,6 +55,7 @@ import com.fongmi.android.tv.databinding.ActivityVideoBinding;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.impl.CustomTarget;
+import com.fongmi.android.tv.impl.DanmakuListener;
 import com.fongmi.android.tv.model.VideoViewModel;
 import com.fongmi.android.tv.playback.ExternalPlayback;
 import com.fongmi.android.tv.playback.PlaybackAction;
@@ -71,16 +79,21 @@ import com.fongmi.android.tv.ui.adapter.PartAdapter;
 import com.fongmi.android.tv.ui.adapter.QualityAdapter;
 import com.fongmi.android.tv.ui.adapter.QuickAdapter;
 import com.fongmi.android.tv.ui.custom.VodInput;
+import com.fongmi.android.tv.ui.helper.ControlFocusEffect;
+import com.fongmi.android.tv.ui.sheet.DanmakuSearchSheet;
+import com.fongmi.android.tv.ui.sheet.PanelSheet;
+import com.fongmi.android.tv.ui.sheet.SheetList;
+import com.fongmi.android.tv.ui.sheet.TrackSheet;
+import com.fongmi.android.tv.ui.sheet.VideoSheet;
 import com.fongmi.android.tv.ui.custom.CustomMovement;
+import com.fongmi.android.tv.ui.custom.LeanbackTimeBar;
+import com.fongmi.android.tv.ui.danmaku.DanmakuHeat;
 import com.fongmi.android.tv.ui.dialog.ChapterDialog;
 import com.fongmi.android.tv.ui.dialog.ContentDialog;
-import com.fongmi.android.tv.ui.dialog.DanmakuDialog;
 import com.fongmi.android.tv.ui.dialog.DecoderSettingDialog;
 import com.fongmi.android.tv.ui.dialog.EditionDialog;
 import com.fongmi.android.tv.ui.dialog.ParseDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
-import com.fongmi.android.tv.ui.dialog.SpeedSettingDialog;
-import com.fongmi.android.tv.ui.dialog.TrackDialog;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.FileUtil;
@@ -103,7 +116,54 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, VodInput.Listener, ParseDialog.Listener, ArrayAdapter.OnClickListener, FlagAdapter.OnClickListener, EpisodeAdapter.OnClickListener, QualityAdapter.OnClickListener, QuickAdapter.OnClickListener, Clock.Callback {
+public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, VodInput.Listener, ParseDialog.Listener, ArrayAdapter.OnClickListener, FlagAdapter.OnClickListener, EpisodeAdapter.OnClickListener, QualityAdapter.OnClickListener, QuickAdapter.OnClickListener, Clock.Callback, DanmakuListener {
+
+    private static final float[] SPEEDS = {0.5f, 0.8f, 1.0f, 1.2f, 1.5f, 2.0f, 3.0f, 5.0f};
+    private static final int SPEED_VISIBLE_ROWS = 5;
+    private static final int SHEET_ROW_CHROME_DP = 72;
+    private static final int SHEET_PLAYING_SLOT_DP = 16;
+
+    /**
+     * 控制条整体下压量（物理像素）：把 {@code view_control_vod} 根部原本 48dp 的底部内边距
+     * 收掉一截，让进度条与按钮行更贴近屏幕下沿，画面底部不留一片纯黑。
+     *
+     * <p>用 px 而不是 dp：这个量是照着「屏幕像素」定的，换一台密度不同的设备时下压的观感应当一致。
+     */
+    private static final int CONTROL_BOTTOM_LIFT_PX = 100;
+    /**
+     * 控制条底部的最小安全留白：下压到极限也要保留这么高，
+     * 否则按钮的焦点光晕（{@code GlowBackground}）会贴住屏幕下沿、看起来像被切掉。
+     */
+    private static final int CONTROL_BOTTOM_MIN_DP = 8;
+    /** {@code view_control_vod.xml} 根布局的底部内边距基准值，与 XML 里的 48dp 必须一致。 */
+    private static final int CONTROL_BOTTOM_BASE_DP = 48;
+    /**
+     * 进度条行（左时间 + timebar + 热力图 + 右时间）整体下移量（物理像素）。
+     *
+     * <p>用 {@code translationY} 而不是 margin：平移不参与测量，控制条总高度、按钮行位置、
+     * 以及 {@link #applyControlBottomInset()} 算出的底部留白都不受影响，只有这一行下移。
+     * 行本身与下方按钮行之间还有 10dp 的 {@code layout_marginBottom}，正好容纳这段位移。
+     */
+    private static final int SEEK_ROW_SHIFT_PX = 20;
+    /** 控制条 / 顶部信息条的滑入、滑出动画：入先快后慢（减速），出先慢后快（加速）。 */
+    private static final long SLIDE_IN_DURATION = 240L;
+    private static final long SLIDE_OUT_DURATION = 200L;
+    private static final TimeInterpolator SLIDE_IN = new PathInterpolator(0.05f, 0.7f, 0.1f, 1f);
+    private static final TimeInterpolator SLIDE_OUT = new PathInterpolator(0.3f, 0f, 0.8f, 0.15f);
+
+    private final DanmakuHeat.Listener mHeatListener = this::applyHeatmap;
+
+    private TextView mSheetProbe;
+    private final ActivityResultLauncher<Intent> mSubtitleLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> FileChooser.getUri(result, this::setSubtitleFile));
+    private VideoSheet mSheet;
+    private PanelSheet mPanelSheet;
+    private TrackSheet mTrackSheet;
+    private DanmakuSearchSheet mDanmakuSearchSheet;
+    private SheetList mEpisodeList;
+    private SheetList mSpeedList;
+    private ControlFocusEffect.Effect mControlFocusEffect;
+    private View mPinnedAnchor;
+    private final List<Episode> mEpisodes = new ArrayList<>();
 
     private ActivityVideoBinding mBinding;
     private VideoViewModel mViewModel;
@@ -118,7 +178,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private VodInput mInput;
     private Clock mClock;
     private View mFocus1;
-    private View mFocus2;
     private Runnable mR1;
     private Runnable mR2;
     private Runnable mR3;
@@ -128,6 +187,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private boolean webFullscreen;
     private boolean externalPlaybackCompleted;
     private boolean useParse;
+    /** 控制条是否处于「呼出」状态：以逻辑位为准，滑动动画期间不会误判。 */
+    private boolean mControlShown;
 
     public static void push(FragmentActivity activity, String text) {
         if (TextUtils.isEmpty(text)) return;
@@ -263,7 +324,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private int getScale() {
-        return mHistory != null && mHistory.getScale() != -1 ? Math.clamp(mHistory.getScale(), PlayerSetting.MIN_SCALE, PlayerSetting.MAX_SCALE) : PlayerSetting.getScale();
+        return mHistory != null && mHistory.getScale() != -1 ? Math.clamp(mHistory.getScale(), PlayerSetting.MIN_SCALE, PlayerSetting.MAX_SCALE) : PlayerSetting.MIN_SCALE;
     }
 
     private void setScale(int scale) {
@@ -320,6 +381,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
         mFrameParams = mBinding.video.getLayoutParams();
+        applyControlBottomInset();
+        applySeekRowShift();
         mClock = Clock.create(mBinding.widget.clock);
         mInput = VodInput.create(this, this);
         mR1 = this::hideControl;
@@ -330,8 +393,39 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         setVideoView();
         setViewModel();
         renderFallbackName(getName());
+        // 弹幕热力图：解析完成 / 换集清空都会回调，先把已有数据贴上（换集后是空）
+        DanmakuHeat.addListener(mHeatListener);
+        applyHeatmap();
         checkCast();
         checkId();
+    }
+
+    /**
+     * 把控制条整体向下压 {@link #CONTROL_BOTTOM_LIFT_PX} px。
+     *
+     * <p>控制条根部是 {@code layout_gravity=bottom} 的 {@code wrap_content} 面板，底边恒贴屏幕下沿，
+     * 所以「整体下移」等价于减少它的底部内边距：面板高度随之变矮、背景渐变的上沿一起下移，
+     * 进度条与按钮行都会向下走，不会只挪内容却留下一块空背景。
+     *
+     * <p>底部留白始终不少于 {@link #CONTROL_BOTTOM_MIN_DP}，低密度设备上 48dp 本身就不足 100px 时
+     * 只会把留白压到下限，不会出现负 padding（负值在布局里会被当 0，反而丢掉了安全区）。
+     */
+    private void applyControlBottomInset() {
+        View control = mBinding.control.getRoot();
+        int base = ResUtil.dp2px(CONTROL_BOTTOM_BASE_DP);
+        int bottom = Math.max(ResUtil.dp2px(CONTROL_BOTTOM_MIN_DP), base - CONTROL_BOTTOM_LIFT_PX);
+        control.setPaddingRelative(control.getPaddingStart(), control.getPaddingTop(), control.getPaddingEnd(), bottom);
+    }
+
+    /**
+     * 把「左时间 / timebar+热力图 / 右时间」这一整行下移 {@link #SEEK_ROW_SHIFT_PX} px。
+     *
+     * <p>只动 {@code control.seek}（PlayerSeekView）这一行的 {@code translationY}：
+     * 它是控制条里的一行，平移不影响父容器的测量结果，所以按钮行、底部留白、
+     * 以及热力图追加高度带来的行高变化都不会被牵连；行内三段（含热力图）一起走，永远保持对齐。
+     */
+    private void applySeekRowShift() {
+        mBinding.control.seek.setTranslationY(SEEK_ROW_SHIFT_PX);
     }
 
     @Override
@@ -341,9 +435,22 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.video.setOnClickListener(view -> onVideo());
         mBinding.change.setOnClickListener(view -> onChange());
         mBinding.content.setOnClickListener(view -> onContent());
-        mBinding.control.action.text.setOnClickListener(this::onTrack);
-        mBinding.control.action.audio.setOnClickListener(this::onTrack);
-        mBinding.control.action.video.setOnClickListener(this::onTrack);
+        mBinding.control.action.playPause.setOnClickListener(view -> onPlayPause());
+        mBinding.control.action.episodes.setOnClickListener(view -> onEpisodeSheet(view));
+        mBinding.control.action.panelBtn.setOnClickListener(view -> onControlPanel());
+        mBinding.control.action.debug.setOnClickListener(view -> {
+            toggleDebugView();
+            view.setSelected(PlayerSetting.isDebug());
+        });
+        mBinding.control.action.debug.setSelected(PlayerSetting.isDebug());
+        mBinding.control.action.text.setOnClickListener(this::onTrackSheet);
+        mBinding.control.action.audio.setOnClickListener(this::onTrackSheet);
+        mBinding.control.action.video.setOnClickListener(this::onTrackSheet);
+        // 弹幕：单击 = 开关，长按 = 「选择弹幕」浮层
+        mBinding.control.action.danmaku.setOnLongClickListener(view -> { onDanmakuSheet(); return true; });
+        // 上/下集长按 = 选集浮层
+        mBinding.control.action.next.setOnLongClickListener(view -> { onEpisodeSheet(view); return true; });
+        mBinding.control.action.prev.setOnLongClickListener(view -> { onEpisodeSheet(view); return true; });
         mBinding.control.action.ending.setUpListener(this::onEndingAdd);
         mBinding.control.action.ending.setDownListener(this::onEndingSub);
         mBinding.control.action.opening.setUpListener(this::onOpeningAdd);
@@ -351,7 +458,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.control.action.next.setOnClickListener(view -> checkNext());
         mBinding.control.action.prev.setOnClickListener(view -> checkPrev());
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
-        mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
+        mBinding.control.action.speed.setOnClickListener(view -> onSpeedSheet());
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
         mBinding.control.action.replay.setOnClickListener(view -> onReplay());
         mBinding.control.action.parse.setOnClickListener(view -> onParse());
@@ -359,7 +466,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.control.action.decoder.setOnClickListener(view -> onDecoder());
         mBinding.control.action.ending.setOnClickListener(view -> onEnding());
         mBinding.control.action.repeat.setOnClickListener(view -> onRepeat());
-        mBinding.control.action.danmaku.setOnClickListener(view -> onDanmaku());
+        mBinding.control.action.danmaku.setOnClickListener(view -> onDanmakuToggle());
         mBinding.control.action.edition.setOnClickListener(view -> onEdition());
         mBinding.control.action.chapter.setOnClickListener(view -> onChapter());
         mBinding.control.action.discMenu.setOnClickListener(this::onDiscMenu);
@@ -387,6 +494,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
                 if (mEpisodeAdapter.getItemCount() > 20 && position > 1) mBinding.episode.setSelectedPosition((position - 2) * 20);
             }
         });
+        setControlFocus();
     }
 
     private void setRecyclerView() {
@@ -411,16 +519,103 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void setVideoView() {
-        setSeekNextFocusDown(R.id.next);
-        setActionFocusBoundary(mBinding.control.action.getRoot());
-        PlayerEngineDialog.setText(mBinding.control.action.player);
-        mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
+        setSeekNextFocusDown(R.id.playPause);
+        mSheet = new VideoSheet(mBinding.video, mBinding.sheet, this::onSheetShow, this::onSheetDismiss);
+        mPanelSheet = new PanelSheet(this, mBinding.control.action);
+        mDanmakuSearchSheet = new DanmakuSearchSheet(this, this::hideSheet);
+        mTrackSheet = new TrackSheet(this, this::hideSheet, this::pickSubtitleFile, this::showDanmakuSearchSheet);
+        mEpisodeList = new SheetList(this);
+        mEpisodeList.setAvoidEmptyRows(true);
+        mSpeedList = new SheetList(this);
+        syncPlayPause();
+        syncDanmaku();
+        // 控制条焦点链：运行时统一重串（两端自封口 / 上回进度条 / 下自封口）
+        relinkControlFocus();
     }
 
-    private void setPlaybackMode() {
-        if (isWebPlaybackActive()) return;
-        PlaybackAction.setPlaybackMode(player(), mBinding.control.action.player);
+    /**
+     * 控制条焦点链运行时统一重串。
+     *
+     * <p>不再在 XML 里逐个写 nextFocusLeft/Right：按「当前可见且可聚焦」的按钮顺序
+     * 动态生成左右链，两端指向自身封口；上键统一回进度条，下键停在自身。
+     * 动态隐藏（弹幕总开关、Web 播放批量隐藏）后重调本方法即可，不会留下指向 gone 视图的死链。
+     */
+    private void relinkControlFocus() {
+        View root = mBinding.control.action.getRoot();
+        if (!(root instanceof ViewGroup group)) return;
+        List<View> focusable = new ArrayList<>();
+        collectFocusable(group, focusable);
+        int seekId = androidx.media3.ui.R.id.exo_progress;
+        for (int i = 0; i < focusable.size(); i++) {
+            View view = focusable.get(i);
+            view.setNextFocusLeftId(i == 0 ? view.getId() : focusable.get(i - 1).getId());
+            view.setNextFocusRightId(i == focusable.size() - 1 ? view.getId() : focusable.get(i + 1).getId());
+            view.setNextFocusUpId(seekId);
+            view.setNextFocusDownId(view.getId());
+        }
     }
+
+    private void collectFocusable(ViewGroup group, List<View> out) {
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child.getId() == R.id.hidden) continue; // hidden 容器仅作转发，不进焦点链
+            if (child.getVisibility() != View.VISIBLE) continue;
+            if (child.isFocusable() && child.getId() != View.NO_ID) out.add(child);
+            if (child instanceof ViewGroup nested) collectFocusable(nested, out);
+        }
+    }
+
+    /** 控制条按钮聚焦反馈（辉光 / 放大），移植自 tv-latest。 */
+    private void setControlFocus() {
+        View[] glow = {
+                mBinding.control.action.playPause,
+                mBinding.control.action.prev,
+                mBinding.control.action.next,
+                mBinding.control.action.episodes,
+                mBinding.control.action.danmaku,
+                mBinding.control.action.text,
+                mBinding.control.action.audio,
+                mBinding.control.action.speed,
+                mBinding.control.action.debug,
+                mBinding.control.action.panelBtn};
+        View[] scaleOnly = {
+                mBinding.control.action.opening,
+                mBinding.control.action.ending};
+        mControlFocusEffect = ControlFocusEffect.attach(mBinding.control.getRoot(), glow, scaleOnly);
+        ControlFocusEffect.setHaloScale(mBinding.control.action.playPause, 1.45f);
+    }
+
+    private void syncPlayPause() {
+        boolean playing = service() != null && isPlayingForControls();
+        mBinding.control.action.playPause.setImageResource(playing ? R.drawable.selector_control_pause : R.drawable.selector_control_play);
+    }
+
+    private void syncDanmaku() {
+        boolean load = DanmakuSetting.isLoad();
+        boolean enabled = load && (service() == null ? DanmakuSetting.isShow() : player().isDanmakuEnabled());
+        // 常显 + 置灰（tv-latest 口径）：让「总开关未开启」的提示在按确认键时可达
+        mBinding.control.action.danmaku.setVisibility(View.VISIBLE);
+        mBinding.control.action.danmaku.setSelected(enabled);
+        mBinding.control.action.danmaku.setAlpha(load ? 1f : 0.4f);
+        // 热力图跟着弹幕一起开关：弹幕关掉就没必要再显示密度曲线
+        applyHeatmap();
+    }
+
+    /** 把当前这一集的弹幕分布贴到进度条上；弹幕关闭 / 无数据 / 设置里关掉热力图时传 null。 */
+    private void applyHeatmap() {
+        LeanbackTimeBar bar = timeBar();
+        if (bar == null) return;
+        boolean danmaku = service() == null ? DanmakuSetting.isShow() : player().isDanmakuEnabled();
+        boolean show = DanmakuSetting.isLoad() && DanmakuSetting.isHeatmap() && danmaku;
+        bar.setHeatmap(show ? DanmakuHeat.get() : null);
+    }
+
+    @Nullable
+    private LeanbackTimeBar timeBar() {
+        View view = mBinding.control.seek.findViewById(androidx.media3.ui.R.id.exo_progress);
+        return view instanceof LeanbackTimeBar bar ? bar : null;
+    }
+
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(VideoViewModel.class);
@@ -759,10 +954,79 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void renderPlaybackMetadata(MediaMetadata metadata) {
         if (isPlaybackCurrent()) player().setMetadata(metadata);
+        // 左上角：片名与当前集数同一行，中间用「：」分隔（站点给的集数常带空格/全角空格，去掉避免「： 1」）
         mBinding.widget.title.setText(MediaItemFactory.getDisplayTitle(metadata));
-        mBinding.widget.title.setSelected(true);
-        mBinding.widget.subtitle.setText(metadata.subtitle);
-        mBinding.widget.subtitle.setVisibility(TextUtils.isEmpty(metadata.subtitle) ? View.GONE : View.VISIBLE);
+        String episode = TextUtils.isEmpty(metadata.subtitle) ? "" : trimSpace(metadata.subtitle.toString());
+        boolean hasSubtitle = !TextUtils.isEmpty(episode);
+        mBinding.widget.subtitle.setText(hasSubtitle ? "：" + episode : "");
+        mBinding.widget.subtitle.setVisibility(hasSubtitle ? View.VISIBLE : View.GONE);
+        // 先定标题形态（单行 / 弹幕两行），再按最终可见性分配宽度
+        renderDanmakuTitle();
+        applyTitleWidth();
+    }
+
+    /**
+     * 弹幕标题：当前选中弹幕来自弹幕接口（非片源自带）且已成功获取时，
+     * 左上角改为两行结构 —— 主行「剧名 · 集数 分集标题」、副行「年份 · 类型 · 平台」，
+     * 与弹幕搜索结果的条目同构；片源自带弹幕 / 本地弹幕 / 尚未选中时，仍用原来的「片名：集数」单行。
+     */
+    @Override
+    protected void renderDanmakuTitle() {
+        if (mBinding == null) return;
+        Danmaku selected = selectedDanmaku();
+        DanmakuTitle meta = selected == null ? null : selected.getMeta();
+        boolean danmaku = meta != null && selected.isRemote();
+        if (danmaku) {
+            String secondary = meta.getSecondary();
+            mBinding.widget.danmakuTitle.setText(meta.getPrimary());
+            mBinding.widget.danmakuSubtitle.setText(secondary);
+            mBinding.widget.danmakuSubtitle.setVisibility(TextUtils.isEmpty(secondary) ? View.GONE : View.VISIBLE);
+        }
+        mBinding.widget.danmakuRow.setVisibility(danmaku ? View.VISIBLE : View.GONE);
+        mBinding.widget.titleRow.setVisibility(danmaku ? View.GONE : View.VISIBLE);
+    }
+
+    /** 当前选中的弹幕；尚未选中（含切集后清空）时返回 null。 */
+    private Danmaku selectedDanmaku() {
+        if (service() == null) return null;
+        for (Danmaku item : player().getDanmakus()) if (item.isSelected()) return item;
+        return null;
+    }
+
+    /**
+     * 片名宽度按「整行可用宽度 − 集数宽度」分配。
+     *
+     * <p>用 {@code layout_weight=1} 时片名会吃掉整行剩余宽度，短片名也会把集数顶到最右边（紧挨右侧时钟）；
+     * 全改成 wrap_content 又会在长片名时把集数挤出可视区。这里取实测宽度的较小值：
+     * 短片名紧贴集数，长片名截断、集数始终完整可见。
+     */
+    private void applyTitleWidth() {
+        TextView title = mBinding.widget.title;
+        TextView subtitle = mBinding.widget.subtitle;
+        View row = mBinding.widget.titleRow;
+        row.post(() -> {
+            int rowWidth = row.getWidth();
+            if (rowWidth <= 0) return;
+            int reserved = subtitle.getVisibility() == View.VISIBLE ? measureTextWidth(subtitle) : 0;
+            int width = Math.max(0, Math.min(measureTextWidth(title), rowWidth - reserved));
+            ViewGroup.LayoutParams params = title.getLayoutParams();
+            if (params.width == width) return;
+            params.width = width;
+            title.setLayoutParams(params);
+        });
+    }
+
+    /** 去掉首尾空白，含全角空格（U+3000）与不换行空格（U+00A0）—— trim() 只处理 <= U+0020。 */
+    private String trimSpace(String text) {
+        return text.replaceAll("^[\\s\\u3000\\u00A0]+|[\\s\\u3000\\u00A0]+$", "");
+    }
+
+    /** 文本的实测像素宽（含内边距，多留 1px 防止四舍五入后又触发截断）。 */
+    private int measureTextWidth(TextView view) {
+        CharSequence text = view.getText();
+        int padding = view.getPaddingStart() + view.getPaddingEnd();
+        if (TextUtils.isEmpty(text)) return padding;
+        return (int) Math.ceil(view.getPaint().measureText(text, 0, text.length())) + padding + 1;
     }
 
     @Override
@@ -864,6 +1128,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void setEpisodeAdapter(List<Episode> items) {
+        mEpisodes.clear();
+        mEpisodes.addAll(items);
         mBinding.episode.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         mEpisodeAdapter.addAll(items);
         setArrayAdapter(items.size());
@@ -945,7 +1211,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.flag.setSelectedPosition(mFlagAdapter.getPosition());
         mInput.setFullscreen(true);
         setFullscreen(true);
-        mFocus2 = null;
     }
 
     private void exitFullscreen() {
@@ -954,8 +1219,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         getFocus1().requestFocus();
         mInput.setFullscreen(false);
         setFullscreen(false);
-        mFocus2 = null;
-        hideInfo();
+        hideTop();
+        hideCenter();
     }
 
     private void onContent() {
@@ -1016,11 +1281,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void onScale() {
         setScale((getScale() + 1) % ResUtil.getStringArray(R.array.select_scale).length);
-    }
-
-    private void onSpeed() {
-        SpeedSettingDialog.create().show(this);
-        hideControl();
     }
 
     private boolean onSpeedLong() {
@@ -1123,11 +1383,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         hideControl();
     }
 
-    private void onTrack(View view) {
-        TrackDialog.create().type(Integer.parseInt(view.getTag().toString())).show(this);
-        hideControl();
-    }
-
     private void onEdition() {
         EditionDialog.create().player(player()).show(this);
         hideControl();
@@ -1148,14 +1403,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         return true;
     }
 
-    private void onDanmaku() {
-        DanmakuDialog.create().show(this);
-        hideControl();
-    }
-
     private void onToggle() {
-        if (isVisible(mBinding.control.getRoot())) hideControl();
-        else showControl(getFocus2());
+        if (isControlVisible()) hideControl();
+        else showControl();
     }
 
     private void showProgress() {
@@ -1183,33 +1433,82 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.widget.text.setText("");
     }
 
-    private void showInfo() {
-        mBinding.widget.top.setVisibility(View.VISIBLE);
-        mBinding.widget.center.setVisibility(View.VISIBLE);
-        setSeekPreviewTime(mBinding.widget.duration, mBinding.widget.position, 0);
+    /**
+     * 顶部信息条：全屏播放页在控制条呼出时，左上角「影片名称：+ 集数」、右上角时间。
+     * 与进度条同样从天顶边缘滑入，插值先快后慢。
+     */
+    private void showTop() {
+        if (!isFullscreen()) return;
+        View top = mBinding.widget.top;
+        top.animate().cancel();
+        float from = top.getTranslationY();
+        top.setTranslationY(from < 0f ? from : -slideDistance(top, ResUtil.dp2px(72)));
+        top.setVisibility(View.VISIBLE);
+        top.animate().translationY(0f).setDuration(SLIDE_IN_DURATION).setInterpolator(SLIDE_IN).start();
     }
 
-    private void hideInfo() {
-        mBinding.widget.top.setVisibility(View.GONE);
-        mBinding.widget.center.setVisibility(View.GONE);
+    private void hideTop() {
+        View top = mBinding.widget.top;
+        if (!isVisible(top)) return;
+        top.animate().cancel();
+        top.animate().translationY(-slideDistance(top, ResUtil.dp2px(72))).setDuration(SLIDE_OUT_DURATION).setInterpolator(SLIDE_OUT).withEndAction(() -> {
+            top.setVisibility(View.GONE);
+            top.setTranslationY(0f);
+        }).start();
     }
 
-    private void showControl(View view) {
+    /** 滑出距离：优先用真实高度，首帧尚未布局时退回估算值。 */
+    private float slideDistance(View view, int fallback) {
+        return view.getHeight() > 0 ? view.getHeight() : fallback;
+    }
+
+    private void showControl() {
         mInput.cancelSeek();
         updateDiscMenuVisibility();
-        mBinding.control.getRoot().setVisibility(View.VISIBLE);
-        view.requestFocus();
+        syncPlayPause();
+        syncDanmaku();
+        boolean wasShown = mControlShown;
+        mControlShown = true;
+        View bar = mBinding.control.getRoot();
+        if (!wasShown) {
+            bar.animate().cancel();
+            bar.setVisibility(View.VISIBLE);
+            // 从屏幕底部边缘滑入：起始位置在自身高度之外（若正在滑出则从其当前位置接着滑回来）
+            float from = bar.getTranslationY();
+            bar.setTranslationY(from > 0f ? from : slideDistance(bar, ResUtil.dp2px(160)));
+            bar.animate().translationY(0f).setDuration(SLIDE_IN_DURATION).setInterpolator(SLIDE_IN).start();
+            showTop();
+        }
+        // 初始焦点恒为播放/暂停：暂停、上键、下键、自动呼出等所有路径都走这里，
+        // 不再按调用方传入的锚点决定落点。
+        mBinding.control.action.playPause.requestFocus();
+        relinkControlFocus();
         setR1Callback();
     }
 
     private void hideControl() {
-        mBinding.control.getRoot().setVisibility(View.GONE);
+        // 浮层未关闭时控制条与浮层一起常驻
+        if (mSheet != null && mSheet.isShowing()) return;
         App.removeCallbacks(mR1);
+        if (!mControlShown) return;
+        mControlShown = false;
+        View bar = mBinding.control.getRoot();
+        bar.animate().cancel();
+        bar.animate().translationY(slideDistance(bar, ResUtil.dp2px(160))).setDuration(SLIDE_OUT_DURATION).setInterpolator(SLIDE_OUT).withEndAction(() -> {
+            bar.setVisibility(View.GONE);
+            bar.setTranslationY(0f);
+        }).start();
+        hideTop();
+    }
+
+    /** 控制条是否处于「呼出」状态：以逻辑位为准，滑动动画期间不会误判。 */
+    private boolean isControlVisible() {
+        return mControlShown;
     }
 
     private void hideCenter() {
         mBinding.widget.statusIcon.setImageResource(R.drawable.ic_widget_play);
-        hideInfo();
+        mBinding.widget.center.setVisibility(View.GONE);
     }
 
     private void setTraffic() {
@@ -1217,15 +1516,28 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         App.post(mR3, 1000);
     }
 
+    /**
+     * 自动隐藏状态机的唯一入口：先清掉旧计时，再按当前条件决定是否重新计时。
+     *
+     * <p>四个前置条件，任一不满足就不计时（控制条常驻）：
+     * <ol>
+     *   <li>不在拖动进度条 —— 拖动期间不打断；</li>
+     *   <li>播放设置 / 选集等浮层未打开 —— 两个层级一起常驻；</li>
+     *   <li>处于播放意图 —— 暂停态下呼出的控制条常驻，恢复播放后重新计时。</li>
+     * </ol>
+     */
     private void setR1Callback() {
+        App.removeCallbacks(mR1);
         if (isScrubbing()) return;
+        if (mSheet != null && mSheet.isShowing()) return;
+        if (!isPlayingForControls()) return;
         App.post(mR1, Constant.INTERVAL_HIDE);
     }
 
     @Override
     protected void onScrubbingChanged(boolean scrubbing) {
         if (scrubbing) App.removeCallbacks(mR1);
-        else if (isVisible(mBinding.control.getRoot())) setR1Callback();
+        else if (isControlVisible()) setR1Callback();
     }
 
     private void setR2Callback() {
@@ -1364,12 +1676,10 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onPrepare() {
-        setPlaybackMode();
     }
 
     @Override
     protected void onDecodeChanged() {
-        setPlaybackMode();
     }
 
     @Override
@@ -1397,7 +1707,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         boolean focused = button.hasFocus();
         boolean available = hasDiscMenu();
         button.setVisibility(available ? View.VISIBLE : View.GONE);
-        if (!available && focused && mBinding.control.getRoot().getVisibility() == View.VISIBLE) mBinding.control.action.opening.requestFocus();
+        if (!available && focused && isControlVisible()) mBinding.control.action.opening.requestFocus();
     }
 
     @Override
@@ -1415,7 +1725,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
                 break;
             case Player.STATE_ENDED:
                 hideProgress();
-                if (isDiscMenuActive()) hideInfo();
+                if (isDiscMenuActive()) hideCenter();
                 mClock.setCallback(null);
                 if (isWebPlaybackActive()) onPlaybackEnded();
                 break;
@@ -1452,19 +1762,18 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     protected void onPlayingChanged(boolean isPlaying) {
         mVod.onPlayingChanged(isPlaying && isPlayerPlaying());
-        if (isDiscMenuActive()) {
-            hideInfo();
-        } else if (isPlaying) {
-            hideCenter();
-        } else if (isPaused() || isWebPlaybackActive()) {
-            if (isFullscreen()) showInfo();
-            else hideInfo();
-        }
+        syncPlayPause();
+        // 屏幕中间只在拖动 / 快进快退时出现提示层；暂停不再弹任何中间控件，
+        // 顶部信息条跟随控制条显隐，不随播放状态单独开关。
+        if (isDiscMenuActive() || isPlaying) hideCenter();
+        // 播放 ↔ 暂停的切换会改变自动隐藏策略：暂停时取消计时（控制条常驻）、恢复播放时重新计时。
+        setR1Callback();
     }
 
     @Override
     public void onPlayWhenReadyChanged(boolean playWhenReady, int reason) {
         if (!playWhenReady && isOwner()) mInput.cancelSeek();
+        syncPlayPause();
     }
 
     @Override
@@ -1511,11 +1820,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     protected void onWebPlaybackChanged(boolean active) {
         PlaybackAction.setWebPlaybackMode(active, mBinding.control.action.player, mBinding.control.action.decoder, mBinding.control.action.reset, mBinding.control.action.replay, mBinding.control.action.repeat, mBinding.control.action.speed, mBinding.control.action.scale, mBinding.control.action.text, mBinding.control.action.audio, mBinding.control.action.video, mBinding.control.action.danmaku, mBinding.control.action.edition, mBinding.control.action.chapter, mBinding.control.action.opening, mBinding.control.action.ending);
         if (!active) {
-            setPlaybackMode();
-            setTrackVisible();
+                setTrackVisible();
             setMediaOptionVisible();
-            mBinding.control.action.danmaku.setVisibility(DanmakuSetting.isLoad() ? View.VISIBLE : View.GONE);
+            mBinding.control.action.danmaku.setVisibility(View.VISIBLE);
+            syncDanmaku();
         }
+        relinkControlFocus();
     }
 
     @Override
@@ -1566,6 +1876,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private boolean isPlayingForControls() {
         if (isWebPlaybackActive()) return isWebPlaybackPlaying();
+        if (service() == null) return false;
         return player().isPlaying() || ((isDiscMenuActive() || (isEnded() && isIsoPlaybackOngoing())) && controller().getPlayWhenReady());
     }
 
@@ -1601,25 +1912,22 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         return mFocus1 == null || mFocus1.getVisibility() != View.VISIBLE ? mBinding.video : mFocus1;
     }
 
-    private View getFocus2() {
-        return mFocus2 == null || !mFocus2.isAttachedToWindow() || mFocus2.getVisibility() != View.VISIBLE || mFocus2 == mBinding.control.action.opening || mFocus2 == mBinding.control.action.ending ? mBinding.control.action.next : mFocus2;
-    }
-
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
+        if (mSheet != null && mSheet.isShowing() && handleSheetHorizontalKey(event)) return true;
+        if (mSheet != null && mSheet.isShowing() && handleSheetVerticalKey(event)) return true;
         if (keyCode == KeyEvent.KEYCODE_MENU && KeyUtil.isActionDown(event)) mInput.cancelSeek();
         boolean discMenuShortcut = keyCode == KeyEvent.KEYCODE_MEDIA_TOP_MENU || keyCode == KeyEvent.KEYCODE_TV_CONTENTS_MENU;
-        boolean discMenuNavigation = keyCode != KeyEvent.KEYCODE_MENU && isFullscreen() && isGone(mBinding.control.getRoot());
+        boolean discMenuNavigation = keyCode != KeyEvent.KEYCODE_MENU && isFullscreen() && !isControlVisible();
         if ((discMenuShortcut || discMenuNavigation) && dispatchDiscMenuKey(event)) {
             mInput.cancelSeek();
             hideControl();
             return true;
         }
         if (isFullscreen() && KeyUtil.isMenuKey(event)) onToggle();
-        if (isVisible(mBinding.control.getRoot())) setR1Callback();
-        if (isVisible(mBinding.control.getRoot())) mFocus2 = getCurrentFocus();
-        if (isFullscreen() && isGone(mBinding.control.getRoot()) && service() != null && mInput.onKeyEvent(event)) return true;
+        if (isControlVisible()) setR1Callback();
+        if (isFullscreen() && !isControlVisible() && service() != null && mInput.onKeyEvent(event)) return true;
         if (KeyUtil.isMediaFastForward(event)) return onSeekForward();
         if (KeyUtil.isMediaRewind(event)) return onSeekBack();
         return super.dispatchKeyEvent(event);
@@ -1656,24 +1964,34 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onKeyUp() {
-        long position = player().getPosition();
-        long duration = player().getDuration();
-        if (player().canSetOpening(position, duration)) showControl(mBinding.control.action.opening);
-        else if (player().canSetEnding(position, duration)) showControl(mBinding.control.action.ending);
-        else showControl(getFocus2());
+        // 上键与下键保持一致：只负责呼出控制条，焦点统一落在播放/暂停。
+        // 不再因为「当前位置可设片头/片尾」就把默认焦点投到对应按钮上。
+        showControl();
     }
 
     @Override
     public void onKeyDown() {
-        showControl(getFocus2());
+        showControl();
     }
 
+    /**
+     * 确定键（播放/暂停）响应规则：
+     * <ul>
+     *   <li>播放中 → 暂停：<b>唯一</b>会呼出控制条的路径（呼出后因处于暂停态而常驻）；</li>
+     *   <li>暂停中 → 播放：只恢复播放，不呼出控制条，也不改动控制条的显示状态；</li>
+     *   <li>播放器为空（解析失败等）→ 沿用原有的重试逻辑。</li>
+     * </ul>
+     */
     @Override
     public void onKeyCenter() {
-        if (isPlayingForControls()) onPaused();
-        else if (!isWebPlaybackActive() && player().isEmpty()) onRefresh();
-        else onPlay();
-        hideControl();
+        if (isPlayingForControls()) {
+            onPaused();
+            showControl();
+        } else if (!isWebPlaybackActive() && player().isEmpty()) {
+            onRefresh();
+        } else {
+            onPlay();
+        }
     }
 
     @Override
@@ -1708,9 +2026,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onBackInvoked() {
-        if (handleWebViewNavigation()) {
+        if (mSheet != null && mSheet.isShowing()) {
+            hideSheet();
+        } else if (handleWebViewNavigation()) {
             return;
-        } else if (isVisible(mBinding.control.getRoot())) {
+        } else if (isControlVisible()) {
             hideControl();
         } else if (handleDiscMenuBack()) {
             return;
@@ -1728,12 +2048,310 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onDestroy() {
+        if (mSheet != null) mSheet.dismissNow();
         mInput.cancelSeek();
         mClock.release();
         saveHistory(true);
         if (isBindingOwner()) DanmakuApi.cancel();
         RefreshEvent.keep();
+        DanmakuHeat.removeListener(mHeatListener);
         App.removeCallbacks(mR1, mR2, mR3, mR4);
         super.onDestroy();
     }
+
+
+    // ==================================================================================
+    // 播放页浮层体系（移植自 tv-latest）
+    // ==================================================================================
+
+    /** 控制条上的播放/暂停按钮：只切换播放状态，控制条保持在屏。 */
+    private void onPlayPause() {
+        if (isPlayingForControls()) onPaused();
+        else onPlay();
+        syncPlayPause();
+        setR1Callback();
+    }
+
+    /** 「播放设置」：在按钮正上方展开浮层。 */
+    private void onControlPanel() {
+        if (mSheet.isShowing()) {
+            hideSheet();
+            return;
+        }
+        int max = Math.max(0, mBinding.video.getWidth() - ResUtil.dp2px(16));
+        mPanelSheet.bind(this::hideSheet);
+        int width = mPanelSheet.measureWidth(max) + ResUtil.dp2px(16);
+        mSheet.show(mBinding.control.action.panelBtn, mPanelSheet.getView(), width, mPanelSheet::focus);
+    }
+
+    /** 收起浮层并把焦点交还锚点按钮。 */
+    private void hideSheet() {
+        if (mSheet == null || !mSheet.isShowing()) return;
+        View anchor = mSheet.getAnchor();
+        mSheet.hide();
+        if (anchor != null && anchor.isShown()) anchor.requestFocus();
+        setR1Callback();
+    }
+
+    /** 浮层打开：进度条退出焦点链，并把浮层以外的控件整体锁掉。 */
+    private void onSheetShow() {
+        setControlPinned(mSheet == null ? null : mSheet.getAnchor());
+        setSeekFocusable(false);
+        setOutsideFocusable(false);
+        App.removeCallbacks(mR1);
+    }
+
+    /** 浮层关闭后恢复外部的焦点能力，并重新激活自动隐藏计时。 */
+    private void onSheetDismiss() {
+        if (mDanmakuSearchSheet != null) mDanmakuSearchSheet.onDismiss();
+        setSeekFocusable(true);
+        setOutsideFocusable(true);
+        mBinding.control.getRoot().post(() -> {
+            if (mSheet == null || !mSheet.isShowing()) setControlPinned(null);
+        });
+        setR1Callback();
+    }
+
+    /** 把「正开着浮层」记在锚点按钮上（activated，与 selected 业务态正交）。 */
+    private void setControlPinned(View anchor) {
+        if (mPinnedAnchor == anchor) return;
+        if (mPinnedAnchor != null) mPinnedAnchor.setActivated(false);
+        mPinnedAnchor = anchor;
+        if (anchor != null) anchor.setActivated(true);
+        if (mControlFocusEffect != null) mControlFocusEffect.setPinned(anchor);
+    }
+
+    private void setOutsideFocusable(boolean focusable) {
+        ViewGroup actionRoot = (ViewGroup) mBinding.control.action.getRoot();
+        actionRoot.setDescendantFocusability(focusable ? ViewGroup.FOCUS_BEFORE_DESCENDANTS : ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        actionRoot.setFocusable(focusable);
+        actionRoot.setFocusableInTouchMode(focusable);
+        mBinding.video.setFocusable(focusable);
+        mBinding.video.setFocusableInTouchMode(focusable);
+    }
+
+    private void setSeekFocusable(boolean focusable) {
+        View timeBar = mBinding.control.seek.findViewById(androidx.media3.ui.R.id.exo_progress);
+        if (timeBar == null) return;
+        timeBar.setFocusable(focusable);
+        timeBar.setFocusableInTouchMode(focusable);
+    }
+
+    /** 选集浮层：选集按钮 / 上集 / 下集长按打开。列表倒序（最新一集在最上）。 */
+    private void onEpisodeSheet(View anchor) {
+        if (mSheet.isShowing()) {
+            hideSheet();
+            return;
+        }
+        if (mEpisodes.isEmpty()) return;
+        List<String> texts = new ArrayList<>();
+        int selected = 0;
+        for (int i = mEpisodes.size() - 1; i >= 0; i--) {
+            Episode item = mEpisodes.get(i);
+            if (item.isSelected()) selected = texts.size();
+            texts.add(item.getDesc().concat(item.getName()));
+        }
+        int current = selected;
+        mEpisodeList.setTitle(R.string.play_episodes);
+        mEpisodeList.submit(texts, selected, selected, current, position -> {
+            int index = mEpisodes.size() - 1 - position;
+            hideSheet();
+            if (index < 0 || index >= mEpisodes.size()) return;
+            Episode item = mEpisodes.get(index);
+            if (item.isSelected()) return;
+            onItemClick(item);
+        });
+        int rows = Math.max(1, Math.min(6, texts.size()));
+        mEpisodeList.setRows(rows);
+        int chars = Math.max(1, (int) Math.ceil(measureSheetText(texts) / sheetCharWidth()));
+        int textWidth = measureSheetChars(Math.max(3, Math.min(15, chars)));
+        int width = textWidth + ResUtil.dp2px(SHEET_ROW_CHROME_DP + SHEET_PLAYING_SLOT_DP);
+        mSheet.show(anchor == null ? mBinding.control.action.episodes : anchor, mEpisodeList.getView(), width, mEpisodeList::focus);
+    }
+
+    /** 倍速浮层：从下往上是 0.5 / 0.8 / 1.0 / 1.2 / 1.5 / 2.0 / 3.0 / 5.0。 */
+    private void onSpeedSheet() {
+        if (mSheet.isShowing()) {
+            hideSheet();
+            return;
+        }
+        List<String> texts = new ArrayList<>();
+        for (int i = SPEEDS.length - 1; i >= 0; i--) texts.add(SPEEDS[i] + "x");
+        float current = service() == null ? 1.0f : player().getSpeed();
+        int selected = SPEEDS.length - 1 - nearestSpeedIndex(current);
+        mSpeedList.setTitle(R.string.play_speed);
+        mSpeedList.submit(texts, selected, selected, position -> {
+            hideSheet();
+            if (service() == null) return;
+            player().setSpeed(SPEEDS[SPEEDS.length - 1 - position]);
+        });
+        mSpeedList.setRows(SPEED_VISIBLE_ROWS);
+        int width = Math.max(measureSheetText(texts), ResUtil.dp2px(72)) + ResUtil.dp2px(24 + 16);
+        mSheet.show(mBinding.control.action.speed, mSpeedList.getView(), width, mSpeedList::focus);
+    }
+
+    /** 字幕 / 音轨 / 视轨浮层。 */
+    private void onTrackSheet(View view) {
+        onTrackSheet(Integer.parseInt(view.getTag().toString()));
+    }
+
+    private void onTrackSheet(int type) {
+        if (mSheet.isShowing()) hideSheet();
+        if (service() == null) return;
+        View anchor = switch (type) {
+            case C.TRACK_TYPE_AUDIO -> mBinding.control.action.audio;
+            case C.TRACK_TYPE_VIDEO -> mBinding.control.action.panelBtn;
+            default -> mBinding.control.action.text;
+        };
+        mTrackSheet.bindTrack(player(), type);
+        mSheet.show(anchor, mTrackSheet.getView(), ResUtil.dp2px(TrackSheet.WIDTH_DP) + ResUtil.dp2px(16), mTrackSheet::focus);
+    }
+
+    /** 弹幕浮层（长按弹幕按钮）：只保留搜索与设置两个动作。 */
+    private void onDanmakuSheet() {
+        if (mSheet.isShowing()) {
+            hideSheet();
+            return;
+        }
+        if (service() == null) return;
+        mTrackSheet.bindDanmaku(player());
+        mSheet.show(mBinding.control.action.danmaku, mTrackSheet.getView(), ResUtil.dp2px(TrackSheet.WIDTH_DP) + ResUtil.dp2px(16), mTrackSheet::focus);
+    }
+
+    /** 「选择弹幕」页的放大镜：切到同一个 VideoSheet 宿主里的弹幕搜索页。 */
+    private void showDanmakuSearchSheet() {
+        if (!ensureDanmakuApi()) return;
+        openDanmakuSearchSheet(true);
+    }
+
+    private void reopenDanmakuSearchSheet() {
+        if (service() == null) return;
+        if (!ensureDanmakuApi()) return;
+        // 先让控制条可见：浮层要拿 danmaku 按钮当锚点算坐标，锚点隐藏时会跑偏
+        showControl();
+        openDanmakuSearchSheet(false);
+    }
+
+    /**
+     * 弹幕接口没配置 / 地址非法时，弹窗一律不打开，只用 Toast 说明原因。
+     *
+     * <p>提示文案按状态区分（{@link DanmakuApi#getApiHintRes()}）：空 → 请配置；
+     * 有值但不合法 → 地址不可用，请检查。
+     *
+     * <p>搜索页一打开就会拿片名自动搜索，接口无效时那条同步链路会构造非法 URL
+     * （OkHttp 抛 {@link IllegalArgumentException}），所以入口必须先挡住。
+     */
+    private boolean ensureDanmakuApi() {
+        if (DanmakuApi.hasValidApi()) return true;
+        Notify.show(DanmakuApi.getApiHintRes());
+        return false;
+    }
+
+    private void openDanmakuSearchSheet(boolean autoSearch) {
+        if (service() == null) return;
+        if (!ensureDanmakuApi()) return;
+        mDanmakuSearchSheet.bind(player(), autoSearch);
+        int width = DanmakuSearchSheet.widthPx();
+        View content = mDanmakuSearchSheet.getView();
+        if (mSheet.isShowing()) mSheet.replace(content, width, mDanmakuSearchSheet::focus);
+        else mSheet.show(mBinding.control.action.danmaku, content, width, mDanmakuSearchSheet::focus);
+        mDanmakuSearchSheet.research();
+    }
+
+    @Override
+    public void setDanmakuApi(String url) {
+        if (mDanmakuSearchSheet == null) return;
+        mDanmakuSearchSheet.setDanmakuApi(url);
+        if (mDanmakuSearchSheet.hasKeyword()) App.post(this::reopenDanmakuSearchSheet);
+    }
+
+    /** 弹幕快捷开关：只切当前播放器的弹幕显隐，不写全局设置。 */
+    private void onDanmakuToggle() {
+        if (!DanmakuSetting.isLoad()) {
+            Notify.show(R.string.danmaku_disabled_hint);
+            return;
+        }
+        if (service() == null) return;
+        player().setDanmakuEnabled(!player().isDanmakuEnabled());
+        syncDanmaku();
+        setR1Callback();
+    }
+
+    private void pickSubtitleFile(int type) {
+        if (service() == null) return;
+        FileChooser.from(mSubtitleLauncher).show(new String[]{MimeTypes.APPLICATION_SUBRIP, MimeTypes.TEXT_SSA, MimeTypes.TEXT_VTT, MimeTypes.APPLICATION_TTML, "text/*", "application/octet-stream"});
+        player().pause();
+    }
+
+    private void setSubtitleFile(Uri uri) {
+        if (uri == null || service() == null) return;
+        player().setSub(Sub.from(FileUtil.getDisplayName(uri), uri.toString()));
+    }
+
+    private void ensureSheetProbe() {
+        if (mSheetProbe != null) return;
+        mSheetProbe = new TextView(this);
+        mSheetProbe.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+    }
+
+    private int measureSheetText(List<String> texts) {
+        ensureSheetProbe();
+        float max = 0;
+        for (String text : texts) max = Math.max(max, mSheetProbe.getPaint().measureText(text));
+        return (int) Math.ceil(max);
+    }
+
+    private float sheetCharWidth() {
+        ensureSheetProbe();
+        return Math.max(1f, mSheetProbe.getPaint().measureText("汉"));
+    }
+
+    private int measureSheetChars(int count) {
+        return (int) Math.ceil(sheetCharWidth() * count);
+    }
+
+    private int nearestSpeedIndex(float speed) {
+        int index = 0;
+        float best = Float.MAX_VALUE;
+        for (int i = 0; i < SPEEDS.length; i++) {
+            float diff = Math.abs(SPEEDS[i] - speed);
+            if (diff < best) {
+                best = diff;
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    /** 浮层内上下键：到边界后吃掉按键，避免焦点掉出弹层。 */
+    private boolean handleSheetVerticalKey(KeyEvent event) {
+        int keyCode = event.getKeyCode();
+        if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return false;
+        if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+        View focused = getCurrentFocus();
+        if (focused == null || !mSheet.contains(focused)) return false;
+        int direction = keyCode == KeyEvent.KEYCODE_DPAD_UP ? View.FOCUS_UP : View.FOCUS_DOWN;
+        View next = focused.focusSearch(direction);
+        if (next != null && next != focused && mSheet.contains(next)) return false;
+        return true;
+    }
+
+    /** 浮层内左右键：按键不锁死，但焦点锁在浮层里。 */
+    private boolean handleSheetHorizontalKey(KeyEvent event) {
+        int keyCode = event.getKeyCode();
+        if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+        View focused = getCurrentFocus();
+        if (focused == null || !mSheet.contains(focused)) {
+            mSheet.requestFocusInside();
+            return true;
+        }
+        if (focused instanceof com.google.android.material.slider.Slider) return false;
+        if (focused instanceof android.widget.EditText) return false;
+        if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+        int direction = keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? View.FOCUS_LEFT : View.FOCUS_RIGHT;
+        View next = focused.focusSearch(direction);
+        if (next != null && next != focused && mSheet.contains(next)) next.requestFocus(direction);
+        return true;
+    }
+
 }

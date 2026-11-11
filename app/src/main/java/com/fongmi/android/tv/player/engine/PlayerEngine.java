@@ -143,9 +143,7 @@ public interface PlayerEngine {
         return false;
     }
 
-    void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection);
 
-    void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection);
 
     default boolean addSubtitle(Sub sub) {
         return false;
@@ -162,7 +160,6 @@ public interface PlayerEngine {
     }
 
     enum Type {
-        EXO,
-        MPV
+        EXO
     }
 }

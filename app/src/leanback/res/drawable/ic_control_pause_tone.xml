@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  暂停按钮 · 聚焦 / 粘性选中态（橙 #E97022 + 奶油 #FFDDAB 折光）。
+  两根 12×34dp 圆角竖条，圆角半径 2.6，几何与 ic_control_pause_white 完全一致。
+
+  抗锯齿说明：与 ic_control_play_tone 同理，不使用 clip-path。
+  原实现用 clip-path 裁全屏渐变矩形，圆角弧与 45° 折线都是硬裁边缘，
+  聚焦放大 1.48 倍后台阶明显。这里改为：
+    · 底层：圆角矩形路径本身承载橙色渐变；
+    · 上层：折光区域路径沿圆角矩形上边界（含两段圆角弧）闭合，
+      不再越界、无需裁剪，所有边界都由 drawPath 的抗锯齿 Paint 绘制。
+  折光下边界由原 (7.5,9.4)-(19.5,18.8) 对齐到圆角切点 y=9.6，
+  斜率差 0.2/12，视觉上无差别。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+  <!-- 左条 · 橙色主体（原 clip-path 的圆角矩形路径，直接作为填充路径） -->
+  <path android:pathData="M10.1,7 H16.9 A2.6,2.6 0 0 1 19.5,9.6 V38.4 A2.6,2.6 0 0 1 16.9,41 H10.1 A2.6,2.6 0 0 1 7.5,38.4 V9.6 A2.6,2.6 0 0 1 10.1,7 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#E97022"
+          android:endX="0"
+          android:endY="41"
+          android:startColor="#FB9350"
+          android:startX="0"
+          android:startY="7"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+  <!-- 左条 · 奶油折光：沿上边缘与两段圆角弧闭合，下边界为斜折线 -->
+  <path android:pathData="M7.5,9.6 A2.6,2.6 0 0 1 10.1,7 H16.9 A2.6,2.6 0 0 1 19.5,9.6 V18.8 L7.5,9.6 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#FFD69E"
+          android:endX="19.5"
+          android:endY="0"
+          android:startColor="#FFF5DC"
+          android:startX="7.5"
+          android:startY="0"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+  <!-- 右条 · 橙色主体 -->
+  <path android:pathData="M31.1,7 H37.9 A2.6,2.6 0 0 1 40.5,9.6 V38.4 A2.6,2.6 0 0 1 37.9,41 H31.1 A2.6,2.6 0 0 1 28.5,38.4 V9.6 A2.6,2.6 0 0 1 31.1,7 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#E97022"
+          android:endX="0"
+          android:endY="41"
+          android:startColor="#FB9350"
+          android:startX="0"
+          android:startY="7"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+  <!-- 右条 · 奶油折光 -->
+  <path android:pathData="M28.5,9.6 A2.6,2.6 0 0 1 31.1,7 H37.9 A2.6,2.6 0 0 1 40.5,9.6 V18.8 L28.5,9.6 Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:endColor="#FFD69E"
+          android:endX="40.5"
+          android:endY="0"
+          android:startColor="#FFF5DC"
+          android:startX="28.5"
+          android:startY="0"
+          android:type="linear" />
+    </aapt:attr>
+  </path>
+
+</vector>

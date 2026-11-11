@@ -3,7 +3,6 @@ package com.fongmi.android.tv.player.exo;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +31,7 @@ import com.fongmi.android.tv.player.track.DecodeCodecSelector;
 import com.fongmi.android.tv.player.track.LangUtil;
 import com.fongmi.android.tv.setting.DecodeSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.github.catvod.utils.Auth;
 
@@ -123,7 +123,7 @@ public final class ExoUtil {
             // 否则 4K 这类"首个解码器初始化成功但出帧失败"的场景会被反复重试后才报错。
             setEnableDecoderFallback(false);
             setMediaCodecSelector(new DecodeCodecSelector());
-            experimentalSetEnableMediaCodecVideoRendererPrewarming(true);
+            experimentalSetEnableMediaCodecVideoRendererPrewarming(PreloadSetting.shouldPrewarmDecoder());
             // AV1 的 sample dependency 不解析会导致 4K AV1 直播出帧错乱或直接解码失败
             experimentalSetParseAv1SampleDependencies(true);
             setExtensionRendererMode(EXTENSION_RENDERER_MODE_ON);

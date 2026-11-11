@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.provider.Settings;
-import android.view.LayoutInflater;
 import android.view.View;
 
 import androidx.annotation.Nullable;
@@ -14,7 +13,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
 import androidx.media3.ui.CaptionStyleCompat;
-import androidx.media3.ui.DefaultTrackNameProvider;
 import androidx.media3.ui.SubtitleView;
 
 import com.fongmi.android.tv.R;
@@ -26,12 +24,9 @@ import com.fongmi.android.tv.player.subtitle.ExternalFont;
 import com.fongmi.android.tv.setting.SubtitleSetting;
 import com.fongmi.android.tv.utils.SliderUtil;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.slider.Slider;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -40,12 +35,9 @@ import java.util.function.IntUnaryOperator;
 final class SubtitleSettingPanel implements Player.Listener {
 
     private static final float STEP_TEXT_SCALE = 0.05f;
-    private static final float STEP_BRIGHTNESS = 0.05f;
     private static final float STEP_POSITION_PERCENT = 0.5f;
     private static final float STEP_OPACITY = 0.05f;
     private static final float STEP_EDGE = 0.5f;
-    private static final float STEP_SECONDARY_POSITION = 1.0f;
-    private static final int SECONDARY_UI_MODE_SELECT = 0;
 
     private final DialogSubtitleSettingBinding binding;
     private final SubtitleView subtitleView;
@@ -70,7 +62,6 @@ final class SubtitleSettingPanel implements Player.Listener {
         bindAppearance();
         bindAdjust();
         offsetPanel.bind();
-        bindAdvanced();
         SettingPanelViews.bindTabs(binding.tabGroup, getTabs(), this::showTab);
         bindReset();
         showTab(0);
@@ -93,7 +84,6 @@ final class SubtitleSettingPanel implements Player.Listener {
     @Override
     public void onTracksChanged(Tracks tracks) {
         if (!isPlayerAvailable() || source != player.getPlayer()) return;
-        bindAdvanced();
         offsetPanel.bind();
         updateStyleEnabled();
     }
@@ -129,76 +119,7 @@ final class SubtitleSettingPanel implements Player.Listener {
     private void bindAdjust() {
         var adjust = binding.adjust;
         setupSlider(adjust.size, R.string.subtitle_size, SubtitleSetting.MIN_SCALE, SubtitleSetting.MAX_SCALE, STEP_TEXT_SCALE, SubtitleSetting.getScale(), this::formatPercent, SubtitleSetting::putScale);
-        setupSlider(adjust.brightness, R.string.subtitle_brightness, SubtitleSetting.MIN_BITMAP_BRIGHTNESS, SubtitleSetting.MAX_BITMAP_BRIGHTNESS, STEP_BRIGHTNESS, SubtitleSetting.getBitmapBrightness(), this::formatPercent, SubtitleSetting::putBitmapBrightness);
         setupSlider(adjust.position, R.string.subtitle_position, SubtitleSetting.MIN_POSITION, SubtitleSetting.MAX_POSITION, STEP_POSITION_PERCENT, SubtitleSetting.getPosition(), this::formatPosition, SubtitleSetting::putPosition);
-        setupSlider(adjust.secondaryPosition, R.string.subtitle_secondary_position, SubtitleSetting.MIN_SECONDARY_POSITION, SubtitleSetting.MAX_SECONDARY_POSITION, STEP_SECONDARY_POSITION, SubtitleSetting.getSecondaryPosition(), this::formatSecondaryPosition, SubtitleSetting::putSecondaryPosition);
-        updatePositionControls();
-    }
-
-    private void bindAdvanced() {
-        SecondarySubtitleUiState state = getSecondarySubtitleUiState();
-        bindSecondaryMode(state);
-        bindSecondaryTracks(state);
-        updateSecondaryControls(state);
-    }
-
-    private void bindSecondaryMode(SecondarySubtitleUiState state) {
-        ChipGroup group = binding.advanced.secondaryGroup;
-        group.setOnCheckedStateChangeListener(null);
-        group.check(chipForSecondaryMode(state.mode()));
-        group.setOnCheckedStateChangeListener((source, checkedIds) -> {
-            if (checkedIds.isEmpty()) bindSecondaryMode(state);
-            else applySecondaryMode(state, secondaryModeForChip(checkedIds.get(0), state.options()));
-        });
-    }
-
-    private void applySecondaryMode(SecondarySubtitleUiState state, int mode) {
-        boolean selectTrack = mode == SECONDARY_UI_MODE_SELECT;
-        SecondaryTrackOption selectedOption = selectTrack && !state.options().isEmpty() ? state.options().get(0) : null;
-        SubtitleSetting.putSecondaryMode(selectTrack ? SubtitleSetting.SECONDARY_MODE_AUTO : mode);
-        SecondarySubtitleUiState next = state.withSelection(mode, selectedOption);
-        setSecondarySubtitleSelection(selectedOption == null ? null : selectedOption.selection());
-        bindSecondaryTracks(next);
-        updateSecondaryControls(next);
-    }
-
-    private void bindSecondaryTracks(SecondarySubtitleUiState state) {
-        ChipGroup group = binding.advanced.secondaryTrackGroup;
-        View focused = group.findFocus();
-        Object focusedTag = focused == null ? null : focused.getTag();
-        group.setOnCheckedStateChangeListener(null);
-        group.removeAllViews();
-        for (SecondaryTrackOption option : state.options()) group.addView(createSecondaryTrackChip(option));
-        int chip = chipForSecondaryTrack(state.selectedOption());
-        if (chip != View.NO_ID) group.check(chip);
-        group.setOnCheckedStateChangeListener((source, checkedIds) -> {
-            if (checkedIds.isEmpty()) bindSecondaryTracks(state);
-            else selectSecondaryTrack(state, secondaryTrackForChip(checkedIds.get(0)));
-        });
-        if (focused != null) restoreSecondaryFocus(group, state, focusedTag);
-    }
-
-    private void restoreSecondaryFocus(ChipGroup group, SecondarySubtitleUiState state, Object focusedTag) {
-        if (state.usesSpecificTrack()) {
-            for (int i = 0; i < group.getChildCount(); i++) {
-                View child = group.getChildAt(i);
-                if (child.getTag().equals(focusedTag)) {
-                    child.requestFocus();
-                    return;
-                }
-            }
-        }
-        focusSecondaryMode();
-    }
-
-    private void selectSecondaryTrack(SecondarySubtitleUiState state, @Nullable SecondaryTrackOption option) {
-        if (option != null) {
-            SubtitleSetting.putSecondaryMode(SubtitleSetting.SECONDARY_MODE_AUTO);
-            setSecondarySubtitleSelection(option.selection());
-            updateSecondaryControls(state.withSelection(SECONDARY_UI_MODE_SELECT, option));
-        } else {
-            bindSecondaryTracks(state);
-        }
     }
 
     private void bindSystemSetting() {
@@ -247,7 +168,6 @@ final class SubtitleSettingPanel implements Player.Listener {
             case 0 -> resetAppearance();
             case 1 -> resetAdjust();
             case 2 -> offsetPanel.reset();
-            case 3 -> resetAdvanced();
         }
     }
 
@@ -263,27 +183,18 @@ final class SubtitleSettingPanel implements Player.Listener {
         applySubtitleStyle();
     }
 
-    private void resetAdvanced() {
-        SubtitleSetting.resetAdvanced();
-        setSecondarySubtitleSelection(null);
-        bindAdvanced();
-        applySubtitleStyle();
-    }
-
     private void resetAll() {
         SubtitleSetting.reset();
-        setSecondarySubtitleSelection(null);
         offsetPanel.resetAll();
         bindAppearance();
         bindAdjust();
         offsetPanel.bind();
-        bindAdvanced();
         applySubtitleStyle();
     }
 
     private void showTab(int index) {
         if (index == 2) offsetPanel.bind();
-        View[] roots = {binding.appearance.getRoot(), binding.adjust.getRoot(), binding.offset.getRoot(), binding.advanced.getRoot()};
+        View[] roots = {binding.appearance.getRoot(), binding.adjust.getRoot(), binding.offset.getRoot()};
         MaterialButton[] tabs = getTabs();
         for (int i = 0; i < roots.length; i++) roots[i].setVisibility(index == i ? View.VISIBLE : View.GONE);
         currentTab = index;
@@ -291,7 +202,7 @@ final class SubtitleSettingPanel implements Player.Listener {
     }
 
     private MaterialButton[] getTabs() {
-        return new MaterialButton[]{binding.tabAppearance, binding.tabAdjust, binding.tabOffset, binding.tabAdvanced};
+        return new MaterialButton[]{binding.tabAppearance, binding.tabAdjust, binding.tabOffset};
     }
 
     private void setupSlider(ViewSettingSliderBinding item, int titleRes, float from, float to, float step, float initial, ValueFormatter formatter, Consumer<Float> setter) {
@@ -331,73 +242,6 @@ final class SubtitleSettingPanel implements Player.Listener {
         });
     }
 
-    private SecondarySubtitleUiState getSecondarySubtitleUiState() {
-        SubtitleSelectionState state = getSubtitleSelectionState();
-        List<SecondaryTrackOption> options = buildSecondaryTrackOptions(state.secondaryCandidates);
-        SecondaryTrackOption selectedOption = findSecondaryTrackOption(options, state.requestedSecondarySelection);
-        int mode = state.secondaryPromotedToPrimary ? SubtitleSetting.SECONDARY_MODE_OFF : SubtitleSetting.getSecondaryMode();
-        if (selectedOption != null) mode = SECONDARY_UI_MODE_SELECT;
-        return new SecondarySubtitleUiState(mode, selectedOption, options);
-    }
-
-    private List<SecondaryTrackOption> buildSecondaryTrackOptions(List<TrackSelectionOverride> candidates) {
-        List<SecondaryTrackOption> options = new ArrayList<>(candidates.size());
-        DefaultTrackNameProvider provider = new DefaultTrackNameProvider(binding.getRoot().getResources());
-        for (TrackSelectionOverride selection : candidates) options.add(new SecondaryTrackOption(selection, provider.getTrackName(getFormat(selection))));
-        return options;
-    }
-
-    private Chip createSecondaryTrackChip(SecondaryTrackOption option) {
-        Chip chip = (Chip) LayoutInflater.from(binding.getRoot().getContext()).inflate(R.layout.view_filter_chip, binding.advanced.secondaryTrackGroup, false);
-        chip.setId(View.generateViewId());
-        chip.setTag(option);
-        chip.setText(option.name());
-        chip.setCheckable(true);
-        return chip;
-    }
-
-    @Nullable
-    private SecondaryTrackOption findSecondaryTrackOption(List<SecondaryTrackOption> options, @Nullable TrackSelectionOverride selection) {
-        if (selection == null) return null;
-        for (SecondaryTrackOption option : options) if (option.selection().equals(selection)) return option;
-        return null;
-    }
-
-    private int chipForSecondaryMode(int mode) {
-        var advanced = binding.advanced;
-        int chip = advanced.secondaryDefault.getId();
-        if (mode == SubtitleSetting.SECONDARY_MODE_OFF) chip = advanced.secondaryOff.getId();
-        else if (mode == SubtitleSetting.SECONDARY_MODE_AUTO) chip = advanced.secondaryAuto.getId();
-        else if (mode == SECONDARY_UI_MODE_SELECT) chip = advanced.secondarySelect.getId();
-        return chip;
-    }
-
-    private int secondaryModeForChip(int chipId, List<SecondaryTrackOption> options) {
-        var advanced = binding.advanced;
-        int mode = SubtitleSetting.SECONDARY_MODE_DEFAULT;
-        if (chipId == advanced.secondaryOff.getId()) mode = SubtitleSetting.SECONDARY_MODE_OFF;
-        else if (chipId == advanced.secondaryAuto.getId()) mode = SubtitleSetting.SECONDARY_MODE_AUTO;
-        else if (chipId == advanced.secondarySelect.getId() && !options.isEmpty()) mode = SECONDARY_UI_MODE_SELECT;
-        return mode;
-    }
-
-    private int chipForSecondaryTrack(@Nullable SecondaryTrackOption selectedOption) {
-        var advanced = binding.advanced;
-        int chipId = View.NO_ID;
-        for (int i = 0; i < advanced.secondaryTrackGroup.getChildCount(); i++) {
-            View child = advanced.secondaryTrackGroup.getChildAt(i);
-            if (child.getTag() instanceof SecondaryTrackOption option && option.equals(selectedOption)) chipId = child.getId();
-        }
-        return chipId;
-    }
-
-    @Nullable
-    private SecondaryTrackOption secondaryTrackForChip(int chipId) {
-        View chip = binding.advanced.secondaryTrackGroup.findViewById(chipId);
-        Object tag = chip == null ? null : chip.getTag();
-        return tag instanceof SecondaryTrackOption option ? option : null;
-    }
-
     private void updateStyleEnabled() {
         boolean textStyle = canApplyTextStyle(getSubtitleSelectionState());
         boolean custom = SubtitleSetting.isCustomStyle();
@@ -427,37 +271,6 @@ final class SubtitleSettingPanel implements Player.Listener {
         binding.appearance.backgroundOpacity.getRoot().setVisibility(custom && Color.alpha(color) > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private void updateSecondaryControls(SecondarySubtitleUiState state) {
-        var advanced = binding.advanced;
-        boolean available = state.hasTracks();
-        binding.tabAdvanced.setVisibility(available ? View.VISIBLE : View.GONE);
-        if (!available && currentTab == 3) binding.tabGroup.check(binding.tabAppearance.getId());
-        advanced.secondarySection.setVisibility(available ? View.VISIBLE : View.GONE);
-        advanced.secondarySelect.setVisibility(available ? View.VISIBLE : View.GONE);
-        advanced.secondaryTrackSection.setVisibility(available && state.usesSpecificTrack() ? View.VISIBLE : View.GONE);
-        updatePositionControls();
-    }
-
-    private void updatePositionControls() {
-        var adjust = binding.adjust;
-        SubtitleSelectionState state = getSubtitleSelectionState();
-        boolean active = state.activeSecondarySelection != null;
-        boolean image = hasImageSubtitles(state);
-        boolean restoreFocus = (!active && adjust.secondaryPosition.getRoot().hasFocus()) || (!image && adjust.brightness.getRoot().hasFocus());
-        adjust.position.title.setText(active ? R.string.subtitle_primary_position : R.string.subtitle_position);
-        adjust.position.slider.setContentDescription(adjust.position.title.getText());
-        adjust.secondaryPosition.slider.setContentDescription(adjust.secondaryPosition.title.getText());
-        adjust.secondaryPosition.getRoot().setVisibility(active ? View.VISIBLE : View.GONE);
-        adjust.brightness.getRoot().setVisibility(image ? View.VISIBLE : View.GONE);
-        if (restoreFocus) adjust.position.slider.requestFocus();
-    }
-
-    private void focusSecondaryMode() {
-        ChipGroup group = binding.advanced.secondaryGroup;
-        View selected = group.findViewById(group.getCheckedChipId());
-        if (selected == null || !selected.requestFocus()) binding.tabAppearance.requestFocus();
-    }
-
     private void updateSystemSettingVisibility() {
         boolean visible = hasSystemCaptionSettings() && SubtitleSetting.isSystemStyle();
         binding.appearance.systemSetting.setVisibility(visible ? View.VISIBLE : View.GONE);
@@ -468,12 +281,8 @@ final class SubtitleSettingPanel implements Player.Listener {
         if (isPlayerAvailable()) player.applySubtitleStyle();
     }
 
-    static boolean canApplyTextStyle(SubtitleSelectionState state) {
-        return (state.primarySelection == null && state.activeSecondarySelection == null) || (state.primarySelection != null && !isImageSubtitle(state.primarySelection)) || (state.activeSecondarySelection != null && !isImageSubtitle(state.activeSecondarySelection));
-    }
-
-    static boolean hasImageSubtitles(SubtitleSelectionState state) {
-        return isImageSubtitle(state.primarySelection) || isImageSubtitle(state.activeSecondarySelection);
+    private static boolean canApplyTextStyle(SubtitleSelectionState state) {
+        return state.primarySelection == null || !isImageSubtitle(state.primarySelection);
     }
 
     private static boolean isImageSubtitle(@Nullable TrackSelectionOverride selection) {
@@ -602,16 +411,6 @@ final class SubtitleSettingPanel implements Player.Listener {
         return String.format(Locale.getDefault(), "%.1f", value);
     }
 
-    private String formatSecondaryPosition(float value) {
-        return String.format(Locale.getDefault(), "%.0f%%", value);
-    }
-
-    private void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        if (isPlayerAvailable()) player.setSecondarySubtitleSelection(selection);
-        updateStyleEnabled();
-        updatePositionControls();
-    }
-
     private SubtitleSelectionState getSubtitleSelectionState() {
         return isPlayerAvailable() ? player.getSubtitleSelectionState() : SubtitleSelectionState.EMPTY;
     }
@@ -620,25 +419,8 @@ final class SubtitleSettingPanel implements Player.Listener {
         return !player.isReleased();
     }
 
-    private record SecondarySubtitleUiState(int mode, @Nullable SecondaryTrackOption selectedOption, List<SecondaryTrackOption> options) {
-
-        private SecondarySubtitleUiState withSelection(int mode, @Nullable SecondaryTrackOption selectedOption) {
-            return new SecondarySubtitleUiState(mode, selectedOption, options);
-        }
-
-        private boolean hasTracks() {
-            return !options.isEmpty();
-        }
-
-        private boolean usesSpecificTrack() {
-            return mode == SECONDARY_UI_MODE_SELECT;
-        }
-    }
-
-    private record SecondaryTrackOption(TrackSelectionOverride selection, String name) {
-    }
-
     private interface ValueFormatter {
+
         String format(float value);
     }
 }

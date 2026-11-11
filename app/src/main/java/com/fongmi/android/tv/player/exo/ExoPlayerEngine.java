@@ -34,7 +34,6 @@ import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.player.track.DecodeCodecSelector;
 import com.fongmi.android.tv.server.LogSession;
 import com.fongmi.android.tv.setting.DecodeSetting;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.google.gson.JsonObject;
 
 import java.util.List;
@@ -174,7 +173,7 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     public DecoderMode getDecoderMode(@C.TrackType int trackType) {
         if (trackType != C.TRACK_TYPE_VIDEO && trackType != C.TRACK_TYPE_AUDIO) return null;
         // 返回用户设置而不是运行时值：自动降级对用户是透明的，不该改设置面板的高亮
-        return DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, trackType);
+        return DecodeSetting.getDecoderMode(trackType);
     }
 
     @Override
@@ -188,8 +187,8 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     /** 复位到设置里的解码方式与画质约束：换片时调用，自动降级只在单次播放内有效。 */
     private void resetDecoderSelection() {
         DecodeCodecSelector.reset(
-                DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_AUDIO),
-                DecodeSetting.getDecoderMode(PlayerSetting.ENGINE_EXO, C.TRACK_TYPE_VIDEO));
+                DecodeSetting.getDecoderMode(C.TRACK_TYPE_AUDIO),
+                DecodeSetting.getDecoderMode(C.TRACK_TYPE_VIDEO));
         videoDowngraded = false;
         clearVideoSizeLimit();
     }
@@ -342,16 +341,6 @@ public class ExoPlayerEngine implements PlayerEngine, AnalyticsListener {
     @Override
     public boolean supportsSubtitleTranscript() {
         return false;
-    }
-
-    @Override
-    public void setSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        subtitles.setSecondarySubtitleSelection(selection);
-    }
-
-    @Override
-    public void restoreSecondarySubtitleSelection(@Nullable TrackSelectionOverride selection) {
-        subtitles.restoreSecondarySubtitleSelection(selection);
     }
 
     @Override

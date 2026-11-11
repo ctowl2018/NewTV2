@@ -36,7 +36,6 @@ import com.fongmi.android.tv.server.LogSession;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.server.impl.Process;
 import com.fongmi.android.tv.service.PlaybackService;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.SpeedSetting;
 import com.fongmi.android.tv.utils.SubtitleArchive;
 import com.fongmi.android.tv.utils.Util;
@@ -49,7 +48,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -279,7 +277,7 @@ public class Remote implements Process {
         body.addProperty("canSeek", service.canRemoteSeek());
         body.addProperty("canSetSpeed", service.canRemoteSetSpeed());
         body.addProperty("speed", player.getSpeed());
-        body.addProperty("engine", player.getEngine() == PlayerSetting.ENGINE_MPV ? "mpv" : "ExoPlayer");
+        body.addProperty("engine", "ExoPlayer");
         body.addProperty("video", player.getSizeText());
         return body;
     }

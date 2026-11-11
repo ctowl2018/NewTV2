@@ -40,7 +40,6 @@ import com.fongmi.android.tv.utils.Util;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -61,7 +60,6 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
     private final ViewTreeObserver.OnGlobalFocusChangeListener focusListener;
     private final Executor executor;
     private SubtitleContent primary = SubtitleContent.LOADING;
-    private SubtitleContent secondary = SubtitleContent.LOADING;
     private List<Danmaku> danmaku = List.of();
     private long danmakuOffsetMs;
     private boolean running;
@@ -241,17 +239,15 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         String status = "";
         if (isSubtitle) {
             SubtitleContent first = selections.primary() == null ? SubtitleContent.UNSUPPORTED : player.getSubtitleContent(selections.primary());
-            SubtitleContent second = selections.secondary() == null ? SubtitleContent.UNSUPPORTED : player.getSubtitleContent(selections.secondary());
-            if (first.state != SubtitleContent.State.LOADING && second.state != SubtitleContent.State.LOADING) retrying = false;
+            if (first.state != SubtitleContent.State.LOADING) retrying = false;
             empty = getEmptyMessage(first.state);
             if (!player.supportsSubtitleTranscript()) empty = R.string.content_subtitle_unsupported;
             else if (selections.primary() == null) empty = R.string.content_subtitle_unselected;
-            status = getStatus(first, second, selections);
+            status = getStatus(first, selections);
             binding.status.setText(status);
-            binding.status.setVisibility(status.isEmpty() || first.entries.isEmpty() && second.entries.isEmpty() ? View.GONE : View.VISIBLE);
-            if (!force && primary == first && secondary == second && isCurrent(requestedContext)) return;
+            binding.status.setVisibility(status.isEmpty() || first.entries.isEmpty() ? View.GONE : View.VISIBLE);
+            if (!force && primary == first && isCurrent(requestedContext)) return;
             primary = first;
-            secondary = second;
         } else {
             binding.status.setVisibility(View.GONE);
             List<Danmaku> source = activity.getDanmakuItems();
@@ -262,7 +258,6 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         }
         String keyword = state.keyword[state.tab];
         SubtitleContent first = primary;
-        SubtitleContent second = secondary;
         List<Danmaku> comments = danmaku;
         long timeOffset = danmakuOffsetMs;
         String message = status.isEmpty() ? ResUtil.getString(empty) : status;
@@ -270,7 +265,7 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         ContentContext context = new ContentContext(source, player.getKey() + "\n" + player.getUrl(), state.tab, selections, timeOffset, player.getSubtitleOffsets(), source == null ? null : source.getCurrentTimeline());
         requestedContext = context;
         int token = ++generation;
-        Supplier<List<PlaybackContent>> loader = isSubtitle ? () -> buildSubtitleItems(first, second) : () -> buildDanmakuItems(comments, timeOffset);
+        Supplier<List<PlaybackContent>> loader = isSubtitle ? () -> buildSubtitleItems(first) : () -> buildDanmakuItems(comments, timeOffset);
         executor.execute(() -> loadItems(token, context, keyword, message, loader));
     }
 
@@ -337,9 +332,8 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         }
     }
 
-    private List<PlaybackContent> buildSubtitleItems(SubtitleContent first, SubtitleContent second) {
-        List<PlaybackContent> items = PlaybackContent.merge(subtitles(first.entries, false), subtitles(second.entries, true));
-        return new ArrayList<>(new LinkedHashSet<>(items));
+    private List<PlaybackContent> buildSubtitleItems(SubtitleContent first) {
+        return new ArrayList<>(subtitles(first.entries));
     }
 
     private List<PlaybackContent> buildDanmakuItems(List<Danmaku> comments, long timeOffset) {
@@ -348,11 +342,11 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         return PlaybackContent.collapseDanmaku(items);
     }
 
-    private List<PlaybackContent> subtitles(List<SubtitleContent.Entry> entries, boolean secondary) {
+    private List<PlaybackContent> subtitles(List<SubtitleContent.Entry> entries) {
         List<PlaybackContent> items = new ArrayList<>(entries.size());
         for (SubtitleContent.Entry entry : entries) {
             String text = entry.image ? ResUtil.getString(R.string.content_image_subtitle) : entry.text;
-            items.add(new PlaybackContent(entry.startTimeUs, entry.endTimeUs, secondary ? "" : text, secondary ? text : "", false));
+            items.add(new PlaybackContent(entry.startTimeUs, entry.endTimeUs, text, "", false));
         }
         items.sort(PlaybackContent.BY_TIME);
         return items;
@@ -376,24 +370,21 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         return state.tab == PlaybackContentDialog.SUBTITLE ? context.offsets().equals(player.getSubtitleOffsets()) && context.selections().equals(getSelectedSelections(player)) : context.offset() == player.getDanmakuConfig().timeOffsetMs;
     }
 
-    private record SubtitleSelections(@Nullable TrackSelectionOverride primary, @Nullable TrackSelectionOverride secondary) {
+    private record SubtitleSelections(@Nullable TrackSelectionOverride primary) {
 
-        private static final SubtitleSelections EMPTY = new SubtitleSelections(null, null);
+        private static final SubtitleSelections EMPTY = new SubtitleSelections(null);
 
         private static SubtitleSelections from(SubtitleSelectionState state) {
-            return new SubtitleSelections(state.primarySelection, state.activeSecondarySelection);
+            return new SubtitleSelections(state.primarySelection);
         }
     }
 
     private record ContentContext(Player source, String media, int tab, SubtitleSelections selections, long offset, SubtitleOffsets offsets, Timeline timeline) {
     }
 
-    private String getStatus(SubtitleContent first, SubtitleContent second, SubtitleSelections selections) {
+    private String getStatus(SubtitleContent first, SubtitleSelections selections) {
         if (selections.primary() == null) return "";
-        if (selections.secondary() == null || first.state == second.state) return first.state == SubtitleContent.State.COMPLETE ? "" : ResUtil.getString(getEmptyMessage(first.state));
-        String main = first.state == SubtitleContent.State.COMPLETE ? "" : ResUtil.getString(R.string.subtitle_primary_role) + "：" + ResUtil.getString(getEmptyMessage(first.state));
-        String sub = second.state == SubtitleContent.State.COMPLETE ? "" : ResUtil.getString(R.string.subtitle_secondary_role) + "：" + ResUtil.getString(getEmptyMessage(second.state));
-        return main.isEmpty() ? sub : sub.isEmpty() ? main : main + "\n" + sub;
+        return first.state == SubtitleContent.State.COMPLETE ? "" : ResUtil.getString(getEmptyMessage(first.state));
     }
 
     private SubtitleSelections getSelectedSelections(PlayerManager player) {
@@ -491,7 +482,7 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         PlayerManager player = player();
         if (state.tab != PlaybackContentDialog.SUBTITLE || player == null || !isCurrent(renderedContext)) return false;
         SubtitleSelections selections = renderedContext.selections();
-        return canRetry(player, selections.primary()) || canRetry(player, selections.secondary());
+        return canRetry(player, selections.primary());
     }
 
     private void retry() {
@@ -500,7 +491,6 @@ final class PlaybackContentPanel implements PlaybackContentAdapter.OnClickListen
         if (player == null || renderedContext == null) return;
         SubtitleSelections selections = renderedContext.selections();
         retry(player, selections.primary());
-        retry(player, selections.secondary());
         retrying = true;
         App.removeCallbacks(search);
         Notify.show(R.string.content_subtitle_loading);

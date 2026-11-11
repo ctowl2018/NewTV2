@@ -21,6 +21,6 @@ public abstract class TrackDao extends BaseDao<Track> {
     @Query("DELETE FROM Track WHERE `key` = :key")
     public abstract void delete(String key);
 
-    @Query("DELETE FROM Track WHERE `key` = :key AND `type` = :type AND `role` = :role")
-    public abstract void delete(String key, int type, int role);
+    @Query("DELETE FROM Track WHERE `key` = :key AND `role` = :role")
+    public abstract void delete(String key, int role);
 }

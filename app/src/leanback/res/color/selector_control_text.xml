@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 片头 / 片尾等纯文字按钮：常态白字，聚焦或正开着对应浮层时品牌橙。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/control_scrubber" android:state_focused="true" />
+    <item android:color="@color/control_scrubber" android:state_activated="true" />
+    <item android:color="@color/white" />
+</selector>

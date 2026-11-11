@@ -15,7 +15,8 @@ import java.util.List;
 public class Track {
 
     public static final int ROLE_PRIMARY = 0;
-    public static final int ROLE_SECONDARY = 1;
+    /** 历史遗留的副字幕角色值，仅用于清理旧版本写入的记录。 */
+    public static final int ROLE_LEGACY_SECONDARY = 1;
 
     @PrimaryKey(autoGenerate = true)
     private int id;
@@ -47,9 +48,9 @@ public class Track {
         AppDatabase.get().getTrackDao().delete(key);
     }
 
-    public static void delete(String key, int type, int role) {
+    public static void delete(String key, int role) {
         if (TextUtils.isEmpty(key)) return;
-        AppDatabase.get().getTrackDao().delete(key, type, role);
+        AppDatabase.get().getTrackDao().delete(key, role);
     }
 
     public int getId() {
@@ -143,10 +144,6 @@ public class Track {
     public Track key(String key) {
         setKey(key);
         return this;
-    }
-
-    public boolean isSecondary() {
-        return role == ROLE_SECONDARY;
     }
 
     public Track toggle() {

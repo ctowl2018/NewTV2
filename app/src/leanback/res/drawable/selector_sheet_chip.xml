@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  播放页浮层（倍速 / 选集 / 播放设置面板）条目与按钮的焦点选择器。
+  聚焦态用内缩描边 shape_sheet_focus；常态 / 当前项沿用原 selector_chip 的样式，保持底色一致。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/shape_sheet_focus" android:state_focused="true" />
+    <item android:drawable="@drawable/shape_chip_activated" android:state_selected="true" />
+    <item android:drawable="@drawable/shape_chip_normal" />
+</selector>

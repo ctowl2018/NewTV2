@@ -34,7 +34,6 @@ import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.exo.ExoCommand;
 import com.fongmi.android.tv.player.mpv.MpvScriptSession;
 import com.fongmi.android.tv.player.mpv.MpvScripts;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.ui.activity.PlaybackActivity;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
 import com.fongmi.android.tv.utils.FileChooser;
@@ -104,7 +103,7 @@ final class PlaybackButtonsPanel {
     void bind(DialogMpvScriptButtonBinding binding, Bundle savedInstanceState) {
         this.binding = binding;
         PlayerManager player = player();
-        exoMode = player != null && player.getEngine() == PlayerSetting.ENGINE_EXO;
+        exoMode = true;
         operations = new ViewModelProvider(owner).get(Operations.class);
         initItems();
         restoreState(savedInstanceState);

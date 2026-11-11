@@ -23,11 +23,26 @@ public class Danmaku {
     private String url;
 
     private transient boolean selected;
+    private transient DanmakuTitle meta;
+    private transient boolean remote;
+
+    /** 结构化标题（懒解析并缓存）：弹幕搜索列表按分类 / 平台筛选时使用。 */
+    public DanmakuTitle getMeta() {
+        if (meta == null) meta = DanmakuTitle.parse(getName());
+        return meta;
+    }
+
+    /** 是否来自弹幕接口（片源自带弹幕为 false）。 */
+    public boolean isRemote() {
+        return remote;
+    }
 
     public static List<Danmaku> arrayFrom(String str) {
         Type listType = TypeToken.getParameterized(List.class, Danmaku.class).getType();
         List<Danmaku> items = App.gson().fromJson(str, listType);
-        return items == null ? Collections.emptyList() : items;
+        if (items == null) return Collections.emptyList();
+        for (Danmaku item : items) item.remote = true;
+        return items;
     }
 
     public static Danmaku from(String url) {

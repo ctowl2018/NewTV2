@@ -17,7 +17,6 @@ import androidx.media3.exoplayer.audio.AudioSink;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.player.compat.DecoderMode;
 import com.fongmi.android.tv.setting.DecodeSetting;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -59,7 +58,7 @@ public final class PlaybackLog {
         DecoderMode audioMode = manager.getDecoderMode(C.TRACK_TYPE_AUDIO);
         DecoderMode videoMode = manager.getDecoderMode(C.TRACK_TYPE_VIDEO);
         body.addProperty("playerId", Integer.toHexString(System.identityHashCode(player)));
-        body.addProperty("engine", manager.getEngine() == PlayerSetting.ENGINE_MPV ? "mpv" : "ExoPlayer");
+        body.addProperty("engine", "ExoPlayer");
         addUrl(body, manager.getUrl());
         if (player.isCommandAvailable(Player.COMMAND_GET_CURRENT_MEDIA_ITEM)) body.addProperty("positionMs", manager.getPosition());
         body.addProperty("playbackState", player.getPlaybackState());

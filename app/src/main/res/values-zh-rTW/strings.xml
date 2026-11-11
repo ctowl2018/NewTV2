@@ -6,7 +6,6 @@
 
 
     <!-- Detail -->
-    <string name="detail_title"><xliff:g name="name">%s</xliff:g>：<xliff:g name="name">%s</xliff:g></string>
     <string name="detail_site">站源：<xliff:g name="name">%s</xliff:g></string>
     <string name="detail_year">年份：<xliff:g name="name">%s</xliff:g></string>
     <string name="detail_area">地區：<xliff:g name="name">%s</xliff:g></string>
@@ -27,7 +26,6 @@
     <string name="play_op">片頭</string>
     <string name="play_ed">片尾</string>
     <string name="play_exo">EXO</string>
-    <string name="play_mpv">MPV</string>
     <string name="play_other">其它</string>
     <string name="play_next">下集</string>
     <string name="play_prev">上集</string>
@@ -43,13 +41,8 @@
     <string name="play_edition">標題</string>
     <string name="play_chapter">章節</string>
     <string name="play_disc_menu">主選單</string>
-    <string name="play_disc_menu_unavailable">目前無法開啟此光碟選單。若為 BD-J，請先到「設定 → 模組管理」安裝 Java 執行環境。</string>
-    <string name="play_disc_menu_timeout">選單尚未開啟，請再試一次</string>
     <string name="play_scale">原始</string>
-    <string name="play_config">配置</string>
     <string name="play_change">換源</string>
-    <string name="play_invert">反轉</string>
-    <string name="play_across">跨類</string>
     <string name="play_reverse">倒序</string>
     <string name="play_track_text">字幕</string>
     <string name="play_track_audio">音軌</string>
@@ -58,7 +51,6 @@
     <string name="play_backward_hint">已切換倒序播放</string>
     <string name="play_switch_flag">正在切換線路至「<xliff:g name="name">%s</xliff:g>」</string>
     <string name="play_switch_site">正在切換站源至「<xliff:g name="name">%s</xliff:g>」</string>
-    <string name="play_switch_parse">正在切换解析至「<xliff:g name="name">%s</xliff:g>」</string>
 
     <!-- Playback Setting -->
     <string name="setting_tab_offset">偏移</string>
@@ -152,12 +144,9 @@
     <string name="subtitle_reset">重置</string>
     <string name="subtitle_tab_appearance">外觀</string>
     <string name="subtitle_tab_adjust">調整</string>
-    <string name="subtitle_tab_advanced">進階</string>
     <string name="subtitle_offset">字幕偏移</string>
     <string name="subtitle_size">大小</string>
-    <string name="subtitle_brightness">字幕亮度</string>
     <string name="subtitle_position">位置</string>
-    <string name="subtitle_primary_position">主字幕位置</string>
     <string name="subtitle_style">樣式</string>
     <string name="playback_font">字型</string>
     <string name="playback_font_default">系統預設</string>
@@ -181,15 +170,8 @@
     <string name="subtitle_shadow_strength">陰影強度</string>
     <string name="subtitle_background">背景</string>
     <string name="subtitle_background_opacity">背景透明度</string>
-    <string name="subtitle_secondary_track">雙字幕</string>
-    <string name="subtitle_secondary_default">預設</string>
-    <string name="subtitle_secondary_off">關閉</string>
-    <string name="subtitle_secondary_auto">自動</string>
-    <string name="subtitle_secondary_select">指定</string>
     <string name="subtitle_primary_role">主</string>
     <string name="subtitle_secondary_role">副</string>
-    <string name="subtitle_secondary_track_select">副字幕</string>
-    <string name="subtitle_secondary_position">副字幕位置</string>
     <string name="subtitle_color_white">白色</string>
     <string name="subtitle_color_yellow">黃色</string>
     <string name="subtitle_color_cyan">青色</string>
@@ -260,7 +242,6 @@
 
     <!-- Setting -->
     <string name="setting_vod">點播</string>
-    <string name="setting_wall">壁紙</string>
     <string name="setting_player">播放設定</string>
     <string name="setting_module">模組管理</string>
     <string name="setting_danmaku">彈幕設定</string>
@@ -270,7 +251,6 @@
     <string name="setting_custom">自訂</string>
     <string name="setting_size">圖片尺寸</string>
     <string name="setting_doh">DoH</string>
-    <string name="setting_proxy">Proxy</string>
     <string name="setting_cache">暫存</string>
     <string name="setting_backup">備份</string>
     <string name="setting_restore">還原</string>
@@ -279,12 +259,10 @@
     <string name="setting_off">關</string>
     <string name="setting_on">開</string>
 
-    <string name="module_bdj">BD-J</string>
     <string name="module_version">版本：%1$s</string>
     <string name="module_installing">安裝中…</string>
     <string name="module_cancelling">取消中…</string>
     <string name="module_cancelled">已取消</string>
-    <string name="module_complete">已安裝</string>
     <string name="module_failed">失敗：%1$s</string>
     <string name="module_cancel">取消</string>
     <string name="module_failed_title">操作失敗</string>
@@ -315,7 +293,6 @@
     <string name="module_remove">移除</string>
     <string name="module_removing">移除中…</string>
     <string name="module_confirm_remove">請在系統畫面確認移除</string>
-    <string name="module_removed">已移除</string>
 
     <!-- Backup & Restore -->
     <string name="restore_select">選擇備份</string>
@@ -326,14 +303,11 @@
 
     <!-- Player -->
     <string name="player">播放核心</string>
-    <string name="player_engine">播放引擎</string>
     <string name="player_debug">偵錯</string>
     <string name="player_render">視訊輸出</string>
     <string name="player_libass">字幕特效</string>
     <string name="player_background">背景播放</string>
     <string name="player_audio_pass_through">音訊直通</string>
-    <string name="player_audio_decode">音訊軟解</string>
-    <string name="player_video_decode">視訊軟解</string>
     <string name="player_dolby_vision_output">杜比視界</string>
     <string name="player_aac_track">AAC優先</string>
     <string name="player_adblock">智慧去廣</string>
@@ -349,26 +323,14 @@
     <string name="player_preload_size">預載容量</string>
     <string name="player_preload_time">預載時間</string>
     <string name="player_preload_time_value">%1$d 秒</string>
-    <string name="player_mpv_conf">mpv.conf</string>
-    <string name="player_mpv_gpu_next">gpu-next</string>
-    <string name="player_mpv_vulkan">vulkan</string>
-    <string name="player_motion_restart">下次開啟影片時套用</string>
-    <string name="player_mpv_motion">插幀（SDR）</string>
-    <string name="player_mpv_motion_unavailable">目前播放模式不支援插幀</string>
-    <string name="player_mpv_motion_applying">正在套用…</string>
-    <string name="player_mpv_motion_target">目標：%1$d fps</string>
-    <string name="player_mpv_motion_capped">目標：%1$.2f fps（螢幕上限）</string>
-    <string name="player_mpv_motion_failed">無法切換插幀</string>
-    <string name="player_mpv_conf_priority_hint">重進播放頁載入 mpv.conf；片源參數、腳本與介面之後仍可改寫，最後寫入者生效。volume 作為介面音量基準。</string>
-    <string name="player_mpv_conf_conflict_hint">介面會管理：%1$s。片源參數、腳本與介面以最後寫入者為準；volume 作為介面音量基準。</string>
-    <string name="player_mpv_conf_import_success">已載入 mpv.conf，按確定後儲存</string>
-    <string name="player_mpv_conf_import_failed">無法匯入 mpv.conf</string>
-    <string name="player_mpv_conf_save_failed">無法儲存 mpv.conf</string>
     <string name="player_ua">User-Agent</string>
 
     <!-- Danmaku -->
     <string name="danmaku_load">彈幕載入</string>
+    <string name="danmaku_heatmap">在進度條上顯示彈幕熱力圖</string>
     <string name="danmaku_api">搜尋接口</string>
+    <string name="danmaku_api_required">請配置彈幕接口後再試！</string>
+    <string name="danmaku_api_invalid">彈幕接口地址不可用，請檢查！</string>
     <string name="danmaku_auto_load">自動搜尋</string>
     <string name="danmaku_spider_first">爬蟲優先</string>
 
@@ -377,10 +339,12 @@
     <string name="search_record">歷史</string>
     <string name="search_suggest">建議</string>
     <string name="search_hot">熱搜</string>
+    <string name="search_hot_movie">熱播電影</string>
+    <string name="search_hot_tv">熱播劇集</string>
+    <string name="search_hot_variety">熱門綜藝</string>
 
     <!-- Dialog -->
     <string name="dialog_edit">修改</string>
-    <string name="dialog_import">匯入</string>
     <string name="dialog_positive">確定</string>
     <string name="dialog_negative">取消</string>
     <string name="dialog_select_edition">選擇標題</string>
@@ -398,23 +362,17 @@
     <string name="error_play_next">已經是最後一集了！</string>
     <string name="error_play_prev">已經是第一集了！</string>
     <string name="error_play_parse">播放網址解析失敗</string>
-    <string name="error_play_drm">本設備不支援所需的 DRM scheme</string>
     <string name="error_play_url">播放網址載入失敗</string>
     <string name="error_episode_missing">無法恢復上次的播放項目，請重新選集</string>
     <string name="error_episode_not_found">找不到指定的播放項目，請重新選集</string>
-    <string name="error_play_flag">暫無線路資料</string>
     <string name="error_play_timeout">連線逾時</string>
-    <string name="bdj_preparing">正在準備 BD-J 選單</string>
-    <string name="error_bdj_prepare">ISO 選單檢查或 BD-J 準備失敗：%1$s</string>
     <string name="error_audio_effect_unsupported">目前播放方式不支援音質設定</string>
-    <string name="error_audio_effect_tunnel">Tunnel 模式下不支援音質設定</string>
     <string name="error_audio_effect_passthrough">音訊直通音軌不支援音質設定</string>
     <string name="error_audio_effect_apply">音質設定套用失敗</string>
     <string name="error_video_effect_unsupported">目前播放方式不支援畫質設定</string>
     <string name="error_video_effect_decode">畫質設定需要視訊硬解</string>
     <string name="error_video_effect_drm">DRM 影片不支援畫質設定</string>
     <string name="error_video_effect_tunnel">Tunnel 模式下不支援畫質設定</string>
-    <string name="error_video_effect_dolby_vision_passthrough">杜比視界直通不支援畫質設定</string>
     <string name="error_detail">暫無播放資料</string>
     <string name="error_empty">這裡什麼都沒有 👀</string>
 
@@ -445,7 +403,6 @@
     <string name="yes">有</string>
     <string name="none">無</string>
     <string name="times">倍</string>
-    <string name="lines">行</string>
 
     <string-array name="select_dolby_vision_output">
         <item>自動</item>
@@ -499,11 +456,7 @@
     <string name="content_image_subtitle">[圖片字幕]</string>
     <string name="content_retry">重試字幕</string>
     <string name="content_retry_loading">載入中…</string>
-    <string name="subtitle_offset_primary">主字幕偏移</string>
-    <string name="subtitle_offset_secondary">副字幕偏移</string>
-    <string name="subtitle_offset_both">主副字幕偏移</string>
     <string name="subtitle_offset_link">一起偏移</string>
-    <string name="subtitle_offset_reset">重設字幕時間</string>
     <string name="subtitle_offset_limit">字幕偏移須在正負 300 秒內。</string>
 
     <string name="decoder_setting">解碼設定</string>
@@ -549,7 +502,6 @@
     <string name="mpv_script_disabled">已停用</string>
     <string name="mpv_script_error">MPV 操作失敗</string>
     <string name="mpv_script_timeout">腳本未回應，已取消排隊操作。</string>
-    <string name="mpv_script_unavailable">請先開始 MPV 播放。</string>
     <string name="mpv_script_add_command">新增指令按鈕</string>
     <string name="mpv_script_edit_command">編輯指令</string>
     <string name="mpv_script_command">MPV 指令</string>
@@ -570,7 +522,6 @@
     <string name="mpv_script_loaded">已載入</string>
 
     <string name="phone_input">遠端輸入</string>
-    <string name="log_action">日誌</string>
     <string name="device_open_web">操作</string>
     <string name="device_view_logs">日誌</string>
     <string name="device_rename">命名裝置</string>
@@ -588,7 +539,6 @@
     <string name="device_cast_title">投屏到裝置</string>
     <string name="device_sync_history_title">同步歷史</string>
     <string name="device_sync_keep_title">同步收藏</string>
-    <string name="error_mpv_runtime">MPV 無法使用，改用 ExoPlayer：%1$s</string>
     <string name="transfer_paused">已暫停</string>
     <string name="transfer_resume">繼續</string>
     <string name="transfer_detail">%1$s/s · 剩餘 %2$s</string>
@@ -605,5 +555,36 @@
     <string name="dialog_max_length">請輸入最多 %1$d 個字元</string>
     <string name="dialog_min_choices">請選擇至少 %1$d 個選項</string>
     <string name="dialog_max_choices">請選擇最多 %1$d 個選項</string>
+
+    <!-- 移植自 tv-latest：播放设置浮层 / 弹幕搜索 -->
+    <string name="setting_more">更多設定</string>
+    <string name="play_pause">Play/Pause</string>
+    <string name="play_episodes">Episodes</string>
+    <string name="danmaku_search">Danmaku search</string>
+    <string name="danmaku_search_action">Search</string>
+    <string name="danmaku_filter_all">All</string>
+    <string name="danmaku_filter_type">Type</string>
+    <string name="danmaku_filter_source">Source</string>
+    <string name="danmaku_group_drama">Series</string>
+    <string name="danmaku_group_movie">Movie</string>
+    <string name="danmaku_group_anime">Anime</string>
+    <string name="danmaku_group_variety">Variety</string>
+    <string name="danmaku_group_documentary">Documentary</string>
+    <string name="danmaku_group_other">Other</string>
+    <string name="danmaku_platform_qiyi">iQIYI</string>
+    <string name="danmaku_platform_qq">Tencent</string>
+    <string name="danmaku_platform_youku">Youku</string>
+    <string name="danmaku_platform_renren">Renren</string>
+    <string name="danmaku_platform_migu">Migu</string>
+    <string name="danmaku_platform_bilibili">Bilibili</string>
+    <string name="danmaku_platform_imgo">Mango TV</string>
+    <string name="danmaku_platform_leshi">LeShi</string>
+    <string name="danmaku_platform_sohu">Sohu</string>
+    <string name="danmaku_search_count">%1$d items</string>
+    <string name="danmaku_search_count_filtered">%1$d / %2$d items</string>
+    <string name="danmaku_search_empty">No matching danmaku found</string>
+    <string name="danmaku_search_empty_filter">Nothing matches the current filter</string>
+
+    <string name="danmaku_disabled_hint">彈幕總開關未開啟，請先在設定中開啟</string>
 
 </resources>

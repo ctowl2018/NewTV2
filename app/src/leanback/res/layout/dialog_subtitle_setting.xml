@@ -57,14 +57,6 @@
             android:layout_weight="1"
             android:text="@string/setting_tab_offset" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/tabAdvanced"
-            style="@style/PlaybackDialogTab"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/subtitle_tab_advanced" />
-
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <androidx.core.widget.NestedScrollView
@@ -96,13 +88,6 @@
             <include
                 android:id="@+id/offset"
                 layout="@layout/view_subtitle_offset"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
-            <include
-                android:id="@+id/advanced"
-                layout="@layout/view_subtitle_advanced"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="gone" />

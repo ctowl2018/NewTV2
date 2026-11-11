@@ -17,7 +17,6 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.exo.ExoCommand;
 import com.fongmi.android.tv.player.mpv.MpvScripts;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.ui.activity.PlaybackActivity;
 import com.fongmi.android.tv.ui.dialog.PlaybackButtonsDialog;
 import com.fongmi.android.tv.utils.Notify;
@@ -29,7 +28,9 @@ public final class PlaybackButtonsView extends LinearLayout implements SharedPre
 
     private final Observer<PlayerManager> playerObserver = this::updateVisibility;
     private LiveData<PlayerManager> players;
-    private int activeEngine = -1;
+    private PlayerManager boundPlayer;
+    /** 浮层内使用：左右键只在本排按钮内走位，首尾封口，不把焦点带回控制条。 */
+    private boolean trapHorizontal;
 
     public PlaybackButtonsView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -70,13 +71,12 @@ public final class PlaybackButtonsView extends LinearLayout implements SharedPre
     }
 
     private void refresh() {
-        boolean exo = activeEngine == PlayerSetting.ENGINE_EXO;
         View focused = getFocusedChild();
         Object focusedId = focused == null ? null : focused.getTag();
         removeAllViews();
-        TextView manage = addButton(getContext().getString(exo ? R.string.exo_command_buttons : R.string.mpv_script_buttons));
+        TextView manage = addButton(getContext().getString(R.string.exo_command_buttons));
         manage.setOnClickListener(view -> manage(null));
-        addScriptButtons(manage, exo);
+        addScriptButtons(manage, true);
         updateFocusNeighbors();
         if (focused != null) {
             View target = focusedId == null ? manage : findViewWithTag(focusedId);
@@ -116,7 +116,26 @@ public final class PlaybackButtonsView extends LinearLayout implements SharedPre
         return view;
     }
 
+    /** 「播放设置」浮层内调用：把脚本按钮行的左右焦点收束在行内。 */
+    public void trapHorizontalFocus() {
+        trapHorizontal = true;
+        updateFocusNeighbors();
+    }
+
+    private void chainHorizontal() {
+        int count = getChildCount();
+        for (int i = 0; i < count; i++) {
+            View view = getChildAt(i);
+            view.setNextFocusLeftId(i == 0 ? view.getId() : getChildAt(i - 1).getId());
+            view.setNextFocusRightId(i == count - 1 ? view.getId() : getChildAt(i + 1).getId());
+        }
+    }
+
     private void updateFocusNeighbors() {
+        if (trapHorizontal) {
+            chainHorizontal();
+            return;
+        }
         boolean visible = getVisibility() == VISIBLE;
         View first = getChildAt(0);
         View last = getChildAt(getChildCount() - 1);
@@ -133,11 +152,10 @@ public final class PlaybackButtonsView extends LinearLayout implements SharedPre
     }
 
     private void updateVisibility(PlayerManager manager) {
-        int engine = manager == null ? -1 : manager.getEngine();
-        boolean visible = engine == PlayerSetting.ENGINE_MPV || engine == PlayerSetting.ENGINE_EXO;
+        boolean visible = manager != null;
         boolean restoreFocus = !visible && hasFocus();
-        if (activeEngine != engine) {
-            activeEngine = engine;
+        if (boundPlayer != manager) {
+            boundPlayer = manager;
             refresh();
         }
         setVisibility(visible ? VISIBLE : GONE);
@@ -157,15 +175,11 @@ public final class PlaybackButtonsView extends LinearLayout implements SharedPre
         FragmentActivity activity = activity();
         PlayerManager manager = activity instanceof PlaybackActivity playback ? playback.getPlaybackPlayer() : null;
         if (manager == null) {
-            Notify.show(activeEngine == PlayerSetting.ENGINE_MPV ? R.string.mpv_script_unavailable : R.string.exo_command_unavailable);
+            Notify.show(R.string.exo_command_unavailable);
             return;
         }
-        if (manager.getEngine() == PlayerSetting.ENGINE_MPV) {
-            if (!manager.runMpvScript(item)) Notify.show(R.string.mpv_script_unavailable);
-        } else if (manager.getEngine() == PlayerSetting.ENGINE_EXO) {
-            ExoCommand.Result result = manager.runExoCommand(item, ((PlaybackActivity) activity).getPlaybackPlayerView());
-            if (result == ExoCommand.Result.UNAVAILABLE) Notify.show(R.string.exo_command_unavailable);
-            else if (result == ExoCommand.Result.UNSUPPORTED) Notify.show(R.string.exo_command_unsupported);
-        }
+        ExoCommand.Result result = manager.runExoCommand(item, ((PlaybackActivity) activity).getPlaybackPlayerView());
+        if (result == ExoCommand.Result.UNAVAILABLE) Notify.show(R.string.exo_command_unavailable);
+        else if (result == ExoCommand.Result.UNSUPPORTED) Notify.show(R.string.exo_command_unsupported);
     }
 }
