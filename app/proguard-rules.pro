@@ -15,6 +15,17 @@
 # Gson
 -keep class com.google.gson.** { *; }
 
+# Gson 泛型必需：R8 默认剥离 Signature 属性后，Gson 拿不到字段的泛型参数
+# （如 List<DoubanHotItem>、Map<String, TmdbArt>、TypeToken 匿名子类的父类签名），
+# 会把元素反序列化成 LinkedTreeMap，运行期强转直接 ClassCastException。
+# 只在 release（minifyEnabled）出现，debug 不复现。
+-keepattributes Signature
+-keepattributes *Annotation*
+# 反射解析的 Gson 模型：字段名不混淆，避免读写键名随版本漂移。
+-keepclassmembers class com.fongmi.android.tv.utils.DoubanHot$Cache {
+  <fields>;
+}
+
 # OkHttp
 -dontwarn okhttp3.**
 -keep class okio.** { *; }

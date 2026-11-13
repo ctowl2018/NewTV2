@@ -34,7 +34,13 @@ public final class TmdbStore {
     private static final String INDEX_NAME = "index.json";
     private static final String BACKDROP_PREFIX = "w1280_";
     private static final Object LOCK = new Object();
-    private static final Type INDEX_TYPE = new TypeToken<Map<String, TmdbArt>>() {}.getType();
+    /**
+     * 索引的 Gson 类型。用 {@link TypeToken#getParameterized} 显式声明，而不用
+     * {@code new TypeToken<Map<String, TmdbArt>>() {}.getType()}：后者的泛型信息存在匿名类的
+     * Signature 属性里，R8 在 release 构建中会剥离该属性，类型退化成 {@code Map<String, Object>}，
+     * 读回的条目变成 LinkedTreeMap（首页主视觉曾因此整块显示不出剧照）。
+     */
+    private static final Type INDEX_TYPE = TypeToken.getParameterized(Map.class, String.class, TmdbArt.class).getType();
     /** 解码后的背景图缓存：焦点快速横移时不再重复解码 1280x720 的 JPEG。 */
     private static final LruCache<String, Bitmap> BITMAPS = new LruCache<>(3);
     /** logo 单独一份缓存，避免把体积更大的背景图挤出内存；w500 PNG 很小，多留几张。 */

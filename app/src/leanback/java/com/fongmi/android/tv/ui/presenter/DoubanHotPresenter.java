@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.ui.presenter;
 
+import android.app.Activity;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -20,6 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.leanback.widget.Presenter;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
@@ -342,7 +345,8 @@ public class DoubanHotPresenter extends Presenter {
             int gen = ++generation;
             if (!animate) {
                 ImageView back = front == binding.backdrop.getImageA() ? binding.backdrop.getImageB() : binding.backdrop.getImageA();
-                Glide.with(back).clear(back);
+                RequestManager manager = glide(back);
+                if (manager != null) manager.clear(back);
                 back.setVisibility(View.GONE);
                 front.setAlpha(IMAGE_ALPHA);
                 front.setVisibility(View.VISIBLE);
@@ -352,7 +356,8 @@ public class DoubanHotPresenter extends Presenter {
             ImageView next = front == binding.backdrop.getImageA() ? binding.backdrop.getImageB() : binding.backdrop.getImageA();
             ImageView old = front;
             next.animate().cancel();
-            Glide.with(next).clear(next);
+            RequestManager manager = glide(next);
+            if (manager != null) manager.clear(next);
             next.setAlpha(0f);
             next.setVisibility(View.INVISIBLE);
             front = next;
@@ -371,8 +376,9 @@ public class DoubanHotPresenter extends Presenter {
                 return;
             }
             bindTitle(item, art);
-            Glide.with(target)
-                    .load(art.getBackdropFile())
+            RequestManager manager = glide(target);
+            if (manager == null) return;
+            manager.load(art.getBackdropFile())
                     // 不走 Glide 的 centerCrop/fitCenter：两者都会改 ImageView 的 scaleType，
                     // 破坏「宽度铺满 + 顶部贴齐」自算的 MATRIX。保留原图尺寸，矩阵自己算。
                     .dontTransform()
@@ -632,6 +638,24 @@ public class DoubanHotPresenter extends Presenter {
             TmdbApi.fetch(title, null, null);
         }
 
+        /**
+         * 取 Glide 的 RequestManager，Activity 已销毁时返回 {@code null}（本次放弃加载）。
+         *
+         * <p>{@code Glide.with(view)} 会沿 View 的 Context 找到宿主 Activity 并校验状态，
+         * 已销毁即抛 {@code IllegalArgumentException: You cannot start a load for a destroyed
+         * activity}。首页主视觉的 7 秒自动轮播定时器、TMDB 刮削完成回调都可能比页面存活更久，
+         * 退出首页后再触发一次 {@link #show} 就会命中这条崩溃（实测 release 包首次启动后必现）。
+         * 统一在这里短路，调用方判空即可。</p>
+         */
+        private static RequestManager glide(View view) {
+            Context context = view.getContext();
+            if (context instanceof Activity) {
+                Activity activity = (Activity) context;
+                if (activity.isFinishing() || activity.isDestroyed()) return null;
+            }
+            return Glide.with(view);
+        }
+
         private DoubanHotItem current() {
             return index >= 0 && index < items.size() ? items.get(index) : null;
         }
@@ -670,8 +694,10 @@ public class DoubanHotPresenter extends Presenter {
             styleAction(false);
             binding.action.setVisibility(View.VISIBLE);
             clearContent();
-            Glide.with(binding.backdrop.getImageA()).clear(binding.backdrop.getImageA());
-            Glide.with(binding.backdrop.getImageB()).clear(binding.backdrop.getImageB());
+            RequestManager imageA = glide(binding.backdrop.getImageA());
+            if (imageA != null) imageA.clear(binding.backdrop.getImageA());
+            RequestManager imageB = glide(binding.backdrop.getImageB());
+            if (imageB != null) imageB.clear(binding.backdrop.getImageB());
         }
     }
 }

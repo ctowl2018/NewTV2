@@ -10,6 +10,10 @@ import com.fongmi.android.tv.bean.DoubanHotItem;
 import com.fongmi.android.tv.bean.Word;
 import com.github.catvod.utils.Path;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.annotations.SerializedName;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -211,14 +215,21 @@ public final class DoubanHot {
 
     private static final class Cache {
 
+        @SerializedName("time")
         private long time;
+        @SerializedName("items")
         private List<DoubanHotItem> items;
+        @SerializedName("source")
         private String source;
 
         private Cache(long time, List<DoubanHotItem> items) {
+            this(time, items, SOURCE);
+        }
+
+        private Cache(long time, List<DoubanHotItem> items, String source) {
             this.time = time;
             this.items = items;
-            this.source = SOURCE;
+            this.source = source;
         }
     }
 
@@ -234,12 +245,44 @@ public final class DoubanHot {
             byte[] buffer = new byte[8192];
             int len;
             while ((len = in.read(buffer)) != -1) out.write(buffer, 0, len);
-            Cache cache = new Gson().fromJson(new String(out.toByteArray(), StandardCharsets.UTF_8), Cache.class);
+            Cache cache = parse(new String(out.toByteArray(), StandardCharsets.UTF_8));
             if (cache == null || cache.items == null || cache.items.isEmpty()) return null;
             // 旧数据源（豆瓣三榜单）写下的缓存没有 source 字段或值不同，直接作废并强制刷新。
             if (!SOURCE.equals(cache.source)) return null;
             memory = cache;
             return cache;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析磁盘缓存。
+     *
+     * <p><b>不能用</b> {@code gson.fromJson(json, Cache.class)}：那要求 Gson 从
+     * {@code items} 字段的泛型签名 {@code List<DoubanHotItem>} 推断元素类型，而 R8 在
+     * release 构建里会剥离 Signature 属性（debug 不剥离），元素于是退化成
+     * {@code LinkedTreeMap}，首页 {@code DoubanHotPresenter} 绑定时强转
+     * {@link DoubanHotItem} 必抛 {@code ClassCastException}（首个 CI 发布版的崩溃根因）。</p>
+     *
+     * <p>这里逐条按<b>具体类型</b> {@code DoubanHotItem.class} 解析，与泛型签名无关；
+     * 脏数据（非对象元素、空片名）直接跳过，不会污染列表。</p>
+     */
+    private static Cache parse(String json) {
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            if (root == null || !root.has("time") || !root.has("items")) return null;
+            JsonElement element = root.get("items");
+            if (element == null || !element.isJsonArray()) return null;
+            Gson gson = new Gson();
+            List<DoubanHotItem> items = new ArrayList<>();
+            for (JsonElement child : element.getAsJsonArray()) {
+                if (child == null || !child.isJsonObject()) continue;
+                DoubanHotItem item = gson.fromJson(child, DoubanHotItem.class);
+                if (item != null && !TextUtils.isEmpty(item.getTitle())) items.add(item);
+            }
+            String source = root.has("source") ? root.get("source").getAsString() : "";
+            return new Cache(root.get("time").getAsLong(), items, source);
         } catch (Exception e) {
             return null;
         }

@@ -2,6 +2,7 @@ package com.fongmi.android.tv.bean;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -22,7 +23,13 @@ public class DoubanHotRow {
     }
 
     public static DoubanHotRow create(List<DoubanHotItem> items) {
-        return new DoubanHotRow(items == null ? Collections.emptyList() : items);
+        if (items == null) return new DoubanHotRow(Collections.emptyList());
+        // 防御历史脏数据：5.8.7.NewTV2 首个发布版因 R8 剥离泛型签名，把磁盘缓存里的条目
+        // 反序列化成了 com.google.gson.internal.LinkedTreeMap，混进列表会在 Presenter
+        // 绑定时抛 ClassCastException 直接闪退。这里逐条校验运行时类型，非本类型直接丢弃。
+        List<DoubanHotItem> safe = new ArrayList<>(items.size());
+        for (Object item : (List<?>) items) if (item instanceof DoubanHotItem) safe.add((DoubanHotItem) item);
+        return new DoubanHotRow(safe);
     }
 
     @NonNull
