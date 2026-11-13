@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug 专用 manifest 覆盖：把 VideoActivity 置为 exported，便于用
+  `adb shell am start -n com.fongmi.android.tv/.ui.activity.VideoActivity -e key ... -e id ... -e name ...`
+  直接拉起播放详情页做视觉核对（首页导航在部分模拟器多 display 环境下不易走位）。
+
+  只在 debug 构建生效，release 包不受影响。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity
+            android:name=".ui.activity.VideoActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+
+</manifest>

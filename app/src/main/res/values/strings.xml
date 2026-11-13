@@ -14,6 +14,11 @@
     <string name="detail_actor">Actor: <xliff:g name="name">%s</xliff:g></string>
     <string name="detail_content">Summary: <xliff:g name="name">%s</xliff:g></string>
     <string name="detail_desc">Summary</string>
+    <string name="detail_label_episode">Episodes</string>
+    <string name="detail_label_range">Episode range</string>
+    <string name="detail_label_source">Sources</string>
+    <string name="detail_label_quality">Quality</string>
+    <string name="detail_label_part">More lines</string>
 
     <!-- Keep -->
     <string name="keep">Keep</string>
@@ -604,4 +609,36 @@
 
     <string name="danmaku_disabled_hint">Danmaku is disabled. Enable it in settings first.</string>
 
+
+    <!-- TMDB scraping (Settings → TMDB setting) -->
+    <string name="setting_tmdb">TMDB setting</string>
+    <string name="tmdb_enable">Enable TMDB scraping</string>
+    <string name="tmdb_site_index">Site %1$d</string>
+    <string name="tmdb_add_site">Add site</string>
+    <string name="tmdb_site_url_hint">Site URL, e.g. https://example.com</string>
+    <string name="tmdb_site_key_hint">API key for this site</string>
+    <string name="tmdb_site_delete">Delete</string>
+    <string name="tmdb_site_invalid">URL must start with http:// or https://</string>
+    <string name="tmdb_site_key_required">API key cannot be empty</string>
+    <string name="tmdb_site_min">Keep at least one site</string>
+    <string name="tmdb_site_max">At most %1$d sites</string>
+    <string name="tmdb_site_summary">%1$d sites (rotating)</string>
+    <string name="tmdb_cache">Cache (backdrops)</string>
+    <string name="tmdb_cache_info">%1$d images · %2$s</string>
+    <string name="tmdb_clear">Clear cache</string>
+    <string name="tmdb_clear_confirm">Delete all cached TMDB backdrops and logos?</string>
+    <string name="tmdb_error_toast">Scrape failure toast</string>
+    <string name="tmdb_fetch_failed">TMDB scrape failed: %1$s</string>
+    <string name="tmdb_retry">TMDB scrape</string>
+    <string name="tmdb_retry_start">Scraping TMDB again…</string>
+    <string name="tmdb_retry_success">TMDB scrape succeeded: %1$s</string>
+    <string name="tmdb_disabled_hint">Enable TMDB scraping in Settings → TMDB setting first</string>
+    <string name="tmdb_no_keyword">No title available for scraping</string>
+    <string name="tmdb_log_entry">View TMDB scrape log</string>
+    <string name="tmdb_log_title">TMDB scrape log</string>
+    <string name="tmdb_log_hint">Each scrape is logged with stage, request and response; up to 240 entries</string>
+    <string name="tmdb_log_summary">%1$d entries · %2$d failed</string>
+    <string name="tmdb_log_clear">Clear log</string>
+    <string name="tmdb_log_clear_confirm">Delete all TMDB scrape logs?</string>
+    <string name="tmdb_log_empty">No logs yet. Scrape entries appear here after playback.</string>
 </resources>

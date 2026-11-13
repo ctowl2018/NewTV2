@@ -10,8 +10,8 @@
     android:focusableInTouchMode="true"
     android:gravity="center"
     android:nextFocusUp="@id/flag"
-    android:nextFocusDown="@id/episode"
+    android:nextFocusDown="@id/part"
     android:singleLine="true"
     android:textColor="@color/text"
-    android:textSize="16sp"
+    android:textSize="12sp"
     tools:text="FHD" />

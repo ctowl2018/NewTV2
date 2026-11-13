@@ -2,7 +2,6 @@ package com.fongmi.android.tv.ui.activity;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -30,6 +29,7 @@ import com.fongmi.android.tv.ui.dialog.LocalConnectDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.utils.HotRank;
 import com.fongmi.android.tv.utils.KeyUtil;
+import com.fongmi.android.tv.utils.SearchSuggest;
 import com.fongmi.android.tv.utils.Util;
 import com.fongmi.android.tv.utils.ZhuToPin;
 import com.github.catvod.net.OkHttp;
@@ -54,8 +54,21 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     private WordAdapter mTvAdapter;
     private WordAdapter mVarietyAdapter;
 
-    /** 联想词序号：请求晚到时直接丢弃，避免旧结果覆盖新输入。 */
+    /** 联想词序号：双源并发返回，用序号丢弃过期响应，避免旧结果覆盖新结果。 */
     private int mSuggestSeq;
+    private List<Word.Data> mIqiyi = new ArrayList<>();
+    private List<Word.Data> mTencent = new ArrayList<>();
+
+    /**
+     * 是否已经历过一次 {@link #onResume()}。
+     *
+     * <p>首次 onResume 是刚进这个页面：此时搜索框里可能有 {@code start(activity, keyword)}
+     * 带进来的关键词（首页主视觉、服务端推送搜索都会走这条路），必须原样保留。</p>
+     *
+     * <p>之后的 onResume 都意味着「从别的页面回到了搜索页」（收藏/播放/设置…），
+     * 按需求一律清空搜索框，让页面回到「热词」初始态，而不是接着上次的词继续。</p>
+     */
+    private boolean mResumed;
 
     private interface HotSaver {
 
@@ -154,22 +167,38 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     }
 
     /**
-     * 热播三分类：先渲染缓存，缓存过期才刷新。
+     * 热词三分类：电影 / 剧集 / 综艺来自 {@link HotRank} 的四平台聚合榜
+     * （优酷 / 爱奇艺 / 腾讯视频 / 芒果TV 公开榜单，交替排名去重）。
      *
-     * <p>榜单是低频数据，没必要每次进搜索页都打三次请求；15 分钟内只读缓存。
-     * 任一请求失败都静默降级为缓存内容，不弹提示、不清空已有数据。
+     * <p>先渲染缓存，缓存过期才刷新。榜单是低频数据，没必要每次进搜索页都打三次请求。
+     * 任一请求失败都静默降级为已有缓存，不弹提示、不清空展示。
+     *
+     * <p>回退保护：豆瓣数据源写下的缓存带 {@code "source":"douban"} 标记，换回 HotRank 后
+     * 不能再拿来渲染（否则热词仍是豆瓣的），也不能只靠 {@code isHotExpired()} 判定刷新 ——
+     * 豆瓣时代刚刷过缓存时它可能是 false，会让三组一直空白。这里检测到旧缓存就丢弃并强制刷新一次。
      */
     private void getHot() {
         mSuggestSeq++;
         mBinding.word.setVisibility(View.GONE);
         mBinding.wordRecycler.setVisibility(View.GONE);
-        bindHot(mMovieAdapter, mBinding.movieWordRecycler, mBinding.movieWord, Setting.getHotMovie());
-        bindHot(mTvAdapter, mBinding.tvWordRecycler, mBinding.tvWord, Setting.getHotTv());
-        bindHot(mVarietyAdapter, mBinding.varietyWordRecycler, mBinding.varietyWord, Setting.getHotVariety());
-        if (!Setting.isHotExpired()) return;
+
+        String movieCache = Setting.getHotMovie();
+        String tvCache = Setting.getHotTv();
+        String varietyCache = Setting.getHotVariety();
+        boolean legacy = isLegacyHot(movieCache) || isLegacyHot(tvCache) || isLegacyHot(varietyCache);
+        String empty = "";
+        bindHot(mMovieAdapter, mBinding.movieWordRecycler, mBinding.movieWord, legacy ? empty : movieCache);
+        bindHot(mTvAdapter, mBinding.tvWordRecycler, mBinding.tvWord, legacy ? empty : tvCache);
+        bindHot(mVarietyAdapter, mBinding.varietyWordRecycler, mBinding.varietyWord, legacy ? empty : varietyCache);
+        if (!legacy && !Setting.isHotExpired()) return;
         requestRank(HotRank.MOVIE, mMovieAdapter, mBinding.movieWordRecycler, mBinding.movieWord, Setting::putHotMovie);
         requestRank(HotRank.TV, mTvAdapter, mBinding.tvWordRecycler, mBinding.tvWord, Setting::putHotTv);
         requestRank(HotRank.VARIETY, mVarietyAdapter, mBinding.varietyWordRecycler, mBinding.varietyWord, Setting::putHotVariety);
+    }
+
+    /** 旧豆瓣数据源的缓存标记；{@code Word.objectFrom()} 会忽略多余字段，必须在这里主动拦掉。 */
+    private static boolean isLegacyHot(String json) {
+        return json != null && json.contains("\"source\":\"douban\"");
     }
 
     private void bindHot(WordAdapter adapter, RecyclerView list, TextView label, String json) {
@@ -184,6 +213,7 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         return new ArrayList<>(data.subList(0, Math.min(data.size(), HOT_LIMIT)));
     }
 
+    /** 四平台聚合榜：回调在后台线程，切回主线程后再写缓存、刷新列表。 */
     private void requestRank(int cat, WordAdapter adapter, RecyclerView list, TextView label, HotSaver saver) {
         HotRank.fetch(cat, result -> {
             if (TextUtils.isEmpty(result)) return;
@@ -196,25 +226,48 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         });
     }
 
+    /**
+     * 联想词：爱奇艺 + 腾讯视频双源并发，用序号丢弃过期响应，最后按出现顺序合并去重。
+     *
+     * <p>与 tv-latest 对齐，但<b>不引入「联网搜索建议」开关</b>：有输入就始终请求两个来源。
+     * 单源失败不影响另一源，失败时保持另一源的结果。</p>
+     */
     private void getSuggest(String text) {
         int seq = ++mSuggestSeq;
+        mIqiyi = new ArrayList<>();
+        mTencent = new ArrayList<>();
         mBinding.word.setText(R.string.search_suggest);
         mBinding.word.setVisibility(View.VISIBLE);
         hideHotGroups();
-        OkHttp.newCall("https://suggest.video.iqiyi.com/?if=mobile&key=" + Uri.encode(ZhuToPin.get(text))).enqueue(new Callback() {
+        mWordAdapter.setItems(new ArrayList<>());
+        String keyword = ZhuToPin.get(text);
+        requestSuggest(SearchSuggest.iqiyiUrl(keyword), seq, false);
+        requestSuggest(SearchSuggest.tencentUrl(keyword), seq, true);
+    }
+
+    private void requestSuggest(String url, int seq, boolean tencent) {
+        OkHttp.newCall(url).enqueue(new Callback() {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.body() == null) return;
                 String result = response.body().string();
                 if (TextUtils.isEmpty(result)) return;
-                App.post(() -> applySuggest(seq, result));
+                App.post(() -> applySuggest(seq, result, tencent));
+            }
+
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                // 单源失败不影响另一源
             }
         });
     }
 
-    private void applySuggest(int seq, String result) {
+    private void applySuggest(int seq, String result, boolean tencent) {
         if (seq != mSuggestSeq || empty()) return;
+        if (tencent) mTencent = SearchSuggest.parseTencent(result);
+        else mIqiyi = SearchSuggest.parseIqiyi(result);
         // AsyncListDiffer 的提交是异步的，这里用解析结果判断可见性，不读 adapter.getItemCount()
-        List<Word.Data> data = Word.objectFrom(result).getData();
+        List<Word.Data> data = SearchSuggest.merge(mIqiyi, mTencent);
         mWordAdapter.setItems(data);
         boolean hasWord = !data.isEmpty();
         mBinding.word.setVisibility(hasWord ? View.VISIBLE : View.GONE);
@@ -421,7 +474,22 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     protected void onResume() {
         super.onResume();
         mBinding.mic.setFocusable(true);
+        // 从任意页面返回搜索页：清空搜索框内的全部字符；首次进入时保留 start(keyword) 带来的词。
+        if (mResumed) clearKeyword();
+        else mResumed = true;
         mBinding.keyword.requestFocus();
+    }
+
+    /**
+     * 清空搜索框并回到热词态。
+     *
+     * <p>只在文本真的非空时写回：{@code setText("")} 会触发 {@code CustomTextListener}
+     * → {@link #getWord(String)} → {@link #getHot()}，热词分组随之重新显示；
+     * 本来就是空的话没必要再走一遍。</p>
+     */
+    private void clearKeyword() {
+        if (mBinding.keyword.getText().length() > 0) mBinding.keyword.setText("");
+        mBinding.keyword.setSelection(0);
     }
 
     @Override

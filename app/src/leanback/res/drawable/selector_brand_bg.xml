@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  左上角品牌入口（播放三角）的黑色「类椭圆」底。
+
+  形状与顶部导航按钮的聚焦选中框 selector_nav_button 完全同款：
+  rectangle + corners radius=16dp。命中区 48×36dp，四边内缩 2dp 后绘制区是
+  44×32dp 的胶囊（16dp 恰好等于半高），因此视觉上是横向类椭圆而不是正圆
+  —— 若仍在 36×36dp 的正方形里用 16dp 圆角，画出来依旧是一个圆，等于没换形状。
+
+  颜色保持不变：常态纯黑 #FF000000，聚焦时外圈 2dp 白描边。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <layer-list>
+            <item
+                android:bottom="2dp"
+                android:left="2dp"
+                android:right="2dp"
+                android:top="2dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="16dp" />
+                    <solid android:color="#FF000000" />
+                </shape>
+            </item>
+            <item
+                android:bottom="1dp"
+                android:left="1dp"
+                android:right="1dp"
+                android:top="1dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="16dp" />
+                    <solid android:color="@android:color/transparent" />
+                    <stroke
+                        android:width="2dp"
+                        android:color="#FFFFFFFF" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+
+    <item>
+        <layer-list>
+            <item
+                android:bottom="2dp"
+                android:left="2dp"
+                android:right="2dp"
+                android:top="2dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="16dp" />
+                    <solid android:color="#FF000000" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+
+</selector>

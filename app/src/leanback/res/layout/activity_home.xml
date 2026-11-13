@@ -1,53 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  首页分四层（FrameLayout 的子 View 顺序即绘制顺序，后画的压在先画的之上；
+  再用 elevation 显式拉开 Z 序，避免 recycler 内部聚焦 item / 系统焦点高亮抢到上层）：
+
+    L0  ProgressLayout → VerticalGridView
+        主视觉 + 全部内容行。
+    L1  topScrim（无 elevation，靠绘制顺序压在 recycler 之上、工具栏之下）
+        顶部渐变遮罩：屏幕边缘黑 50%，向下淡出到全透明。高度由
+        HomeActivity.applyTopScrim() 按「工具栏底边 + 5dp」动态设置，不遮住顶栏文字。
+    L2  homeToolbar（elevation 8dp）
+        屏幕顶部一条水平工具栏，导航控件 12sp 加粗、垂直居中对齐、无文字投影：
+        最左是品牌入口（播放三角，纯展示：不可聚焦、无点击、无弹窗）；
+        其次 6 个导航文字按钮（首页 / 爱奇艺 / 腾讯视频 / 优酷 / 芒果TV / 片库）；
+        右侧依次是 4 个功能图标（搜索 / 收藏 / 连接 / 设置）→ 站源下拉入口 → 时间（18sp）。
+    L3  siteSheet（elevation 16dp，最后一个子 View）
+        FocusTrapFrameLayout：显示期间把方向焦点搜索截断在容器内部；内容为站源列表。
+        原品牌入口的功能 sheet（moreSheet）已随 logo 弹窗菜单一并移除。
+
+  层级保证：sheet > toolbar > topScrim > recycler。浮层控件全部叠加在主视觉之上，
+  不占用列表行。toolbar/sheet 是 ProgressLayout 的兄弟节点，因此
+  ProgressLayout.showProgress() 隐藏 recycler 时不会把它们一起隐藏。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:clipChildren="false">
 
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:animateLayoutChanges="true"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingTop="24dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp">
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:id="@+id/logo"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="12dp"
-            android:src="@drawable/ic_logo" />
-
-        <com.fongmi.android.tv.ui.custom.CustomTitleView
-            android:id="@+id/title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:layout_weight="1"
-            android:ellipsize="marquee"
-            android:focusable="false"
-            android:singleLine="true"
-            android:text="@string/app_name"
-            android:textColor="@color/white"
-            android:textSize="24sp" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/clock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:textSize="24sp"
-            tools:text="09:20:00" />
-
-    </androidx.appcompat.widget.LinearLayoutCompat>
-
+    <!-- L0：列表内容（主视觉是它的第 0 行） -->
     <com.fongmi.android.tv.ui.custom.ProgressLayout
         android:id="@+id/progressLayout"
         android:layout_width="match_parent"
@@ -67,4 +48,26 @@
             app:focusOutFront="true" />
 
     </com.fongmi.android.tv.ui.custom.ProgressLayout>
-</androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- L1：顶部渐变遮罩（高度由代码设置；不参与焦点与点击） -->
+    <View
+        android:id="@+id/topScrim"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="top"
+        android:background="@drawable/shape_top_scrim"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
+    <!-- L2：顶部工具栏（可复用布局 view_home_toolbar.xml，与分类页共用同一份样式） -->
+    <include
+        android:id="@+id/homeToolbar"
+        layout="@layout/view_home_toolbar" />
+
+    <!-- L3-a：站源下拉面板（可复用布局 view_site_sheet.xml，与首页 / 分类页共用） -->
+    <include
+        android:id="@+id/siteSheet"
+        layout="@layout/view_site_sheet" />
+
+</FrameLayout>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="16dp"
+    android:background="@drawable/selector_item"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/siteTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            tools:text="站点 1" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/siteUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="middle"
+            android:gravity="end"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            tools:text="https://example.com" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/siteKey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0.55"
+        android:gravity="end"
+        android:singleLine="true"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        tools:text="3164…3642" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

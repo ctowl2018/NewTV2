@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶部工具栏「搜索」图标（矢量版，替代原 PNG）。
+
+  线条口径与 ic_home_connect 完全一致：24 viewBox + strokeWidth=2（显示 14dp 时
+  约 1.17dp 粗），圆头圆角。原 PNG 是细描边（约 1 单位），缩到 14dp 后线性变细发虚，
+  这里按 connect 的 2 单位重绘，四枚图标的线条粗细统一。
+
+  几何：圆环中心 (10.7,10.7)、半径 7.3（描边外缘 19.1u → 14dp 盒内 11.1dp 墨迹），
+  手柄从 (15.9,15.9) 到 (20.5,20.5)、圆头外扩 1 单位，与圆环相接。
+  左右留 2.4~21.5u，与 connect 的 2~22u 视觉大小一致。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:tint="@color/white"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M3.40,10.70 a7.3,7.3 0 1,0 14.60,0 a7.3,7.3 0 1,0 -14.60,0"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="2" />
+
+    <path
+        android:pathData="M15.90,15.90 L20.50,20.50"
+        android:strokeColor="@android:color/white"
+        android:strokeLineCap="round"
+        android:strokeWidth="2" />
+
+</vector>

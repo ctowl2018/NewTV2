@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  站源下拉面板（可复用组件）：首页与分类页共用，挂在宿主根 FrameLayout 的最后一层。
+
+  引用方式：<include android:id="@+id/siteSheet" layout="@layout/view_site_sheet" />
+    - 本文件根节点为 match_parent × match_parent，include 不覆盖尺寸即可铺满宿主；
+    - 宿主需要在其前面提供 id 为 siteEntry 的触发入口（在 view_home_toolbar 内）。
+
+  层级：FocusTrapFrameLayout 在显示期间把方向焦点搜索截断在容器内部；
+  内容为站源列表，面板宽度 / 顶边由宿主的 positionSheet() 按入口位置自适应计算。
+-->
+<com.fongmi.android.tv.ui.custom.FocusTrapFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/siteSheet"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:descendantFocusability="afterDescendants"
+    android:elevation="16dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:visibility="gone">
+
+    <!-- 点击面板外关闭；遮罩极淡，不改变主视觉观感 -->
+    <View
+        android:id="@+id/siteScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#1A000000"
+        android:focusable="false" />
+
+    <!-- 面板宽度由宿主的 positionSheet() 按最长站源名自适应计算 -->
+    <FrameLayout
+        android:id="@+id/sitePanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:background="@drawable/shape_site_sheet"
+        android:clipChildren="false"
+        android:padding="6dp">
+
+        <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+            android:id="@+id/siteList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            app:maxHeight="240dp"
+            tools:itemCount="5"
+            tools:listitem="@layout/adapter_site_menu" />
+
+    </FrameLayout>
+
+</com.fongmi.android.tv.ui.custom.FocusTrapFrameLayout>

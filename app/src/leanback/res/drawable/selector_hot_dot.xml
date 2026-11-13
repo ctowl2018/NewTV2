@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 指示点：selected 态用实心白，其余半透明。代码里对每个点调用 setSelected(i == index)。 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/shape_hot_dot_on" android:state_selected="true" />
+    <item android:drawable="@drawable/shape_hot_dot_off" />
+</selector>

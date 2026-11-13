@@ -4,11 +4,14 @@ import android.annotation.SuppressLint;
 import android.animation.TimeInterpolator;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.style.ClickableSpan;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
@@ -16,6 +19,10 @@ import android.view.ViewGroup;
 import android.view.animation.PathInterpolator;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.regex.Matcher;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -39,6 +46,8 @@ import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.DanmakuApi;
 import com.fongmi.android.tv.api.SiteApi;
+import com.fongmi.android.tv.api.TmdbApi;
+import com.fongmi.android.tv.api.TmdbStore;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.DanmakuTitle;
@@ -50,6 +59,7 @@ import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Sub;
+import com.fongmi.android.tv.bean.TmdbArt;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.ActivityVideoBinding;
 import com.fongmi.android.tv.db.AppDatabase;
@@ -72,6 +82,7 @@ import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.setting.TmdbSetting;
 import com.fongmi.android.tv.ui.adapter.ArrayAdapter;
 import com.fongmi.android.tv.ui.adapter.EpisodeAdapter;
 import com.fongmi.android.tv.ui.adapter.FlagAdapter;
@@ -117,6 +128,9 @@ import java.util.List;
 import java.util.Objects;
 
 public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, VodInput.Listener, ParseDialog.Listener, ArrayAdapter.OnClickListener, FlagAdapter.OnClickListener, EpisodeAdapter.OnClickListener, QualityAdapter.OnClickListener, QuickAdapter.OnClickListener, Clock.Callback, DanmakuListener {
+
+    /** 调试日志标签：定位详情页背景相关问题时用 {@code adb logcat -s TVDBG} 过滤。 */
+    private static final String TAG_DEBUG = "TVDBG";
 
     private static final float[] SPEEDS = {0.5f, 0.8f, 1.0f, 1.2f, 1.5f, 2.0f, 3.0f, 5.0f};
     private static final int SPEED_VISIBLE_ROWS = 5;
@@ -189,6 +203,25 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private boolean useParse;
     /** 控制条是否处于「呼出」状态：以逻辑位为准，滑动动画期间不会误判。 */
     private boolean mControlShown;
+
+    /**
+     * 等弹幕接口回传片名的上限：超过就按「取不到」处理，改用站源片名去刮 TMDB。
+     * 弹幕接口正常时通常 1 秒内就有结果，4 秒足够覆盖慢网，又不至于让背景图迟迟不出现。
+     */
+    private static final long TMDB_DANMAKU_TIMEOUT = 4000L;
+
+    /** 弹幕接口回传的规范化片名；null 表示还没拿到。 */
+    private String mTmdbKeyword;
+    /** 站源片名（兜底关键字），也是别名关联里的第二个名字。 */
+    private String mTmdbPosterName = "";
+    /** 已发起过抓取的「关键字组合」，避免换集 / 重渲染时重复打接口。 */
+    private String mTmdbFetchedKey;
+    /** 片名关键字是否已定（拿到弹幕片名或已判定取不到）。 */
+    private boolean mTmdbKeywordReady;
+    /** 抓取完成回调（TMDB 落地后本页立即刷新背景与 logo）。 */
+    private final Runnable mTmdbRefresh = this::applyCachedTmdb;
+    /** 弹幕片名等待超时后的兜底。 */
+    private final Runnable mTmdbFallback = () -> onTmdbDanmaku(null);
 
     public static void push(FragmentActivity activity, String text) {
         if (TextUtils.isEmpty(text)) return;
@@ -371,6 +404,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         externalPlaybackCompleted = false;
         saveHistory(true);
         mVod.reset();
+        // 换了影片：TMDB 的片名 / 已抓标记全部作废，重新走一次优先级流程
+        App.removeCallbacks(mTmdbFallback);
+        mTmdbPosterName = "";
+        mTmdbKeyword = null;
+        mTmdbFetchedKey = null;
+        mTmdbKeywordReady = false;
         setIntent(intent);
         renderFallbackName(getName());
         updateNavigationKey();
@@ -380,6 +419,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
+        // 背景底边钉在「集数范围」整块区域（labelArray 标签 + array 网格）的下沿，主锚点是 array
+        // 网格；该块不显示（只有一集）时顺延到「选集」块，再顺延到来源 / 画质 / 更多线路，
+        // 全部不显示时控件自己回落到屏高比例。+8dp 让衔接线落在网格 16dp 外边距的中段，
+        // 既不压在网格里、也不贴住下一行标签。行数据显示/收起后锚点会重新布局并自动跟位。
+        mBinding.detailBackdrop.setBottomAnchors(ResUtil.dp2px(8), mBinding.array, mBinding.labelArray,
+                mBinding.episode, mBinding.labelEpisode, mBinding.labelFlag, mBinding.labelQuality,
+                mBinding.labelPart);
         mFrameParams = mBinding.video.getLayoutParams();
         applyControlBottomInset();
         applySeekRowShift();
@@ -396,6 +442,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         // 弹幕热力图：解析完成 / 换集清空都会回调，先把已有数据贴上（换集后是空）
         DanmakuHeat.addListener(mHeatListener);
         applyHeatmap();
+        // TMDB 抓取是异步的：抓完（或别的页面抓完）时本页要立刻换上背景图与片名 logo
+        TmdbApi.addOnFetched(mTmdbRefresh);
         checkCast();
         checkId();
     }
@@ -838,12 +886,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void loadDanmaku(Result result, History history, Episode episode) {
-        VodPlaybackMedia.searchDanmaku(result, history, episode, () -> isNativePlaybackCurrent() && mVod.isCurrentResult(result), player()::setDanmaku, player()::addDanmaku);
+        // 第 7 个参数：把接口返回的条目回传给 TMDB 刮削，用接口认定的规范片名做关键字
+        VodPlaybackMedia.searchDanmaku(result, history, episode, () -> isNativePlaybackCurrent() && mVod.isCurrentResult(result), player()::setDanmaku, player()::addDanmaku, this::onTmdbDanmaku);
     }
 
     @Override
     public void renderDetail(Vod item, History history) {
         mHistory = history;
+        mDebugDumped = false;
         mBinding.progressLayout.showContent();
         renderFallbackName(item.getName());
         mBinding.video.requestFocus();
@@ -852,6 +902,15 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         checkKeepImg();
         setText(item);
         updateKeep();
+        startTmdbFetch(item.getName());
+        // 调试：10 秒后无论背景有没有贴上，都抓一帧 —— 用于区分「没素材」与「画不出来」。
+        // 全进程只做一次：单帧 2560×1440 的 PNG 约 1.6MB，反复在主线程压图会拖慢首帧。
+        if (!mDebugFullDumped) {
+            mDebugFullDumped = true;
+            mBinding.getRoot().postDelayed(() -> {
+                if (!isFinishing() && !isDestroyed()) debugDumpScreen("detail-full");
+            }, 10000);
+        }
     }
 
     @Override
@@ -859,6 +918,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (!item.getId().isEmpty()) updateNavigationKey();
         renderVodMetadata(item.getName(), item.getPic());
         setText(item);
+        if (!item.getName().isEmpty()) startTmdbFetch(item.getName());
     }
 
     private void renderVodMetadata(String name, String pic) {
@@ -872,6 +932,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void renderEmptyDetail() {
         showEmpty();
+        // 没详情就没有素材归属，把上一部片的背景图与 logo 一起收掉，避免串图
+        applyTmdbArt(null);
     }
 
     @Override
@@ -880,9 +942,139 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.name.setText(name);
     }
 
+    // ==================================================================================
+    // TMDB 刮削：片名优先级、片名 logo、整页背景
+    // ==================================================================================
+
+    /**
+     * 进入详情页后的 TMDB 准备流程。
+     *
+     * <p>片名优先级：<b>弹幕接口返回的规范化片名</b> &gt; 站源片名。接口返回为空、请求失败，
+     * 或弹幕本身处于关闭/未配置状态时，一律回落到站源片名，保证刮削不会因为等不到弹幕而卡死。</p>
+     *
+     * <p>同一部片只抓一次：{@code mTmdbFetchedKey} 记录已发起的关键字组合，
+     * 后续 {@code renderVodUpdate} 重复进来时直接复用缓存。</p>
+     */
+    private void startTmdbFetch(String name) {
+        String poster = TextUtils.isEmpty(name) ? getName() : name;
+        if (TextUtils.isEmpty(poster)) return;
+        boolean same = TextUtils.equals(poster, mTmdbPosterName) && mTmdbFetchedKey != null;
+        mTmdbPosterName = poster;
+        // 先贴已有缓存：再次进入同一部片时不必等网络，背景与 logo 立刻可见
+        applyCachedTmdb();
+        if (same) return;
+        App.removeCallbacks(mTmdbFallback);
+        mTmdbKeyword = null;
+        mTmdbKeywordReady = false;
+        mTmdbFetchedKey = null;
+        // 总开关关闭：不再抓新素材，已缓存的图仍然显示
+        if (!TmdbSetting.isEnabled()) return;
+        // 弹幕关闭 / 接口未配置 / 自动搜索关闭：不指望接口给片名，直接用站源片名
+        if (!DanmakuSetting.isLoad() || !DanmakuApi.canSearch()) {
+            onTmdbDanmaku(null);
+            return;
+        }
+        // 接口在跑：给它 TMDB_DANMAKU_TIMEOUT 的时间回来，超时按「取不到」兜底
+        App.post(mTmdbFallback, TMDB_DANMAKU_TIMEOUT);
+    }
+
+    /**
+     * 弹幕接口回传片名（{@code DanmakuTitle} 里的规范剧名）。
+     *
+     * <p>只在第一次调用时生效：超时兜底与接口回调可能都到，先到者决定关键字。</p>
+     *
+     * @param danmaku null 表示超时或接口不可用，直接回落到站源片名
+     */
+    private void onTmdbDanmaku(@Nullable Danmaku danmaku) {
+        String keyword = "";
+        if (danmaku != null) {
+            DanmakuTitle meta = danmaku.getMeta();
+            if (meta != null) keyword = meta.getTitle();
+        }
+        if (TextUtils.isEmpty(keyword)) keyword = mTmdbPosterName;
+        // 已经用站源片名兜过底，此刻才拿到接口片名：关键字变了就换成更准的那个再抓一次
+        boolean upgrade = mTmdbKeywordReady && !TextUtils.equals(keyword, mTmdbKeyword);
+        if (mTmdbKeywordReady && !upgrade) return;
+        mTmdbKeyword = keyword;
+        mTmdbKeywordReady = true;
+        App.removeCallbacks(mTmdbFallback);
+        tryFetchTmdb();
+    }
+
+    /** 关键字就绪且总开关打开时才真正发请求；同一组合只发一次。 */
+    private void tryFetchTmdb() {
+        if (!mTmdbKeywordReady || !TmdbSetting.isEnabled()) return;
+        String keyword = TextUtils.isEmpty(mTmdbKeyword) ? mTmdbPosterName : mTmdbKeyword;
+        if (TextUtils.isEmpty(keyword)) return;
+        String key = keyword + "|" + mTmdbPosterName;
+        if (TextUtils.equals(key, mTmdbFetchedKey)) return;
+        mTmdbFetchedKey = key;
+        // 两个名字都登记成别名：换集后即使先用站源片名查，也能命中同一条素材
+        TmdbApi.fetch(keyword, mTmdbPosterName, tmdbAliases(keyword));
+    }
+
+    private List<String> tmdbAliases(String keyword) {
+        List<String> aliases = new ArrayList<>();
+        if (!TextUtils.isEmpty(mTmdbPosterName)) aliases.add(mTmdbPosterName);
+        if (!TextUtils.isEmpty(keyword)) aliases.add(keyword);
+        return aliases;
+    }
+
+    /** 从本地缓存取素材并贴上；关键字与站源片名都试一遍。 */
+    private void applyCachedTmdb() {
+        if (mBinding == null) return;
+        TmdbArt art = TmdbStore.find(TextUtils.isEmpty(mTmdbKeyword) ? mTmdbPosterName : mTmdbKeyword);
+        if (art == null || !art.hasBackdrop()) art = TmdbStore.find(mTmdbPosterName);
+        applyTmdbArt(art);
+    }
+
+    /**
+     * 提交 TMDB 素材。
+     *
+     * <p>详情页的横向剧照背景已按用户要求移除显示，所以这里不再取、也不再贴背景图；
+     * 但 {@link #tryFetchTmdb()} 的刮削链路完全保留 —— 素材仍然落盘、仍然供首页主视觉
+     * 与片名 logo 使用，只是这一页不再把它铺在整页背景上。</p>
+     */
+    private void applyTmdbArt(@Nullable TmdbArt art) {
+        if (mBinding == null) return;
+        showDetailBackdrop(null);
+        applyDetailLogo(art != null && !TextUtils.isEmpty(art.getLogo()) ? TmdbStore.logoBitmap(art.getLogo()) : null);
+    }
+
+    /** 详情页背景：恒为 GONE，只做清理，不再贴图。 */
+    private void showDetailBackdrop(@Nullable Bitmap bitmap) {
+        mBinding.detailBackdrop.setBackdrop(null);
+        mBinding.detailBackdrop.setVisibility(View.GONE);
+    }
+
+    /**
+     * 用 logo 顶替片名文字，并把备注重新锚到当前显示的那个视图上。
+     *
+     * <p>有 logo 时 {@code name} 置 GONE，否则 GONE 的视图宽度为 0，备注会滑到最左边。
+     * 备注的「在片名右侧、与底边齐平」关系保持不变：文字态用基线对齐，logo 态用底边对齐。</p>
+     */
+    /**
+     * 取消「用 logo 图片顶替片名文字」的展示逻辑，片名始终以文字显示。
+     * 备注固定锚定在 {@code name} 上（基线对齐），不再随 logo 出现而切换。
+     */
+    private void applyDetailLogo(@Nullable Bitmap logo) {
+        if (mBinding == null) return;
+        mBinding.detailLogo.setVisibility(View.GONE);
+        mBinding.detailLogo.setImageBitmap(null);
+        mBinding.name.setVisibility(View.VISIBLE);
+        RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mBinding.remark.getLayoutParams();
+        params.removeRule(RelativeLayout.END_OF);
+        params.removeRule(RelativeLayout.ALIGN_BASELINE);
+        params.removeRule(RelativeLayout.ALIGN_BOTTOM);
+        params.addRule(RelativeLayout.END_OF, R.id.name);
+        params.addRule(RelativeLayout.ALIGN_BASELINE, R.id.name);
+        mBinding.remark.setLayoutParams(params);
+    }
+
     @Override
     public void renderFlags(List<Flag> items) {
-        mBinding.flag.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        // 线路只有一条时没有切换意义，标题一并收起（标题与控件必须同进同退）。
+        setRowVisible(mBinding.flag, mBinding.labelFlag, items.size() > 1);
         mFlagAdapter.addAll(items);
     }
 
@@ -923,7 +1115,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void renderSources(List<Vod> items) {
         mQuickAdapter.addAll(items);
-        mBinding.quick.setVisibility(mQuickAdapter.isEmpty() ? View.GONE : View.VISIBLE);
+        setRowVisible(mBinding.quick, null, !mQuickAdapter.isEmpty());
     }
 
     @Override
@@ -1112,6 +1304,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         CustomMovement.bind(view);
     }
 
+    // 演员数量不再限制：原 limitActor() 已移除，全部人员可点击，显示行数由 TextView 的 maxLines=2 控制。
+
     private ClickableSpan clickableSpan(Result result) {
         return new ClickableSpan() {
             @Override
@@ -1130,7 +1324,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private void setEpisodeAdapter(List<Episode> items) {
         mEpisodes.clear();
         mEpisodes.addAll(items);
-        mBinding.episode.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        setRowVisible(mBinding.episode, mBinding.labelEpisode, !items.isEmpty());
         mEpisodeAdapter.addAll(items);
         setArrayAdapter(items.size());
         setR2Callback();
@@ -1143,8 +1337,18 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void setQualityVisible(boolean visible) {
-        mBinding.quality.setVisibility(visible ? View.VISIBLE : View.GONE);
+        setRowVisible(mBinding.quality, mBinding.labelQuality, visible);
         setR2Callback();
+    }
+
+    /**
+     * 详情页下方每一行都由「标题 + 横向列表」组成，标题必须跟随列表一起出现/收起，
+     * 否则会在空行位置留下一个孤立的标题。
+     */
+    private void setRowVisible(View row, View label, boolean visible) {
+        int state = visible ? View.VISIBLE : View.GONE;
+        row.setVisibility(state);
+        if (label != null) label.setVisibility(state);
     }
 
     @Override
@@ -1156,29 +1360,29 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         List<String> items = new ArrayList<>();
         items.add(getString(R.string.play_reverse));
         items.add(getString(mHistory.getRevPlayText()));
-        mBinding.array.setVisibility(size > 1 ? View.VISIBLE : View.GONE);
+        setRowVisible(mBinding.array, mBinding.labelArray, size > 1);
         if (mHistory.isRevSort()) for (int i = size; i > 0; i -= 20) items.add(i + "-" + Math.max(i - 19, 1));
         else for (int i = 0; i < size; i += 20) items.add((i + 1) + "-" + Math.min(i + 20, size));
         mArrayAdapter.addAll(items);
     }
 
     private int findFocusDown(int index) {
-        List<Integer> orders = Arrays.asList(R.id.flag, R.id.quality, R.id.episode, R.id.array, R.id.part, R.id.quick);
+        List<Integer> orders = Arrays.asList(R.id.episode, R.id.array, R.id.flag, R.id.quality, R.id.part, R.id.quick);
         for (int i = 0; i < orders.size(); i++) if (i > index) if (isVisible(findViewById(orders.get(i)))) return orders.get(i);
         return 0;
     }
 
     private int findFocusUp(int index) {
-        List<Integer> orders = Arrays.asList(R.id.flag, R.id.quality, R.id.episode, R.id.array, R.id.part, R.id.quick);
+        List<Integer> orders = Arrays.asList(R.id.episode, R.id.array, R.id.flag, R.id.quality, R.id.part, R.id.quick);
         for (int i = orders.size() - 1; i >= 0; i--) if (i < index) if (isVisible(findViewById(orders.get(i)))) return orders.get(i);
         return 0;
     }
 
     private void updateFocus() {
         mPartAdapter.setNextFocusUp(findFocusUp(4));
-        mEpisodeAdapter.setNextFocusUp(findFocusUp(2));
-        mFlagAdapter.setNextFocusDown(findFocusDown(0));
-        mEpisodeAdapter.setNextFocusDown(findFocusDown(2));
+        mEpisodeAdapter.setNextFocusUp(findFocusUp(0));
+        mFlagAdapter.setNextFocusDown(findFocusDown(2));
+        mEpisodeAdapter.setNextFocusDown(findFocusDown(0));
         notifyItemChanged(mBinding.episode, mEpisodeAdapter);
         notifyItemChanged(mBinding.part, mPartAdapter);
         notifyItemChanged(mBinding.flag, mFlagAdapter);
@@ -1571,8 +1775,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     };
 
     private void setPartAdapter() {
-        mPartAdapter.addAll(PartUtil.split(mHistory.getVodName()));
-        mBinding.part.setVisibility(View.VISIBLE);
+        List<String> items = PartUtil.split(mHistory.getVodName());
+        mPartAdapter.addAll(items);
+        setRowVisible(mBinding.part, mBinding.labelPart, !items.isEmpty());
         setR2Callback();
     }
 
@@ -2046,6 +2251,96 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         }
     }
 
+    // ==================================================================================
+    // 调试：把当前界面按 View 树渲染成 PNG 存盘
+    // ==================================================================================
+
+    /** 一次详情页只存一张，避免缓存命中与网络回调各存一次。 */
+    private boolean mDebugDumped;
+    /** 整页那帧每进程只抓一次，避免反复在主线程压 1.6MB 的 PNG。 */
+    private boolean mDebugFullDumped;
+
+    /**
+     * 把整棵视图树软件渲染成 PNG，写到应用私有外部目录。
+     *
+     * <p>不走 {@code screencap}：本机模拟器是 MuMu 多 display 架构，截屏通道抓到的
+     * 是 launcher 那一块屏，拿不到本页画面。软件渲染走的是同一套 {@code View.draw}，
+     * fading edge 与 scrim 都会照常执行，因此羽化端、压暗层的真实效果都能如实反映
+     * （只有 SurfaceView 里的视频画面是黑的，而本页背景与它无关）。</p>
+     */
+    private void debugDumpScreen(String tag) {
+        if (mBinding == null) return;
+        View root = mBinding.getRoot();
+        View backdrop = mBinding.detailBackdrop;
+        TmdbArt art = TmdbStore.find(TextUtils.isEmpty(mTmdbKeyword) ? mTmdbPosterName : mTmdbKeyword);
+        Log.i(TAG_DEBUG, tag
+                + " root=" + root.getWidth() + "x" + root.getHeight()
+                + " backdrop=" + backdrop.getWidth() + "x" + backdrop.getHeight()
+                + " vis=" + backdrop.getVisibility()
+                + " alpha=" + backdrop.getAlpha()
+                + " enabled=" + TmdbSetting.isEnabled()
+                + " sites=" + TmdbSetting.getSites().size()
+                + " keyword=" + mTmdbKeyword
+                + " posterName=" + mTmdbPosterName
+                + " art=" + (art == null ? "null" : ("backdrop=" + art.hasBackdrop() + " logo=" + art.getLogo()))
+                + " child=" + debugChildState(backdrop)
+                + " float=" + android.os.Build.VERSION.SDK_INT);
+        if (root.getWidth() <= 0 || root.getHeight() <= 0) return;
+        try {
+            Bitmap shot = Bitmap.createBitmap(root.getWidth(), root.getHeight(), Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(shot);
+            // 先铺窗口底色再画视图树，导出的图才等价于屏幕观感；否则背景透明的区域会变成
+            // 全透明像素，看图器一律衬白底，观感与真机完全相反。
+            canvas.drawColor(0xFF101114);
+            root.draw(canvas);
+            File dir = new File(getExternalFilesDir(null), "debug");
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.w(TAG_DEBUG, "mkdirs failed: " + dir);
+                return;
+            }
+            writePng(shot, new File(dir, tag + ".png"));
+            // 单独再导一张「只有背景控件」的图，用来把背景层从整页里隔离出来核对
+            View backdrop2 = mBinding.detailBackdrop;
+            if (backdrop2.getWidth() > 0 && backdrop2.getHeight() > 0) {
+                Bitmap only = Bitmap.createBitmap(backdrop2.getWidth(), backdrop2.getHeight(), Bitmap.Config.ARGB_8888);
+                Canvas c2 = new Canvas(only);
+                c2.drawColor(0xFF101114);
+                backdrop2.draw(c2);
+                writePng(only, new File(dir, tag + "-backdrop.png"));
+            }
+        } catch (Throwable e) {
+            Log.w(TAG_DEBUG, "dump failed", e);
+        }
+    }
+
+    /** 调试：把背景容器内部那个剧照 ImageView 的尺寸与位图信息拼成一行，便于确认是否真的画得出内容。 */
+    private String debugChildState(View backdrop) {
+        if (!(backdrop instanceof android.view.ViewGroup)) return "n/a";
+        android.view.ViewGroup group = (android.view.ViewGroup) backdrop;
+        if (group.getChildCount() == 0) return "no-child";
+        View child = group.getChildAt(0);
+        android.graphics.drawable.Drawable d = null;
+        if (child instanceof android.widget.ImageView) d = ((android.widget.ImageView) child).getDrawable();
+        String bitmap = "null";
+        if (d instanceof android.graphics.drawable.BitmapDrawable) {
+            Bitmap b = ((android.graphics.drawable.BitmapDrawable) d).getBitmap();
+            bitmap = b.isRecycled() ? "recycled" : (b.getWidth() + "x" + b.getHeight());
+        }
+        return child.getClass().getSimpleName()
+                + " " + child.getMeasuredWidth() + "x" + child.getMeasuredHeight()
+                + " bmp=" + bitmap;
+    }
+
+    private void writePng(Bitmap bitmap, File file) throws java.io.IOException {
+        FileOutputStream out = new FileOutputStream(file);
+        try {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } finally {
+            out.close();
+        }
+        Log.i(TAG_DEBUG, "saved " + file.getAbsolutePath() + " bytes=" + file.length());
+    }
+
     @Override
     protected void onDestroy() {
         if (mSheet != null) mSheet.dismissNow();
@@ -2055,7 +2350,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (isBindingOwner()) DanmakuApi.cancel();
         RefreshEvent.keep();
         DanmakuHeat.removeListener(mHeatListener);
+        TmdbApi.removeOnFetched(mTmdbRefresh);
         App.removeCallbacks(mR1, mR2, mR3, mR4);
+        App.removeCallbacks(mTmdbFallback);
         super.onDestroy();
     }
 

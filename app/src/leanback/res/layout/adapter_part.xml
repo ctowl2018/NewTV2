@@ -9,8 +9,8 @@
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:gravity="center"
-    android:nextFocusUp="@id/array"
+    android:nextFocusUp="@id/quality"
     android:singleLine="true"
     android:textColor="@color/white"
-    android:textSize="16sp"
+    android:textSize="12sp"
     tools:text="分詞" />

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶部工具栏「收藏」图标（矢量版，替代原 PNG）。
+
+  原 PNG 是「空心五角星描边」（线条约 1 单位），缩小到 14dp 后线条发细。
+  按要求改为<b>白色实心填充</b>（无描边）：外接半径 9.6、内半径 4.0，
+  外框中心下移 0.9 单位做光学居中（尖角向上的星形，几何视觉重心偏上）。
+  墨迹 18.3×17.4u → 14dp 盒内约 10.7×10.1dp，与另外三枚图标同尺寸。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:tint="@color/white"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12.00,3.30 L14.35,9.66 L21.13,9.93 L15.80,14.14 L17.64,20.67 L12.00,16.90 L6.36,20.67 L8.20,14.14 L2.87,9.93 L9.65,9.66 Z" />
+
+</vector>

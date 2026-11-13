@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  首页顶部工具栏（可复用组件）：首页与分类页（VodActivity）共用这一份布局，
+  <b>样式 / 布局只在这里维护</b>，改这里两个页面同时生效。
+
+  引用方式：<include android:id="@+id/homeToolbar" layout="@layout/view_home_toolbar" />
+    - include 不覆盖 layout_width / layout_height，宿主按本文件根节点的参数
+      （match_parent × wrap_content、layout_gravity=top、marginTop=16dp）布局；
+    - 宿主必须存在 id 为 recycler 的可聚焦列表，工具栏各控件的 nextFocusDown 指向它。
+
+  组成（从左到右）：
+    品牌入口（播放三角，纯展示：不可聚焦、无点击、无弹窗）
+    → 6 个导航文字按钮（首页 / 爱奇艺 / 腾讯视频 / 优酷 / 芒果TV / 片库）
+    → 弹性空白
+    → 4 个功能图标（搜索 / 收藏 / 连接 / 设置）→ 站源下拉入口 → 时间（18sp）。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/homeToolbar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top"
+    android:layout_marginTop="16dp"
+    android:clipChildren="false"
+    android:descendantFocusability="afterDescendants"
+    android:elevation="8dp"
+    android:focusable="false"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <!--
+      品牌入口：播放三角，现在<b>纯展示</b> —— 不可聚焦、不可点击、没有弹窗菜单。
+      原来的「设置 / 收藏 / 连接」功能已改为右侧的四个图标按钮，所以这里同时去掉
+      focusable / clickable 与 nextFocusDown：向上找焦点不会再落在 logo 上，
+      启动默认焦点直接由「首页」的 focusedByDefault 接管。
+
+      外观保持不变：命中区高 36dp、左右内边距 8dp、wrap_content 宽，黑色背景框
+      （selector_brand_bg：rectangle + 16dp 圆角；常态纯黑、聚焦 2dp 白描边）尺寸
+      仍与「首页」选中焦点框一致；内层 28dp 三角用 translationX="2px" 右移 2px。
+    -->
+    <FrameLayout
+        android:id="@+id/brandEntry"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:background="@drawable/selector_brand_bg"
+        android:clickable="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:importantForAccessibility="no"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/brandLogo"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_brand_play"
+            android:translationX="2px" />
+
+    </FrameLayout>
+
+    <!--
+      左侧：6 个导航文字按钮，12sp 加粗；聚焦时套半透明圆角高亮。
+      顺序即焦点顺序（未写 nextFocusLeft/Right，交给布局顺序自动串联）：
+      首页 → 爱奇艺 → 腾讯视频 → 优酷 → 芒果TV → 片库。
+      「搜索」文字按钮已移除 —— 搜索功能统一由右侧的 funcSearch 图标承担（更省横向空间）。
+      「首页」是 index 0，带 focusedByDefault，启动 / setFocus() / 返回「回首页」都指向它；
+      「片库」在最后，点击沿原点播入口进 VodActivity。
+
+      尺寸：wrap_content 高 + 四边 8dp padding —— 选中框紧贴文字、上下间距与左右一致。
+    -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/navButtons"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:clipChildren="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:focusedByDefault="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_nav_home"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navIqiyi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_nav_iqiyi"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navTencent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_nav_tencent"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navYouku"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_nav_youku"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navMango"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_nav_mango"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- 片库：追加在「芒果TV」之后，点击进 VodActivity（组内最后一项，不再留右边距） -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/navVod"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/selector_nav_button"
+            android:ellipsize="end"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:maxLines="1"
+            android:nextFocusDown="@id/recycler"
+            android:padding="8dp"
+            android:text="@string/home_vod"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 中间撑开：把右侧组推到屏幕右缘；自身不可聚焦 -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:focusable="false" />
+
+    <!--
+      右侧：4 个功能图标 → 站源下拉入口 → 时间，与左侧按钮同一水平线居中对齐。
+      站源下拉入口紧贴时钟左侧，与站源名、三角、时间连成一组；四个图标作为独立一簇排在更左。
+    -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/rightGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:clipChildren="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!--
+          四个功能图标（原 logo 弹窗菜单里的三项 + 搜索），现在排在工具栏右侧最左，
+          其后才是站源下拉入口与时间：
+          搜索（SearchActivity）/ 收藏（KeepActivity）/ 连接（推送二维码）/ 设置（SettingActivity）。
+          尺寸：命中区仍是 36×36dp（与导航按钮、站源入口、时钟同高，焦点胶囊尺寸不变），
+          内边距 11dp → 可见图标 14dp，实际墨迹高度约 10.5~11.7dp，与站源名
+          （12sp 加粗 CJK，墨迹高度 ≈ 10.6dp）齐平，视觉高度统一。
+          线条：四枚图标现全部是矢量，统一 24 viewBox + strokeWidth=2
+          （= ic_home_connect 的口径，14dp 下约 1.17dp），收藏的★为纯白实心填充。
+          间距：三枚后置图标各带 -6.6dp 起始负边距，节距 36dp → 29.4dp，
+          图标墨迹间隙 22dp → 15.4dp（= 原来的 70%）；命中区/胶囊仍是 36dp，不影响走位。
+          聚焦反馈沿用 selector_icon_action（常态透明 → 聚焦半透明胶囊 + 白描边），
+          未选中时不画任何容器，与站源入口的新样式保持一致。
+        -->
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/funcSearch"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/selector_icon_action"
+            android:contentDescription="@string/home_search"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/recycler"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home_search" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/funcKeep"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="-6.6dp"
+            android:background="@drawable/selector_icon_action"
+            android:contentDescription="@string/home_keep"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/recycler"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home_keep" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/funcConnect"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="-6.6dp"
+            android:background="@drawable/selector_icon_action"
+            android:contentDescription="@string/home_push_qr"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/recycler"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home_connect" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/funcSetting"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="-6.6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/selector_icon_action"
+            android:contentDescription="@string/home_setting"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/recycler"
+            android:padding="11dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home_setting" />
+
+        <!--
+          站源下拉入口：已移到时钟左侧（原在四个功能图标之前）。
+          未选中状态<b>没有胶囊容器</b>（selector_site_entry 的常态已改为全透明），
+          只有站源名 + 三角；聚焦时才出现半透明胶囊 + 白描边作为焦点反馈。
+          左内边距 10dp → 8dp：左侧邻居从「撑开的空白」变成图标簇，8dp 即有足够呼吸位，
+          也和导航按钮的 8dp 一致；右内边距 8dp 后接 8dp margin，与时钟分开。
+          三角用 ic_site_arrow（viewBox 紧贴三角形），12×6dp 即真实可见尺寸。
+          与站源名的间距 9dp：原实现 margin=4dp，但 24 viewBox 的三角形左右各有 3.5dp
+          透明留白，实际可见间距是 7.5dp；9dp = 7.5dp 的 120%，且新矢量无留白，
+          margin 就是真实间距。
+        -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/siteEntry"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/selector_site_entry"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center_vertical"
+            android:nextFocusDown="@id/recycler"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/siteName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="配置|中心" />
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/siteArrow"
+                android:layout_width="12dp"
+                android:layout_height="6dp"
+                android:layout_marginStart="9dp"
+                android:src="@drawable/ic_site_arrow" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!-- 时间：HH:mm 无秒，18sp 加粗，位于工具栏最右（全局时钟统一口径） -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="21:36" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

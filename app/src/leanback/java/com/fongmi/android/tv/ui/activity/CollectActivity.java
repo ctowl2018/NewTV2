@@ -25,14 +25,11 @@ import com.fongmi.android.tv.bean.Collect;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.ActivityCollectBinding;
 import com.fongmi.android.tv.model.SiteViewModel;
-import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.CollectAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.fragment.CollectFragment;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.google.gson.reflect.TypeToken;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class CollectActivity extends BaseActivity {
@@ -75,7 +72,8 @@ public class CollectActivity extends BaseActivity {
     protected void initView(Bundle savedInstanceState) {
         setRecyclerView();
         setViewModel();
-        saveKeyword();
+        // 凡经 CollectActivity.start() 进入结果页的关键词一律不写搜索历史；
+        // 搜索页自身的记录走 SearchActivity.onSearch() 的 mRecordAdapter.add()，不受影响。
         setSites();
         setPager();
         search();
@@ -112,14 +110,6 @@ public class CollectActivity extends BaseActivity {
             mAdapter.add(Collect.create(result.getList()));
             mBinding.pager.getAdapter().notifyDataSetChanged();
         });
-    }
-
-    private void saveKeyword() {
-        List<String> items = Setting.getKeyword().isEmpty() ? new ArrayList<>() : App.gson().fromJson(Setting.getKeyword(), TypeToken.getParameterized(List.class, String.class).getType());
-        items.remove(getKeyword());
-        items.add(0, getKeyword());
-        if (items.size() > 9) items.remove(9);
-        Setting.putKeyword(App.gson().toJson(items));
     }
 
     private void setSites() {

@@ -22,6 +22,7 @@ import com.fongmi.android.tv.impl.ConfigListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.TmdbSetting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DohDialog;
@@ -78,6 +79,21 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.dohText.setText(getDohList()[getDohIndex()]);
         mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
+        setTmdbText();
+    }
+
+    /** TMDB 行右侧摘要：启用时显示站点数，关闭时显示「关」。 */
+    private void setTmdbText() {
+        mBinding.tmdbText.setText(TmdbSetting.isEnabled()
+                ? getString(R.string.tmdb_site_summary, TmdbSetting.getSites().size())
+                : Setting.getSwitch(false));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 从「TMDB 配置」返回时开关 / 站点数可能已变，回来就刷新这一行的摘要
+        if (mBinding != null) setTmdbText();
     }
 
     private void setCacheText() {
@@ -99,6 +115,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.player.setOnClickListener(this::onPlayer);
         // 模块管理入口已按产品要求隐藏（布局中 visibility="gone"），ModuleActivity 保留
         mBinding.danmaku.setOnClickListener(this::onDanmaku);
+        mBinding.tmdb.setOnClickListener(this::onTmdb);
         mBinding.restore.setOnClickListener(this::onRestore);
         mBinding.version.setOnClickListener(this::onVersion);
         mBinding.vod.setOnLongClickListener(this::onVodEdit);
@@ -166,6 +183,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     private void onDanmaku(View view) {
         SettingDanmakuActivity.start(this);
+    }
+
+    private void onTmdb(View view) {
+        SettingTmdbActivity.start(this);
     }
 
     private void onVersion(View view) {

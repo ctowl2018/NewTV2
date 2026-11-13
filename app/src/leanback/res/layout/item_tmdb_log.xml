@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 一条 TMDB 刮削日志：首行「时间 · 阶段 · 关键字」，下面按需展开请求 / 响应 / 原因 -->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/selector_item"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/logTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.55"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            tools:text="11-05 15:31:08" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/logStage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            tools:text="搜索" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/logKeyword"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="end"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            tools:text="繁花" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/logRequest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:alpha="0.62"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="请求：https://example.com/3/search/multi?language=zh-CN&amp;page=1"
+        tools:visibility="visible" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/logResponse"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:visibility="gone"
+        tools:text="响应：HTTP 200 · results=20 · 可用=18 · 首个=繁花(tv #106841)"
+        tools:visibility="visible" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/logReason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:alpha="0.85"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:visibility="gone"
+        tools:text="失败原因：HTTP 401：{&quot;status_code&quot;:7,&quot;status_message&quot;:&quot;Invalid API key&quot;}"
+        tools:visibility="visible" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

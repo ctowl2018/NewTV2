@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  站源下拉的实心三角。viewBox 紧贴三角形本身（10×5，与 icon 的 2:1 比例一致），
+  因此 ImageView 上写的 12×6dp 就是真实可见尺寸 —— 间距不需要再扣掉矢量内部留白。
+  原实现复用了 24×24 viewport 的 ic_arrow_drop_down（三角形只占 10×5），
+  放在 12dp 盒子里实际只有约 5×2.5dp，看起来过小。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="6dp"
+    android:viewportWidth="10"
+    android:viewportHeight="5">
+
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M0,0 L10,0 L5,5 Z" />
+
+</vector>

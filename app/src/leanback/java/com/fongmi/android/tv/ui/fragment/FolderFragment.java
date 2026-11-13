@@ -89,6 +89,11 @@ public class FolderFragment extends BaseFragment {
         return Optional.ofNullable(getChild()).map(TypeFragment::moveToTop).orElse(false);
     }
 
+    /** 切页时把海报区复位到第一张，但不抢焦点（焦点留在分类胶囊）。 */
+    public void resetToFirstPoster() {
+        Optional.ofNullable(getChild()).ifPresent(TypeFragment::resetToFirstPoster);
+    }
+
     public boolean canBack() {
         return getChildFragmentManager().getBackStackEntryCount() > 0;
     }

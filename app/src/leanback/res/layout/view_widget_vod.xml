@@ -102,6 +102,7 @@
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
+        <!-- 播放页时钟：HH:mm，18sp 加粗（与首页 / 投屏页全局统一） -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/clock"
             style="@style/Shadow"
@@ -110,8 +111,9 @@
             android:layout_alignParentEnd="true"
             android:fontFeatureSettings="tnum"
             android:textColor="@color/white"
-            android:textSize="20sp"
-            tools:text="09:20:00" />
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="21:36" />
 
     </RelativeLayout>
 

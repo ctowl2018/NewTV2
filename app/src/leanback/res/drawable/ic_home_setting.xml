@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶部工具栏「设置」图标（矢量版，替代原 PNG）。
+
+  保持原造型（六边形「螺母」+ 中心圆孔），但线条口径对齐 ic_home_connect：
+  24 viewBox + strokeWidth=2（显示 14dp 时约 1.17dp），圆角连接。
+  原 PNG 线条只有约 1 单位，缩到 14dp 后发细。
+
+  几何：六边形顶点 (21,12)(16.5,4)(7.5,4)(3,12)(7.5,20)(16.5,20)，
+  描边外缘 x 2~22、y 3~21 → 14dp 盒内约 11.7×10.5dp，与 connect 的 2~22u 完全一致；
+  中心圆孔半径 3.4（描边后 2.4~4.4），孔与外框之间留 2 单位净空。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:tint="@color/white"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:pathData="M21.00,12.00 L16.50,4.00 L7.50,4.00 L3.00,12.00 L7.50,20.00 L16.50,20.00 Z"
+        android:strokeColor="@android:color/white"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2" />
+
+    <path
+        android:pathData="M8.10,12.00 a3.9,3.9 0 1,0 7.80,0 a3.9,3.9 0 1,0 -7.80,0"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2" />
+
+</vector>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏品牌入口弹出的功能菜单项：图标在左、文字在右。
+  与站点下拉项同高（30dp）、同底色（selector_site_menu_item）、同字号（12sp），
+  保证两个 sheet 的外观与走位一致。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="30dp"
+    android:background="@drawable/selector_site_menu_item"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:gravity="center_vertical"
+    android:nextFocusDown="@id/recycler"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="8dp"
+        android:scaleType="fitCenter"
+        tools:src="@drawable/ic_home_setting" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:textColor="@color/white_70"
+        android:textSize="12sp"
+        tools:text="设置" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

@@ -256,6 +256,18 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return mBinding != null && mBinding.recycler.moveToTop();
     }
 
+    /**
+     * 把海报区复位到第一行第一个：只改内部选中位置与滚动，<b>不 requestFocus</b>。
+     *
+     * <p>切页时焦点仍在分类胶囊上，所以第一张海报不会显示焦点高亮，也不会被当作
+     * 「已选中」；用户按下 ↓ 进入海报区后，才真正落在它上面并点亮。</p>
+     */
+    public void resetToFirstPoster() {
+        if (mBinding == null) return;
+        mBinding.recycler.scrollToPosition(0);
+        mBinding.recycler.setSelectedPosition(0);
+    }
+
     @Override
     public void onItemClick(Vod item) {
         if (item.isAction()) {
@@ -297,6 +309,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
-        moveToTop();
+        // 切页 / 首次可见：只复位海报位置，不抢焦点；焦点始终由分类胶囊掌握。
+        if (isVisibleToUser) resetToFirstPoster();
     }
 }

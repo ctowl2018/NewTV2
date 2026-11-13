@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  主视觉：整行横版剧照 + 片名（优先 logo，取不到回退文字）+ 评分 + 剧情简介 + 详情按钮。
+
+  背景层（HomeHeroBackdropView）的铺图方式、高度、底部羽化与不透明度全部来自 BackdropStyle，
+  与播放详情页的整页剧照背景同源同值：宽度铺满 + 顶部贴齐 + 上移 5%，行占位高度 440dp 绝对
+  高度（1080p 下 880px），再向下溢出 80dp 画到「最近观看」标题上方；底部 350dp 半径、
+  21 档 smootherstep 渐隐到 #101114，剧照层 0.58 不透明度。
+
+  控件整体下移 10dp：details 的 paddingBottom 与 indicator 的 marginBottom 同步 32dp → 22dp
+  （两者都是 bottom 对齐，减小底部留白即整体下沉，彼此相对位置不变）。
+
+  根布局保留 @color/app_background 同色背景：避免系统默认焦点高亮绘制，
+  并保证画框边缘像素与窗口底色逐像素一致。聚焦放大动画已取消。
+
+  文字层是背景层的兄弟节点（压在羽化之上），所以底部渐隐不会吃掉文字。
+  「豆瓣热门」栏目标签已移除。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/app_background"
+    android:clipChildren="false"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
+
+    <com.fongmi.android.tv.ui.custom.HomeHeroBackdropView
+        android:id="@+id/backdrop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!--
+      文字层：layout_gravity=bottom 让它沉到画框底边。
+      高度必须是 wrap_content 而不是 match_parent —— 本行的高度由背景层决定，
+      父容器给子 View 的高度约束是 UNSPECIFIED，match_parent 会退化成包内容而无法沉底。
+      宽度必须 match_parent：简介的宽度是「屏宽 70%」，固定宽度（原 620dp）会比它窄，
+      超出的部分被父布局裁掉 —— 表现就是文字在右侧被切断、且不会出现省略号
+      （TextView 以为自己有 70% 屏宽的可用宽度，判定不出溢出）。
+    -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/details"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="bottom"
+        android:orientation="vertical"
+        android:paddingStart="36dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="22dp">
+
+        <!--
+          logo / 文字片名共用容器。宽高都由 DoubanHotPresenter 在运行时设置：
+          高度按 logo 宽高比分三档 —— 宽/高 < 1/1.6（竖版）200dp、
+          <= 1/1（类正方形）120dp、其余横版 80dp，文字片名用 120dp；
+          logo 态宽度按图片比例自适应、一律不超过 300dp（且不越出屏幕）；
+          取不到 logo 而显示文字片名时不限制容器宽度（wrap_content，最多撑满 details）。
+
+          logo 显示的是 TmdbStore.logoBitmap() 的原始分辨率 Bitmap（不再经 Glide 下采样），
+          避免容器放大后出锯齿；scaleType=fitCenter 只负责等比绘制。
+
+          details 是 bottom 对齐的垂直容器：这个块改变高度只会让自己向上/向下扩展，
+          下方 meta / overview / action 的坐标由底边决定，不会跟着跑。
+          两个子 View 都 layout_gravity=bottom|start 贴容器底、二选一显示，
+          初始都是 invisible —— logo 解码结果出来之前不显示任何文字。
+        -->
+        <FrameLayout
+            android:id="@+id/titleBox"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            android:clipChildren="false">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/logo"
+                android:layout_width="wrap_content"
+                android:layout_height="120dp"
+                android:layout_gravity="bottom|start"
+                android:scaleType="fitCenter"
+                android:visibility="invisible"
+                tools:visibility="visible" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|start"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/white"
+                android:textSize="44sp"
+                android:textStyle="bold"
+                android:visibility="invisible"
+                tools:text="后会友期" />
+
+        </FrameLayout>
+
+        <!--
+          meta 行「评分 · 年份 · 类型 · 题材」。TMDB 图标（ic_tmdb）放在评分最左侧，
+          仅在确有评分时显示，用于标注该评分来自 TMDB。整行字号 14sp。
+          外层的横向 LinearLayout 把图标与文字并排居中对齐；缺内容时整行 GONE。
+
+          图标高度与评分行文字高度一致：XML 给 14dp×20dp 作为静态兜底（14sp 字号 ≈ 14dp，
+          20dp = 14dp × ic_tmdb 的 viewport 宽高比 185.04/133.4），运行时再由
+          DoubanHotPresenter.initTextWidths() 按 meta.getTextSize() 精确重算，
+          跟随系统字体缩放且保持原始比例，不会被拉扁。
+        -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/metaRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/tmdbIcon"
+                android:layout_width="20dp"
+                android:layout_height="14dp"
+                android:layout_marginEnd="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_tmdb"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/meta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                tools:text="8.7 分 · 2026 · 综艺" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!--
+          TMDB 剧情简介：宽度由代码设为屏宽 70%（initTextWidths），最多 2 行、超出尾部省略。
+          依赖父容器足够宽 —— details 已是 match_parent，70% 屏宽不会被裁切，
+          ellipsize=end 才会在第二行末尾真正补出「...」。
+          行间距 lineSpacingMultiplier=1.2（当前默认行距的 120%）—— 该属性是 TextView
+          的实例属性、不会被兄弟控件继承，主视觉的片名 / meta / 按钮文字均未设置任何
+          lineSpacing*，因此这个间距只作用于简介文本；首行缩进 2 字符由代码用
+          LeadingMarginSpan 实现（android:textIndent 需 API 28+，本工程资源框架不含该属性）。
+          文字阴影已移除。
+        -->
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/overview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp"
+            android:lineSpacingMultiplier="1.2"
+            android:visibility="gone"
+            tools:text="一位失忆的摄影师在旧胶片里发现了被抹去的夏天，于是沿着海岸线重新走了一遍那年没走完的路。" />
+
+        <!--
+          「查看详情」按钮：纯文字，无实心三角图标。
+          常态是不透明的 #3C3C3C 实底（shape_hot_action），聚焦态纯白底 + 近黑字
+          （shape_hot_action_focused + styleAction() 换字色）。
+          去掉整体 alpha：若保留原来的 0.72，不透明底色也会被 view alpha 冲淡成半透明。
+          左右内边距改为对称的 16dp，纯文字居中排版。
+        -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/action"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/shape_hot_action"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/actionText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/douban_hot_action"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="22dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp" />
+
+</FrameLayout>

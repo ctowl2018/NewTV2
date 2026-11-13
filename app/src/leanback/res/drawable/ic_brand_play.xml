@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏品牌入口图标：按 design/v2/foreground-v2.svg 还原的橙色播放三角。
+  原 SVG 由「亮面 + 暗面 + 高光」三块拼成，这里保留主体轮廓与左上亮、右下暖的线性渐变，
+  22dp 以下看不出三块拼接的差别，因此合成一条 path。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <path android:pathData="M294.62,250.28 Q274,238 274,262 L274,762 Q274,786 294.62,773.72 L713.38,524.28 Q734,512 713.38,499.72 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="274"
+                android:startY="238"
+                android:endX="734"
+                android:endY="786">
+                <item
+                    android:offset="0"
+                    android:color="#FFF0CE" />
+                <item
+                    android:offset="1"
+                    android:color="#FFB45E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>

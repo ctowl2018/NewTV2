@@ -22,7 +22,8 @@ public class Clock {
     }
 
     public static Clock create(TextView view) {
-        return new Clock().view(view).format("HH:mm:ss");
+        // 全局时钟统一 HH:mm（无秒）；需要秒的调用方可再 .format(...) 覆盖。
+        return new Clock().view(view).format("HH:mm");
     }
 
     public Clock() {

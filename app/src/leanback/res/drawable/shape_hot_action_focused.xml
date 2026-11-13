@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 主视觉「查看详情」按钮的聚焦态底色：纯白实心，配合近黑文字（三角图标已移除）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <solid android:color="#FFFFFFFF" />
+</shape>

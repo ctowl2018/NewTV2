@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:singleLine="true"
         android:textColor="@color/white"
-        android:textSize="16sp"
+        android:textSize="12sp"
         tools:text="蜘蛛人" />
 
     <com.google.android.material.textview.MaterialTextView
@@ -25,7 +25,7 @@
         android:layout_marginTop="2dp"
         android:singleLine="true"
         android:textColor="@color/green_a_400"
-        android:textSize="14sp"
+        android:textSize="12sp"
         tools:text="泥巴"
         tools:visibility="visible" />
 
@@ -36,7 +36,7 @@
         android:layout_marginTop="2dp"
         android:singleLine="true"
         android:textColor="@color/yellow_500"
-        android:textSize="14sp"
+        android:textSize="12sp"
         tools:text="1080p" />
 
 </androidx.appcompat.widget.LinearLayoutCompat>
