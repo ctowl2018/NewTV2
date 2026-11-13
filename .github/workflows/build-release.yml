@@ -90,7 +90,7 @@ jobs:
           body=$(git log -1 --format=%b)
           if [ -z "$body" ]; then body=$(git log -1 --format=%B); fi
           {
-            echo "Automated leanback (TV) release built from commit ${{ github.sha }}."
+            echo "Automated leanback (TV) release built from http://github.com/ctowl2018/NewTV2"
             echo ""
             echo "$body"
           } > release_notes.md
