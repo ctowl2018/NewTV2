@@ -72,11 +72,16 @@ jobs:
             -PappVersionCode="${{ steps.ver.outputs.version_code }}" \
             --no-configuration-cache --no-daemon --stacktrace
 
-      - name: Rename APKs for updater
+      - name: Prepare APKs for updater
         run: |
           cd app/build/outputs/apk/leanback/release
-          mv -f app-leanback-arm64-v8a-release.apk leanback-arm64_v8a.apk
-          mv -f app-leanback-armeabi-v7a-release.apk leanback-armeabi_v7a.apk
+          shopt -s nullglob
+          for target in arm64_v8a armeabi_v7a; do
+            cand=$(ls *"${target}"*.apk 2>/dev/null | head -1)
+            if [ -n "$cand" ] && [ "$cand" != "leanback-${target}.apk" ]; then
+              mv -f "$cand" "leanback-${target}.apk"
+            fi
+          done
           ls -l
 
       - name: Publish GitHub Release
