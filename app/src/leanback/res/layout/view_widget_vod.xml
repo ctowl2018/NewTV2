@@ -9,9 +9,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_widget_top"
-        android:paddingStart="24dp"
+        android:paddingStart="48dp"
         android:paddingTop="16dp"
-        android:paddingEnd="24dp"
+        android:paddingEnd="48dp"
         android:paddingBottom="28dp"
         android:visibility="gone"
         tools:visibility="visible">

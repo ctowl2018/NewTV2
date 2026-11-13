@@ -9,10 +9,10 @@
     <string name="home_history">最近觀看</string>
     <string name="home_recommend">更新推薦</string>
     <string name="home_nav_home">首頁</string>
-    <string name="home_nav_iqiyi">愛奇藝</string>
-    <string name="home_nav_tencent">騰訊視頻</string>
-    <string name="home_nav_mango">芒果TV</string>
-    <string name="home_nav_youku">優酷</string>
+    <string name="home_nav_movie">電影</string>
+    <string name="home_nav_series">劇集</string>
+    <string name="home_nav_variety">綜藝</string>
+    <string name="home_nav_mine">我的</string>
     <string name="back_exit_hint">再按一次返回鍵退出</string>
     <string name="home_more">更多</string>
     <string name="home_push_qr">連接（二維碼）</string>

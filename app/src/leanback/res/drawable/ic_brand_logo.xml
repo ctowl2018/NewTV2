@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏品牌图标（整枚图标：自带深色圆形底 + 双层橙色播放三角 + 左上高光）。
+
+  来源：D:/桌面/deepseek_svg_20261113_682ce1.svg（120×120，圆 r=60，#262626，
+  主体外接半径 48、中心相对圆心左移 2px）。
+
+  移植方式：SVG 里的 transform「translate(55,60) scale(0.1540415) translate(-422.4,-512)」
+  在 VectorDrawable 里没有等价的多级 group 变换（且渐变坐标会被 group 矩阵影响），
+  因此这里把<b>全部坐标预先换算到 120×120 viewport</b>，矢量里不再保留任何 group 变换，
+  渐变端点也用同一套换算值，避免运行时错位。
+
+  绘制顺序：圆形底 → （按三角裁剪）亮面 → 暗面 → 高光矩形。
+  尺寸按使用者给定：36dp（与顶栏导航选中框等高）。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- 圆形深色底：#262626，直径铺满 120 -->
+    <path
+        android:fillColor="#FF262626"
+        android:pathData="M60,0 A60,60 0 1,1 60,120 A60,60 0 1,1 60,0 Z" />
+
+    <group>
+
+        <!-- 以三角外轮廓裁剪，保证高光只落在主体上 -->
+        <clip-path android:pathData="M35.3172,19.6843 Q32.1409,17.7926 32.1409,21.4896 L32.1409,98.5104 Q32.1409,102.2074 35.3172,100.3157 L99.8237,61.8916 Q103,60 99.8237,58.1084 Z" />
+
+        <!-- 亮面（左上 → 右下：#FFF0CE → #FFB45E） -->
+        <path android:pathData="M32.1409,17.7926 L32.1409,23.9543 L81.1831,72.9965 L103,60 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="32.1409"
+                    android:startY="17.7926"
+                    android:endX="103"
+                    android:endY="102.2074">
+                    <item
+                        android:offset="0"
+                        android:color="#FFFFF0CE" />
+                    <item
+                        android:offset="1"
+                        android:color="#FFFFB45E" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- 暗面（左上 → 右下：#FF8F3C → #D9590F） -->
+        <path android:pathData="M32.1409,23.9543 L32.1409,102.2074 L81.1831,72.9965 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="32.1409"
+                    android:startY="17.7926"
+                    android:endX="103"
+                    android:endY="102.2074">
+                    <item
+                        android:offset="0"
+                        android:color="#FFFF8F3C" />
+                    <item
+                        android:offset="1"
+                        android:color="#FFD9590F" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- 左上高光（白色 22% → 6% → 0），铺满 viewport，由上面的裁剪收在三角内 -->
+        <path android:pathData="M0,0 L120,0 L120,120 L0,120 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="32.1409"
+                    android:startY="17.7926"
+                    android:endX="55.2471"
+                    android:endY="79.4092">
+                    <item
+                        android:offset="0"
+                        android:color="#38FFFFFF" />
+                    <item
+                        android:offset="0.45"
+                        android:color="#0FFFFFFF" />
+                    <item
+                        android:offset="1"
+                        android:color="#00FFFFFF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+    </group>
+
+</vector>

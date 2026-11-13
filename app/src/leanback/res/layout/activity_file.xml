@@ -10,6 +10,9 @@
         android:layout_height="match_parent"
         android:clipChildren="false"
         android:clipToPadding="false"
-        android:padding="24dp" />
+        android:paddingStart="48dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="24dp" />
 
 </com.fongmi.android.tv.ui.custom.ProgressLayout>

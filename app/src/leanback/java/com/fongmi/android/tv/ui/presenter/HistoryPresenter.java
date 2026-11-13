@@ -11,8 +11,8 @@ import com.bumptech.glide.Glide;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.databinding.AdapterVodBinding;
+import com.fongmi.android.tv.ui.custom.PosterFocusAnimator;
 import com.fongmi.android.tv.utils.ImgUtil;
-import com.fongmi.android.tv.utils.ResUtil;
 
 public class HistoryPresenter extends Presenter {
 
@@ -35,10 +35,10 @@ public class HistoryPresenter extends Presenter {
     }
 
     private void setLayoutSize() {
-        int space = ResUtil.dp2px(48) + ResUtil.dp2px(16 * (Product.getColumn() - 1));
-        int base = ResUtil.getScreenWidth() - space;
-        width = base / Product.getColumn();
-        height = (int) (width / 0.75f);
+        // 与网格卡共用一套口径：双边 48dp 安全区 + 20dp 列间距，避免各自硬编码漏算单边。
+        int[] size = Product.getRectSpec();
+        width = size[0];
+        height = size[1];
     }
 
     public boolean isDelete() {
@@ -62,7 +62,7 @@ public class HistoryPresenter extends Presenter {
     public Presenter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent) {
         ViewHolder holder = new ViewHolder(AdapterVodBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
         holder.binding.getRoot().getLayoutParams().width = width;
-        holder.binding.image.getLayoutParams().height = height;
+        holder.binding.poster.getLayoutParams().height = height;
         return holder;
     }
 
@@ -84,6 +84,7 @@ public class HistoryPresenter extends Presenter {
     @Override
     public void onUnbindViewHolder(@NonNull Presenter.ViewHolder viewHolder) {
         ViewHolder holder = (ViewHolder) viewHolder;
+        PosterFocusAnimator.reset(holder.view);
         Glide.with(holder.binding.image).clear(holder.binding.image);
     }
 
@@ -94,6 +95,8 @@ public class HistoryPresenter extends Presenter {
         public ViewHolder(@NonNull AdapterVodBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
+            // 最近观看此前没有任何聚焦动效，这里与其它海报卡统一。
+            PosterFocusAnimator.bind(view, false, (card, focused) -> PosterFocusAnimator.marquee(binding.name, focused));
         }
     }
 }

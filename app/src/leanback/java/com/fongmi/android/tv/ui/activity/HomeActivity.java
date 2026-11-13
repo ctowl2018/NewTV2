@@ -30,6 +30,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.VodConfig;
@@ -64,7 +65,6 @@ import com.fongmi.android.tv.ui.adapter.SiteMenuAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
 import com.fongmi.android.tv.ui.custom.CustomSelector;
-import com.fongmi.android.tv.ui.dialog.LocalConnectDialog;
 import com.fongmi.android.tv.ui.presenter.DoubanHotPresenter;
 import com.fongmi.android.tv.ui.presenter.HeaderPresenter;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
@@ -221,6 +221,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         setAdapter();
         checkPermission();
         loadDoubanHot();
+        // 启动画面：静态品牌 banner（原始尺寸 50%、等比居中）显示片刻后自动淡出。
+        mBinding.splashBrand.play();
     }
 
     @Override
@@ -260,10 +262,12 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         selector.addPresenter(Integer.class, new HeaderPresenter());
         selector.addPresenter(String.class, new ProgressPresenter());
         selector.addPresenter(Vod.class, new VodPresenter(this, Style.list()));
-        // 「更新推荐」用与「最近观看」完全相同的行参数（间距 16dp / ZOOM_FACTOR_SMALL /
-        // FOCUS_SCROLL_ALIGNED），保证单行横向滚动的走位与对齐体验一致。
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL, HorizontalGridView.FOCUS_SCROLL_ALIGNED), VodPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL, HorizontalGridView.FOCUS_SCROLL_ALIGNED), HistoryPresenter.class);
+        // 卡片自带 1.04 倍聚焦缩放，必须关掉 Leanback 的 ZOOM_FACTOR_*，否则两套缩放
+        // 叠加会让焦点左右切换时抖动。行内 grid 左右 padding 显式归零（末参 0），
+        // 页面级 48dp 安全区由 recycler 提供，卡片宽度也按双边 96dp 计算，正好铺满不溢出。
+        // 「更新推荐」用 FOCUS_SCROLL_ITEM（只在贴边时滚动），「最近观看」保留 ALIGNED。
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(Product.POSTER_SPACING_DP, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 0), VodPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(Product.POSTER_SPACING_DP, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ALIGNED, 0), HistoryPresenter.class);
         // 首页主视觉：不是 ListRow，而是整行单条的自定义 Presenter，
         // 与参照实现（FeaturedVodRow / FeaturedVodPresenter）同构。
         selector.addPresenter(DoubanHotRow.class, new DoubanHotPresenter(this::onDoubanHotClick));
@@ -283,47 +287,47 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
          * 「标题与海报背后的底色」；标题文字、海报图片后画，天然压在它之上。
          * 该顺序由列表结构决定，与焦点位置、滚动位置、屏幕尺寸/density 无关。
          *
-         * 行间距 16dp 远大于海报聚焦放大幅度（ZOOM_FACTOR_SMALL），且 recycler
+         * 行间距 20dp 远大于海报聚焦放大幅度（PosterFocusAnimator 的 1.04 倍），且 recycler
          * 已 clipChildren=false，关闭置顶不会造成焦点卡片边缘被相邻行裁掉。
          */
         mBinding.recycler.setFocusDrawingOrderEnabled(false);
     }
 
     /**
-     * 顶部工具栏：一条横栏、左右分组，导航控件 12sp 加粗并垂直居中对齐；
-     * 仅最右时钟是 18sp（全局统一字号）。
+     * 顶部工具栏：单行、行高 64dp；导航与站源名 16sp 加粗，时钟 18sp（全局统一字号）。
+     * 自左至右为：搜索圆钮（放大镜）→ 6 个导航 → 站源入口 → 时钟。
      *
-     * <p>导航文字按钮按序为「首页 / 爱奇艺 / 腾讯视频 / 优酷 / 芒果TV / 片库」共 <b>6</b> 项
-     * （「搜索」文字按钮已移除，搜索统一交给右侧 {@code funcSearch} 图标）：「首页」刷新首页
-     * 内容并回到列表顶部；「片库」进 VodActivity；四个站点暂不接线（可聚焦、有焦点反馈，
-     * 但点击不触发任何动作）。左右走位未写死 nextFocusLeft/Right，完全由布局顺序决定；
-     * 「首页」仍是 index 0 且带 focusedByDefault，启动 / setFocus() / 返回「回首页」都指向它。</p>
+     * <p>导航文字按钮按序为「首页 / 电影 / 剧集 / 综艺 / 片库 / 我的」共 <b>6</b> 项：
+     * 「首页」刷新首页内容并回到列表顶部；「片库」进 VodActivity；「我的」进设置页
+     * （原右侧齿轮图标已移除，设置入口并入导航）；电影 / 剧集 / 综艺 暂不接线
+     * （可聚焦、有焦点反馈，但点击不触发任何动作）。左右走位未写死 nextFocusLeft/Right，
+     * 完全由布局顺序决定；「首页」仍是 index 0 且带 focusedByDefault，
+     * 启动 / setFocus() / 返回「回首页」都指向它。</p>
      *
-     * <p>品牌入口（logo）已改为<b>纯展示</b>：不可聚焦、不可点击，原「设置 / 收藏 / 连接」
-     * 弹窗菜单（moreSheet）整体移除，四项功能改由右侧的图标按钮承担
-     * （搜索 / 收藏 / 连接 / 设置，见 {@code funcSearch / funcKeep / funcConnect / funcSetting}），
-     * 站源下拉入口则排在图标簇与时钟之间。
-     * 站源名最多 6 个字符（emoji / 截断符都按 1 个字符计），sheet 面板不受限制。</p>
+     * <p>选中态：导航项统一使用 36dp 高胶囊（selector_nav_button）。聚焦 = 纯白底 + 黑字；
+     * <b>当前所在页</b>未聚焦 = 50% 透明黑底 + 白字（{@link #mToolbar}.navHome.setSelected(true)）；
+     * 其余 = 透明底 + 白字。左侧原本的品牌 logo 位改成<b>放大镜圆钮</b>
+     * （{@code brandEntry}，点击进 SearchActivity），原搜索框按钮已移除。</p>
      */
     private void setToolbar() {
         mToolbar.navHome.setOnClickListener(v -> refreshHome());
         mToolbar.navVod.setOnClickListener(v -> VodActivity.start(this, mResult));
-        // 四个站点：只保留焦点反馈，暂不接线。
+        mToolbar.navMine.setOnClickListener(v -> SettingActivity.start(this));
+        // 电影 / 剧集 / 综艺：只保留焦点反馈，暂不接线。
         mToolbar.siteEntry.setOnClickListener(v -> showSiteSheet());
         mSheet.siteScrim.setOnClickListener(v -> hideSiteSheet());
         mSheet.siteList.setLayoutManager(new LinearLayoutManager(this));
         mSheet.siteList.setItemAnimator(null);
         // 8 行站点名 = 8 × 30dp = 240dp，超出部分在面板内滚动。
         mSheet.siteList.setMaxHeight(ResUtil.dp2px(SITE_ROW_DP * SITE_ROWS));
-        // 右侧四个功能图标：顺序与布局一致（搜索 / 收藏 / 连接 / 设置），替代原 logo 弹窗菜单。
-        mToolbar.funcSearch.setOnClickListener(v -> SearchActivity.start(this));
-        mToolbar.funcKeep.setOnClickListener(v -> KeepActivity.start(this));
-        mToolbar.funcConnect.setOnClickListener(v -> LocalConnectDialog.show(this, "push"));
-        mToolbar.funcSetting.setOnClickListener(v -> SettingActivity.start(this));
-        // 记住最后聚焦的导航按钮：内容区 / 品牌行按返回时焦点回到它（tv-latest 的 lastTypePosition）。
-        // 这里的顺序即导航索引顺序，必须与 activity_home.xml 的 navButtons 子项顺序一致（6 项）。
+        // 搜索圆钮（放大镜，占原品牌位）：点击 / 确认键进搜索页。
+        mToolbar.brandEntry.setOnClickListener(v -> SearchActivity.start(this));
+        // 当前所在页 = 首页：常亮 50% 黑胶囊 + 白字（焦点离开后仍保留）。
+        mToolbar.navHome.setSelected(true);
+        // 记住最后聚焦的导航按钮：内容区 / 右侧动作区按返回时焦点回到它。
+        // 这里的顺序即导航索引顺序，必须与 view_home_toolbar.xml 的 navButtons 子项顺序一致（6 项）。
         // 注意 mLastNav 存的是 View 引用而非下标，增删项不会留下错位索引。
-        View[] navs = {mToolbar.navHome, mToolbar.navIqiyi, mToolbar.navTencent, mToolbar.navYouku, mToolbar.navMango, mToolbar.navVod};
+        View[] navs = {mToolbar.navHome, mToolbar.navMovie, mToolbar.navSeries, mToolbar.navVariety, mToolbar.navVod, mToolbar.navMine};
         for (View nav : navs) nav.setOnFocusChangeListener((view, hasFocus) -> {
             if (hasFocus) mLastNav = view;
         });
@@ -331,8 +335,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
 
     /**
      * 顶部渐变遮罩：下边缘 = 工具栏底边 + 5dp。
-     * 工具栏本身是「marginTop 16dp + 36dp 高」，文字在其内部垂直居中，
-     * 所以底边已经落在文字下方；再留 5dp 让遮罩完整包住文字又不拖到主视觉画面上。
+     * 工具栏本身是「marginTop 16dp + 单行 64dp」，时钟已回到行内（站源入口与设置之间），
+     * 所以底边就是整条顶栏的下沿；再留 5dp 让遮罩完整包住文字又不拖到主视觉画面中部。
      */
     private void applyTopScrim() {
         mToolbar.getRoot().post(() -> {
@@ -537,7 +541,7 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         float textWidth = mSiteMenuAdapter.maxTextWidth(mToolbar.siteName.getPaint());
         int width = (int) Math.ceil(textWidth) + ResUtil.dp2px(44);
         // 极长站源名不能把面板顶出屏幕左边，给一个不截断文字前提下的安全上限。
-        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(24));
+        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(48));
         lp.width = Math.min(Math.max(width, ResUtil.dp2px(140)), maxWidth);
         mSheet.sitePanel.setLayoutParams(lp);
     }
@@ -707,7 +711,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
      * 「最近观看」的单行横向滚动完全不是一回事。</p>
      *
      * <p>现在不再切分：一条 ListRow 承载全部条目，RecyclerView 只创建可见范围内的子 View，
-     * 条目再多也只占一行高度，左右方向按 {@code FOCUS_SCROLL_ALIGNED} 走位（与最近观看一致）。</p>
+     * 条目再多也只占一行高度，左右方向按 {@code FOCUS_SCROLL_ITEM} 走位（只在贴边时滚动，
+     * 不会每次换焦点都把整行对齐重排而产生抖动）。</p>
      */
     private void addGrid(List<Vod> items, Style style) {
         // 空结果不建行：旧实现用 Lists.partition，空列表天然不会产生任何 ListRow。
@@ -991,8 +996,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
                 mPendingPoster = poster;
             }
             mLastBackAt = 0;
-        } else if (isBrandFocused()) {
-            // 品牌行（图标胶囊 / 站点入口）：先回导航按钮。
+        } else if (isToolbarActionFocused()) {
+            // 顶栏右侧动作区（站源入口 / 设置 / 搜索框）：先回导航按钮，不直接触发退出。
             focusNav();
             mLastBackAt = 0;
         } else if (isHomeNavFocused()) {
@@ -1032,9 +1037,14 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         return isDescendant(getCurrentFocus(), mBinding.recycler);
     }
 
-    /** 焦点是否在「品牌行」：品牌入口已不可聚焦，实际只剩站点下拉入口。 */
-    private boolean isBrandFocused() {
-        return isDescendant(getCurrentFocus(), mToolbar.siteEntry);
+    /**
+     * 焦点是否在顶栏的「动作区」：搜索圆钮（原品牌位）或站源下拉入口。
+     * 设置已并入导航「我的」，搜索框按钮已移除，这里只保留这两个非导航控件。
+     */
+    private boolean isToolbarActionFocused() {
+        View focus = getCurrentFocus();
+        return isDescendant(focus, mToolbar.brandEntry)
+                || isDescendant(focus, mToolbar.siteEntry);
     }
 
     /** 焦点是否在左侧导航文字按钮组。 */

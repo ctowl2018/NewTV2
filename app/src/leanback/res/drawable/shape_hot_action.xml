@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  主视觉「查看详情」按钮的常态底色：不透明的 #3C3C3C 实底。
-  不再用半透明白 / 白色描边，也不再由代码把整个按钮 alpha 压到 0.72，
-  否则「不透明」这一要求会被 view alpha 冲淡。聚焦态见 shape_hot_action_focused.xml。
+  主视觉「查看详情」按钮的未选中（常态）底色：50% 透明黑 #80000000。
+  半透明由 solid 的 alpha 通道表达，而非给 view 设 alpha，所以不会被整体 alpha 冲淡。
+  聚焦态见 shape_hot_action_focused.xml（纯白实底）。
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <corners android:radius="20dp" />
-    <solid android:color="#FF3C3C3C" />
+    <solid android:color="#80000000" />
 </shape>

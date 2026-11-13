@@ -5,8 +5,9 @@
   布局结构（自下而上）：
     L0  topScrim   顶部渐变遮罩，垫在最底层：高度 = 工具栏底边 + 5dp（代码设置）。
     L1  LinearLayout（垂直流式，match_parent）
-        ① <include view_home_toolbar>  —— 整条顶栏（品牌 + 6 导航 + 4 功能图标 + 站源 + 时钟），
-           样式 / 间距 / 焦点反馈与首页完全一致，只维护 view_home_toolbar.xml 一份；
+        ① <include view_home_toolbar>  —— 整条顶栏（搜索圆钮 + 6 导航（含「我的」设置入口）+ 站源 + 时钟，
+           单行 64dp），样式 / 间距 / 焦点反馈与首页完全一致，只维护
+           view_home_toolbar.xml 一份；
         ② <HorizontalGridView recycler> —— 分类胶囊（原第 0 项，现排顶栏下方，二者不重叠）；
         ③ <CustomViewPager pager>       —— 高度 0dp + weight=1，精确占据剩余空间，
            不与顶栏、分类导航重叠，也不会因内容高度溢出而错位。
@@ -25,7 +26,7 @@
     <View
         android:id="@+id/topScrim"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="85dp"
         android:layout_gravity="top"
         android:background="@drawable/shape_top_scrim"
         android:clickable="false"
@@ -49,9 +50,9 @@
             android:layout_height="wrap_content"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:paddingStart="24dp"
+            android:paddingStart="48dp"
             android:paddingTop="8dp"
-            android:paddingEnd="24dp"
+            android:paddingEnd="48dp"
             app:focusOutEnd="false"
             app:focusOutFront="false" />
 

@@ -10,8 +10,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.databinding.AdapterVodBinding;
+import com.fongmi.android.tv.ui.custom.PosterFocusAnimator;
 import com.fongmi.android.tv.utils.ImgUtil;
-import com.fongmi.android.tv.utils.ResUtil;
 
 public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
 
@@ -34,10 +34,10 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
     }
 
     private void setLayoutSize() {
-        int space = ResUtil.dp2px(48) + ResUtil.dp2px(16 * (Product.getColumn() - 1));
-        int base = ResUtil.getScreenWidth() - space;
-        width = base / Product.getColumn();
-        height = (int) (width / 0.75f);
+        // 与网格卡共用一套口径：双边 48dp 安全区 + 20dp 列间距，避免各自硬编码漏算单边。
+        int[] size = Product.getRectSpec();
+        width = size[0];
+        height = size[1];
     }
 
     public boolean isDelete() {
@@ -62,7 +62,7 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ViewHolder holder = new ViewHolder(AdapterVodBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
         holder.binding.getRoot().getLayoutParams().width = width;
-        holder.binding.image.getLayoutParams().height = height;
+        holder.binding.poster.getLayoutParams().height = height;
         return holder;
     }
 
@@ -78,6 +78,12 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
         ImgUtil.load(item.getVodName(), item.getVodPic(), holder.binding.image);
     }
 
+    @Override
+    public void onViewRecycled(@NonNull ViewHolder holder) {
+        PosterFocusAnimator.reset(holder.itemView);
+        super.onViewRecycled(holder);
+    }
+
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         private final AdapterVodBinding binding;
@@ -85,21 +91,8 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
         public ViewHolder(@NonNull AdapterVodBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
-            setFocusListener();
-        }
-
-        private void setFocusListener() {
-            itemView.setOnFocusChangeListener((v, hasFocus) -> {
-                if (hasFocus) {
-                    v.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).start();
-                    v.setTranslationZ(10f);
-                    v.setSelected(true);
-                } else {
-                    v.animate().scaleX(1f).scaleY(1f).setDuration(150).start();
-                    v.setTranslationZ(0f);
-                    v.setSelected(false);
-                }
-            });
+            // 与其它海报卡共用 120ms / 1.04 缩放口径，替换旧的 150ms / 1.1 倍私有动画。
+            PosterFocusAnimator.bind(itemView, false, (card, focused) -> PosterFocusAnimator.marquee(binding.name, focused));
         }
     }
 }

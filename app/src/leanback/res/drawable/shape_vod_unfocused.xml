@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 海报聚焦描边的默认态：与聚焦态同圆角的全透明底，保证 selector 的淡出过渡有目标可画。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <corners android:radius="16dp" />
+    <solid android:color="@android:color/transparent" />
+
+</shape>

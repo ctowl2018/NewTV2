@@ -1,46 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应图标前景：橙色斜切播放三角（来源 main_icon.svg）。
+  坐标按 1024 viewport ÷ 2 换算到 512，并整体缩放 0.8 + 平移 51.2，
+  让图形落在 adaptive icon 的中心安全区（66dp / 108dp）内，避免被圆形遮罩切角。
+  渐变端点与 path 在同一局部坐标系，随 group 一起变换，不会错位。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
+
     <group
-        android:scaleX="0.42777777"
-        android:scaleY="0.42777777"
-        android:translateX="146.48889"
-        android:translateY="146.48889">
-        <path
-            android:fillColor="#2DD4AA"
-            android:pathData="M470.626,132.082L437.945,205.418L223.319,78.583L256,8.167Z" />
-        <path
-            android:fillColor="#4CF5CB"
-            android:pathData="M256,8.167L256,78.583L223.319,27.035Z" />
-        <path
-            android:fillColor="#4CF5CB"
-            android:pathData="M437.945,150.95L256,321.358L190.638,183.63L256,45.902Z" />
-        <path
-            android:fillColor="#A3FBE5"
-            android:pathData="M256,45.902L256,321.358L41.374,132.082L223.319,27.035Z" />
-        <path
-            android:fillColor="#68AEF4"
-            android:pathData="M256,255.997L310.468,373.43L256,503.827L41.374,379.912L111.054,243.51Z" />
-        <path
-            android:fillColor="#8FE1EA"
-            android:pathData="M256,255.997L41.374,379.912L41.374,132.082Z" />
-        <path
-            android:fillColor="#FFE08F"
-            android:pathData="M470.626,379.912L437.945,398.779L396.549,284.789Z" />
-        <path
-            android:fillColor="#FFEAB2"
-            android:pathData="M437.945,273.895L437.945,398.779L256,503.827L256,255.997Z" />
-        <path
-            android:fillColor="#FFD159"
-            android:pathData="M470.626,132.082L470.626,379.912L437.945,361.044L416.158,255.997L437.945,150.95Z" />
-        <path
-            android:fillColor="#FFE08F"
-            android:pathData="M437.945,150.95L437.945,361.044L256,255.997Z" />
-        <path
-            android:fillColor="#276AAD"
-            android:pathData="M474.712,125.01L260.085,1.095c-2.527,-1.46 -5.643,-1.46 -8.17,0L37.288,125.01c-2.527,1.46 -4.085,4.156 -4.085,7.075v247.83c0,2.919 1.558,5.616 4.085,7.075l214.627,123.915c1.264,0.73 2.674,1.095 4.085,1.095s2.821,-0.365 4.085,-1.095L474.712,386.99c2.527,-1.46 4.085,-4.156 4.085,-7.075v-247.83C478.797,129.166 477.24,126.469 474.712,125.01zM256,17.604l198.287,114.481L256,246.566L57.713,132.085L256,17.604zM49.543,146.236L247.83,260.717v228.962L49.543,375.198V146.236zM264.17,489.679V260.717l198.287,-114.481v228.962L264.17,489.679z" />
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="51.2"
+        android:translateY="51.2">
+        <group>
+            <!-- 圆角三角轮廓：亮面 / 暗面 / 高光都收在这条边界内 -->
+            <clip-path android:pathData="M159.81,125.14 Q149.5,119 149.5,131 L149.5,381 Q149.5,393 159.81,386.86 L369.19,262.14 Q379.5,256 369.19,249.86 Z" />
+
+            <!-- 亮面：#FFF0CE → #FFB45E -->
+            <path android:pathData="M149.5,119 L149.5,139 L308.685,298.185 L379.5,256 Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:endX="379.5"
+                        android:endY="393"
+                        android:startX="149.5"
+                        android:startY="119"
+                        android:type="linear">
+                        <item android:color="#FFFFF0CE" android:offset="0" />
+                        <item android:color="#FFFFB45E" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+
+            <!-- 暗面：#FF8F3C → #D9590F -->
+            <path android:pathData="M149.5,139 L149.5,393 L308.685,298.185 Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:endX="379.5"
+                        android:endY="393"
+                        android:startX="149.5"
+                        android:startY="119"
+                        android:type="linear">
+                        <item android:color="#FFFF8F3C" android:offset="0" />
+                        <item android:color="#FFD9590F" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+
+            <!-- 左上高光：白色 22% → 6% → 0，铺满三角由裁剪收边 -->
+            <path android:pathData="M149.5,119 L379.5,119 L379.5,393 L149.5,393 Z">
+                <aapt:attr name="android:fillColor">
+                    <gradient
+                        android:endX="224.5"
+                        android:endY="319"
+                        android:startX="149.5"
+                        android:startY="119"
+                        android:type="linear">
+                        <item android:color="#38FFFFFF" android:offset="0" />
+                        <item android:color="#0FFFFFFF" android:offset="0.45" />
+                        <item android:color="#00FFFFFF" android:offset="1" />
+                    </gradient>
+                </aapt:attr>
+            </path>
+        </group>
     </group>
 </vector>

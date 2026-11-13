@@ -75,7 +75,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16), VodPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(Product.POSTER_SPACING_DP), VodPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.addOnScrollListener(mScroller = new CustomScroller(this));
         mBinding.recycler.setHeader(getActivity(), R.id.result, R.id.recycler);

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  海报片名文字色：未聚焦用低对比的浅灰（让海报成为主视觉），聚焦时提亮到纯白。
+  片名 View 需 duplicateParentState="true" 才能跟随卡片根的 state_focused。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:color="#FFFFFFFF" android:state_focused="true" />
+    <item android:color="#FFC4C6CF" />
+
+</selector>

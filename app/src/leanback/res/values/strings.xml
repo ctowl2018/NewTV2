@@ -9,10 +9,10 @@
     <string name="home_history">History</string>
     <string name="home_recommend">Recommend</string>
     <string name="home_nav_home">Home</string>
-    <string name="home_nav_iqiyi">iQIYI</string>
-    <string name="home_nav_tencent">Tencent Video</string>
-    <string name="home_nav_mango">Mango TV</string>
-    <string name="home_nav_youku">Youku</string>
+    <string name="home_nav_movie">Movies</string>
+    <string name="home_nav_series">Series</string>
+    <string name="home_nav_variety">Variety</string>
+    <string name="home_nav_mine">Mine</string>
     <string name="back_exit_hint">Press back again to exit</string>
     <string name="home_more">More</string>
     <string name="home_push_qr">Connect (QR)</string>

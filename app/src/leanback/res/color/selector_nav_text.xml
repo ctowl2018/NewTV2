@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶部导航文字颜色（与 selector_nav_button 的三态胶囊配套）：
+
+  聚焦（选中）    → 纯黑 #000000（白底上的最强对比）；
+  当前页未聚焦    → 纯白（50% 透明黑胶囊上仍清晰）；
+  其余导航项      → 纯白。
+
+  只区分「聚焦 / 非聚焦」两档颜色，当前页与其余项的区别完全交给背景胶囊，
+  避免文字色与底色组合过多、风格发散。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:color="#FF000000" android:state_focused="true" />
+    <item android:color="@color/white" />
+
+</selector>

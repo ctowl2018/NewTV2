@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 圆形海报聚焦描边：3dp 纯白椭圆，与矩形海报的描边粗细一致。 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
 
+    <solid android:color="@android:color/transparent" />
+
     <stroke
-        android:width="2dp"
+        android:width="3dp"
         android:color="@color/white" />
 
 </shape>

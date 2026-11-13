@@ -1,85 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  收藏页 / 最近观看海报卡片（KeepAdapter / HistoryPresenter）。
+
+  与 adapter_vod_rect.xml 同构，两处差异：
+    ① poster 内多一层 delete 删除态遮罩（16dp 圆角，不会露出直角黑块）；
+    ② metadata 常显而非聚焦展开 —— 收藏 / 历史需要常驻的来源与进度信息。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:foreground="@drawable/selector_vod">
+    android:orientation="vertical">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/image"
+    <FrameLayout
+        android:id="@+id/poster"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:background="@color/black_20"
-        app:shapeAppearanceOverlay="@style/Vod.Grid" />
+        android:clipChildren="false"
+        android:duplicateParentState="true"
+        android:foreground="@drawable/selector_vod">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/delete"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignStart="@+id/image"
-        android:layout_alignTop="@+id/image"
-        android:layout_alignEnd="@+id/image"
-        android:layout_alignBottom="@+id/name"
-        android:background="@color/black_50"
-        android:scaleType="center"
-        android:src="@drawable/ic_vod_delete"
-        android:visibility="gone"
-        app:shapeAppearanceOverlay="@style/Vod.Grid.Large"
-        tools:visibility="visible" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black_20"
+            app:shapeAppearanceOverlay="@style/Vod.Grid" />
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/year"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/shape_vod_year"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:visibility="gone"
-        tools:text="2022"
-        tools:visibility="visible" />
-
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/site"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/shape_vod_site"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:visibility="gone"
-        tools:text="泥巴"
-        tools:visibility="visible" />
-
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/remark"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/name"
-        android:background="@drawable/shape_vod_remark"
-        android:ellipsize="marquee"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        tools:text="1080p" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/delete"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/shape_vod_delete"
+            android:scaleType="center"
+            android:src="@drawable/ic_vod_delete"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </FrameLayout>
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/name"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/image"
-        android:layout_alignStart="@+id/image"
-        android:layout_alignEnd="@+id/image"
-        android:background="@drawable/shape_vod_name"
-        android:ellipsize="marquee"
-        android:gravity="center"
-        android:padding="6dp"
+        android:layout_height="26dp"
+        android:layout_marginTop="8dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:gravity="start|center_vertical"
+        android:includeFontPadding="false"
         android:singleLine="true"
-        android:textColor="@color/white"
+        android:textColor="@color/selector_vod_title"
         android:textSize="16sp"
         tools:text="蜘蛛人" />
 
-</RelativeLayout>
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/metadata"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/year"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="2022"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/remark"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            tools:text="观看到 12:30" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/site"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:maxWidth="64dp"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="泥巴"
+            tools:visibility="visible" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

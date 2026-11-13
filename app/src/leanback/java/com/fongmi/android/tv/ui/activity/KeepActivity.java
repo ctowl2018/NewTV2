@@ -47,7 +47,7 @@ public class KeepActivity extends BaseActivity implements KeepAdapter.OnClickLis
         mBinding.recycler.setItemAnimator(null);
         mBinding.recycler.setAdapter(mAdapter = new KeepAdapter(this));
         mBinding.recycler.setLayoutManager(new GridLayoutManager(this, Product.getColumn()));
-        mBinding.recycler.addItemDecoration(new SpaceItemDecoration(Product.getColumn(), 16));
+        mBinding.recycler.addItemDecoration(new SpaceItemDecoration(Product.getColumn(), Product.POSTER_SPACING_DP));
     }
 
     private void getKeep() {

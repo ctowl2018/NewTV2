@@ -1,70 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  网格矩形海报卡片（首页 / 分类 / 搜索结果，VodRectHolder）。
+
+  JetStream 风格三段式垂直卡片：
+    ① poster 容器（图片，16dp 四角圆角，聚焦描边只套这一层）
+    ② name 片名（海报下方独立一行，26dp，左对齐，未聚焦浅灰 / 聚焦纯白）
+    ③ metadata 元数据行（年份 · 备注 · 站源，12sp，聚焦时展开）
+
+  与旧版的区别：片名不再用深色条压在海报底部、图片不再只圆上方两角；
+  角标也不再贴在图片上，统一收进海报下方的元数据行，视觉更干净。
+  尺寸由 VodRectHolder.size() 运行时写入 poster.height / root.width。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:foreground="@drawable/selector_vod">
+    android:orientation="vertical">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/image"
+    <!-- duplicateParentState：焦点在卡片根上，让描边能跟随 state_focused。 -->
+    <FrameLayout
+        android:id="@+id/poster"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:background="@color/black_20"
-        app:shapeAppearanceOverlay="@style/Vod.Grid" />
+        android:clipChildren="false"
+        android:duplicateParentState="true"
+        android:foreground="@drawable/selector_vod">
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/year"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/shape_vod_year"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:visibility="gone"
-        tools:text="2022"
-        tools:visibility="visible" />
-
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/site"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/shape_vod_site"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:visibility="gone"
-        tools:text="泥巴"
-        tools:visibility="visible" />
-
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/remark"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/name"
-        android:background="@drawable/shape_vod_remark"
-        android:ellipsize="marquee"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        tools:text="1080p" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black_20"
+            app:shapeAppearanceOverlay="@style/Vod.Grid" />
+    </FrameLayout>
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/image"
-        android:layout_alignStart="@+id/image"
-        android:layout_alignEnd="@+id/image"
-        android:background="@drawable/shape_vod_name"
-        android:ellipsize="marquee"
-        android:gravity="center"
-        android:padding="6dp"
+        android:layout_width="match_parent"
+        android:layout_height="26dp"
+        android:layout_marginTop="8dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:gravity="start|center_vertical"
+        android:includeFontPadding="false"
         android:singleLine="true"
-        android:textColor="@color/white"
+        android:textColor="@color/selector_vod_title"
         android:textSize="16sp"
         tools:text="蜘蛛人" />
 
-</RelativeLayout>
+    <!-- 悬停展开：VodRectHolder 在聚焦时置 VISIBLE，失焦回到 INVISIBLE（保留占位，卡片不跳动）。 -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/metadata"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="invisible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/year"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="2022"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/remark"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            tools:text="更新至第 12 集" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/site"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:ellipsize="end"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:maxWidth="64dp"
+            android:singleLine="true"
+            android:textColor="@color/white_60"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="泥巴"
+            tools:visibility="visible" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

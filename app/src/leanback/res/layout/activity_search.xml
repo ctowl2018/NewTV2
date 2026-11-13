@@ -7,7 +7,10 @@
     android:clipChildren="false"
     android:clipToPadding="false"
     android:orientation="horizontal"
-    android:padding="24dp">
+    android:paddingStart="48dp"
+    android:paddingTop="24dp"
+    android:paddingEnd="48dp"
+    android:paddingBottom="24dp">
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="wrap_content"

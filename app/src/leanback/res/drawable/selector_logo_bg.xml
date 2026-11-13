@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏「搜索圆钮」的圆形底（原品牌 logo 位）。
+
+  常态：#262626 深灰正圆，与导航胶囊（透明）区分开，作为「工具入口」的锚点；
+  聚焦：#FFFFFF 纯白正圆 —— 与导航胶囊的取反逻辑完全一致（白底 + 深色图标），
+        放大镜的颜色由 res/color/selector_logo_tint 同步切到纯黑。
+  直径 36dp = 导航选中框高度，焦点态尺寸不变，只是换色，不会产生跳动。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFFFF" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#FF262626" />
+        </shape>
+    </item>
+
+</selector>

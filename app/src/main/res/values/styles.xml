@@ -2,17 +2,21 @@
 
     <style name="Control.Script" parent="Control" />
 
+    <!--
+      海报圆角口径（JetStream 风格）：网格海报 / 删除遮罩 16dp 四角全圆，
+      列表缩略图 14dp，圆形海报 50%。片名已移到海报下方独立成行，
+      不再需要「图片只圆上方两角 + 片名条补下方两角」的拼接做法。
+    -->
     <style name="Vod">
         <item name="cornerFamily">rounded</item>
     </style>
 
     <style name="Vod.Grid">
-        <item name="cornerSizeTopLeft">8dp</item>
-        <item name="cornerSizeTopRight">8dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <style name="Vod.Grid.Large">
-        <item name="cornerSize">8dp</item>
+        <item name="cornerSize">16dp</item>
     </style>
 
     <style name="Vod.Circle">
@@ -21,8 +25,7 @@
     </style>
 
     <style name="Vod.List">
-        <item name="cornerSizeTopLeft">8dp</item>
-        <item name="cornerSizeBottomLeft">8dp</item>
+        <item name="cornerSize">14dp</item>
     </style>
 
     <style name="Player">

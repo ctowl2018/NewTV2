@@ -26,6 +26,8 @@
     <color name="white_80">#CCFFFFFF</color>
     <color name="white_90">#E6FFFFFF</color>
     <color name="splash_background">#141218</color>
+    <!-- 新版品牌底 #0C1219：欢迎页动画、TV banner、自适应图标背景共用 -->
+    <color name="brand_background">#FF0C1219</color>
     <color name="app_background">#101114</color>
 
     <!-- TMDB 刮削日志：成功阶段与失败条目的文字色 -->

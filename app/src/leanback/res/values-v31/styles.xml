@@ -2,8 +2,9 @@
 
     <style name="Theme.Splash" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.App</item>
-        <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo_animated</item>
+        <item name="windowSplashScreenBackground">@color/brand_background</item>
+        <!-- 系统层只留同色纯底；banner 由 SplashBrandView 在内容层静态显示 -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_blank</item>
         <item name="windowSplashScreenAnimationDuration">800</item>
     </style>
 

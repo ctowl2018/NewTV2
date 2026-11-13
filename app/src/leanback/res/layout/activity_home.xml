@@ -9,13 +9,16 @@
         顶部渐变遮罩：屏幕边缘黑 50%，向下淡出到全透明。高度由
         HomeActivity.applyTopScrim() 按「工具栏底边 + 5dp」动态设置，不遮住顶栏文字。
     L2  homeToolbar（elevation 8dp）
-        屏幕顶部一条水平工具栏，导航控件 12sp 加粗、垂直居中对齐、无文字投影：
-        最左是品牌入口（播放三角，纯展示：不可聚焦、无点击、无弹窗）；
-        其次 6 个导航文字按钮（首页 / 爱奇艺 / 腾讯视频 / 优酷 / 芒果TV / 片库）；
-        右侧依次是 4 个功能图标（搜索 / 收藏 / 连接 / 设置）→ 站源下拉入口 → 时间（18sp）。
+        屏幕顶部一条 64dp 单行工具栏（导航 16sp 加粗、垂直居中对齐、无文字投影）：
+        最左是搜索圆钮（36dp 深色圆 + 白色放大镜，点击进搜索页）；
+        其次 6 个导航文字按钮（首页 / 电影 / 剧集 / 综艺 / 片库 / 我的——「我的」是设置入口）；
+        右侧依次是 站源下拉入口 → 时钟。
     L3  siteSheet（elevation 16dp，最后一个子 View）
         FocusTrapFrameLayout：显示期间把方向焦点搜索截断在容器内部；内容为站源列表。
         原品牌入口的功能 sheet（moreSheet）已随 logo 弹窗菜单一并移除。
+    L4  splashBrand（elevation 32dp）
+        启动画面 banner：静态显示 640×360（原始 1280×720 的 50%）等比居中，
+        约 600ms 后自动淡出隐藏。
 
   层级保证：sheet > toolbar > topScrim > recycler。浮层控件全部叠加在主视觉之上，
   不占用列表行。toolbar/sheet 是 ProgressLayout 的兄弟节点，因此
@@ -40,9 +43,9 @@
             android:layout_height="match_parent"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:paddingStart="24dp"
+            android:paddingStart="48dp"
             android:paddingTop="8dp"
-            android:paddingEnd="24dp"
+            android:paddingEnd="48dp"
             android:paddingBottom="24dp"
             app:focusOutEnd="true"
             app:focusOutFront="true" />
@@ -53,7 +56,7 @@
     <View
         android:id="@+id/topScrim"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="85dp"
         android:layout_gravity="top"
         android:background="@drawable/shape_top_scrim"
         android:clickable="false"
@@ -69,5 +72,16 @@
     <include
         android:id="@+id/siteSheet"
         layout="@layout/view_site_sheet" />
+
+    <!-- L4：启动画面 banner（静态显示，1280×720 的 50% = 640×360 等比居中），
+         约 600ms 后自动淡出隐藏；不参与焦点与点击，elevation 最高。 -->
+    <com.fongmi.android.tv.ui.custom.SplashBrandView
+        android:id="@+id/splashBrand"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:elevation="32dp"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
 
 </FrameLayout>

@@ -6,6 +6,7 @@ import com.bumptech.glide.Glide;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterVodListBinding;
 import com.fongmi.android.tv.ui.base.BaseVodHolder;
+import com.fongmi.android.tv.ui.custom.PosterFocusAnimator;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.ImgUtil;
 
@@ -18,6 +19,8 @@ public class VodListHolder extends BaseVodHolder {
         super(binding.getRoot());
         this.binding = binding;
         this.listener = listener;
+        // 列表卡整卡有实底，边界即内容轮廓，可安全抬升；片名聚焦时跑马灯。
+        PosterFocusAnimator.bind(binding.getRoot(), true, (card, focused) -> PosterFocusAnimator.marquee(binding.name, focused));
     }
 
     @Override
@@ -33,6 +36,7 @@ public class VodListHolder extends BaseVodHolder {
 
     @Override
     public void unbind() {
+        PosterFocusAnimator.reset(binding.getRoot());
         Glide.with(binding.image).clear(binding.image);
     }
 }

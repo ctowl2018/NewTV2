@@ -37,10 +37,10 @@ import com.fongmi.android.tv.databinding.ViewHomeToolbarBinding;
 import com.fongmi.android.tv.databinding.ViewSiteSheetBinding;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.model.SiteViewModel;
+import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.ui.adapter.SiteMenuAdapter;
 import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
-import com.fongmi.android.tv.ui.dialog.LocalConnectDialog;
 import com.fongmi.android.tv.ui.fragment.FolderFragment;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.KeyUtil;
@@ -74,6 +74,8 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     private Clock mClock;
     private String mKey;
     private View mOldView;
+    /** 上一次已应用的海报尺寸档位；设置里改过之后回到前台要按新列数重建分类页。 */
+    private int mPosterSize;
     /** 最后一次聚焦的导航文字按钮：顶栏按返回时焦点回到它。 */
     private View mLastNav;
     /**
@@ -142,6 +144,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     @Override
     protected void initView(Bundle savedInstanceState) {
         mKey = getIntent().getStringExtra("key");
+        mPosterSize = PlayerSetting.getSize();
         setRecyclerView();
         setToolbar();
         setViewModel();
@@ -183,11 +186,12 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         mSheet.siteList.setLayoutManager(new LinearLayoutManager(this));
         mSheet.siteList.setItemAnimator(null);
         mSheet.siteList.setMaxHeight(ResUtil.dp2px(SITE_ROW_DP * SITE_ROWS));
-        mToolbar.funcSearch.setOnClickListener(v -> SearchActivity.start(this));
-        mToolbar.funcKeep.setOnClickListener(v -> KeepActivity.start(this));
-        mToolbar.funcConnect.setOnClickListener(v -> LocalConnectDialog.show(this, "push"));
-        mToolbar.funcSetting.setOnClickListener(v -> SettingActivity.start(this));
-        View[] navs = {mToolbar.navHome, mToolbar.navIqiyi, mToolbar.navTencent, mToolbar.navYouku, mToolbar.navMango, mToolbar.navVod};
+        // 搜索圆钮（放大镜，占原品牌位）：点击进搜索页；「我的」= 设置入口。
+        mToolbar.brandEntry.setOnClickListener(v -> SearchActivity.start(this));
+        mToolbar.navMine.setOnClickListener(v -> SettingActivity.start(this));
+        // 当前所在页 = 片库：50% 透明黑胶囊 + 白字（焦点离开后仍保留）。
+        mToolbar.navVod.setSelected(true);
+        View[] navs = {mToolbar.navHome, mToolbar.navMovie, mToolbar.navSeries, mToolbar.navVariety, mToolbar.navVod, mToolbar.navMine};
         for (View nav : navs) nav.setOnFocusChangeListener((view, hasFocus) -> {
             if (hasFocus) mLastNav = view;
         });
@@ -257,7 +261,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         lp.rightMargin = marginEnd;
         float textWidth = mSiteMenuAdapter.maxTextWidth(mToolbar.siteName.getPaint());
         int width = (int) Math.ceil(textWidth) + ResUtil.dp2px(44);
-        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(24));
+        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(48));
         lp.width = Math.min(Math.max(width, ResUtil.dp2px(140)), maxWidth);
         mSheet.sitePanel.setLayoutParams(lp);
     }
@@ -365,6 +369,56 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         focusCapsule(0);
     }
 
+    /**
+     * 设置里切换海报尺寸后，返回本页时按新列数重建分类区。
+     *
+     * <p>RefreshEvent.SIZE 会在设置页仍在前台时送达（EventBus 注册到 onDestroy），
+     * 但那时本 Activity 已 stop，直接动 Fragment / 抢焦点不安全，所以事件只作提示，
+     * 真正重建放到 onResume；这里用「档位比对」兜底，即使事件没送达也能生效。</p>
+     */
+    private void applyPosterSizeIfChanged() {
+        int size = PlayerSetting.getSize();
+        if (size == mPosterSize) return;
+        mPosterSize = size;
+        rebuildPagesForPosterSize();
+    }
+
+    /**
+     * 按新列数重建所有分类页，并<b>停留在用户离开前的分类</b>。
+     *
+     * <p>不能只刷新当前 Fragment：ViewPager 会预加载相邻页，旧 Fragment 与回收池里的
+     * ViewHolder 都固化了旧列数 / 卡片宽高（VodPresenter 构造时算 size、Holder 写进
+     * LayoutParams），切到那些分类时不会自动重算。因此复用站源切换的「就地重建」流程：
+     * 显式移除所有 FolderFragment（PageAdapter.destroyItem 是空实现），再换新适配器。</p>
+     *
+     * <p>与站源切换的区别：分类列表不变，不重灌 mAdapter，也不回到 0 号胶囊，
+     * 而是恢复 setCurrentItem(position)，停在用户离开前的分类。</p>
+     */
+    private void rebuildPagesForPosterSize() {
+        if (mBinding == null || mAdapter == null || mAdapter.getItemCount() == 0) return;
+        int position = Math.min(mBinding.pager.getCurrentItem(), mAdapter.getItemCount() - 1);
+        FragmentManager manager = getSupportFragmentManager();
+        List<Fragment> stale = new ArrayList<>();
+        for (Fragment fragment : manager.getFragments()) {
+            if (fragment instanceof FolderFragment) stale.add(fragment);
+        }
+        if (!stale.isEmpty()) {
+            FragmentTransaction transaction = manager.beginTransaction();
+            for (Fragment fragment : stale) transaction.remove(fragment);
+            transaction.commitNowAllowingStateLoss();
+        }
+        clearPendingPoster();
+        mOldView = null;
+        mBinding.pager.setAdapter(new PageAdapter(manager));
+        mBinding.pager.setCurrentItem(position, false);
+        mBinding.recycler.setSelectedPosition(position);
+        focusCapsule(position);
+        mBinding.pager.post(() -> {
+            FolderFragment folder = getFragment(position);
+            if (folder != null) folder.resetToFirstPoster();
+        });
+    }
+
     // ------------------------------------------------------------ 焦点 / 返回
 
     @Override
@@ -404,6 +458,9 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     private void setPager() {
+        // 分类页只允许顶部导航胶囊横移切页：关掉 ViewPager 自身的左右键切页，
+        // 避免焦点停在海报网格最左/最右列时继续按方向键误切到上/下一个分类。
+        mBinding.pager.setKeyPagingEnabled(false);
         mBinding.pager.setAdapter(new PageAdapter(getSupportFragmentManager()));
     }
 
@@ -442,6 +499,8 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
         if (event.getType() == RefreshEvent.Type.CATEGORY) getFragment().onRefresh();
+        // SIZE 不在这里动 UI：设置页在前台时本页已 stop，回到 onResume 时由
+        // applyPosterSizeIfChanged() 比对档位后按新列数重建（见上）。
     }
 
     @Override
@@ -460,6 +519,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         if (mClock != null) mClock.stop();
         mClock = Clock.create().view(mToolbar.clock).format("HH:mm");
         mClock.start();
+        applyPosterSizeIfChanged();
     }
 
     @Override

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  收藏 / 历史的「删除态」遮罩底：16dp 圆角与海报一致，避免半透明黑块露出直角。
+  颜色取高不透明的深色，保证白色删除图标在任意海报上都清晰。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <corners android:radius="16dp" />
+    <solid android:color="#CC1A1C1E" />
+
+</shape>

@@ -129,8 +129,9 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
         selector.addPresenter(Vod.class, new VodPresenter(this, Style.list()));
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16), VodPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(8, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ALIGNED), FilterPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(Product.POSTER_SPACING_DP), VodPresenter.class);
+        // 分类胶囊行保留 Leanback 原有左右 padding（-1），不适用海报行的归零规则。
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(8, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ALIGNED, -1), FilterPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setHeader(getActivity(), R.id.recycler);
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  顶栏「搜索圆钮」内放大镜的颜色状态：
+    聚焦 → 纯黑（此时圆底已转纯白，与导航胶囊的黑字同源）；
+    其余 → 品牌橙（#FF8F3C，深灰圆底上的常态高亮色）。
+
+  与 selector_logo_bg 一一对应，两者必须同改，否则会出现「白底白图标」。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:color="#FF000000" android:state_focused="true" />
+    <item android:color="#FFFF8F3C" />
+
+</selector>

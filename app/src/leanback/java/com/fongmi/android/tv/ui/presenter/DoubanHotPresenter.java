@@ -118,9 +118,9 @@ public class DoubanHotPresenter extends Presenter {
      * 让主视觉的剧照<b>左、右、上三边贴住屏幕边缘</b>，与播放详情页的整页背景严格对齐。
      *
      * <p>首页这一行是 {@code VerticalGridView} 的普通 item，父容器的
-     * {@code paddingStart/End = 24dp}、{@code paddingTop = 8dp} 会把画框整体缩进一圈。
-     * 这里给 item 加<b>等量的负 margin</b> 抵消；leanback 的 {@code GridLayoutManager}
-     * 在测量与落位两处都会计入 margin，因此负值是有效的。</p>
+     * {@code paddingStart/End = 48dp}（全局左右基线）、{@code paddingTop = 8dp}
+     * 会把画框整体缩进一圈。这里给 item 加<b>等量的负 margin</b> 抵消；leanback 的
+     * {@code GridLayoutManager} 在测量与落位两处都会计入 margin，因此负值是有效的。</p>
      */
     private static void applyBleed(View view, ViewGroup parent) {
         ViewGroup.LayoutParams params = view.getLayoutParams();
@@ -256,15 +256,15 @@ public class DoubanHotPresenter extends Presenter {
         }
 
         /**
-         * 「查看详情」按钮两态样式：常态 = 不透明 {@code #3C3C3C} 实底 + 白字；
+         * 「查看详情」按钮两态样式：常态（未选中）= 50% 透明黑 {@code #80000000} 实底 + 白字；
          * 聚焦（选中）= 纯白实底 + 近黑字（{@code #101114}）。字号 14sp / 加粗由布局给定，
          * 这里只切底色与字色；按钮已是纯文字，实心三角图标与对应的染色逻辑均已移除。
          *
          * <p>不用 state_focused 选择器：焦点落在整行 item 的根布局上，
          * 按钮及其子 View 不会进入 focused 状态，选择器不会命中。</p>
          *
-         * <p><b>不再改动整体 alpha</b>：常态底色要求「不透明」，任何小于 1 的 view alpha
-         * 都会把 {@code #3C3C3C} 冲淡成半透明；聚焦反馈已由底色 + 字色的强对比承担。</p>
+         * <p><b>不再改动整体 alpha</b>：半透明由 {@code #80000000} 的 alpha 通道表达，
+         * 而非给 view 设 alpha，所以不会被冲淡；聚焦反馈由纯白底 + 近黑字的强对比承担。</p>
          */
         private void styleAction(boolean focused) {
             binding.action.setBackgroundResource(focused ? R.drawable.shape_hot_action_focused : R.drawable.shape_hot_action);
