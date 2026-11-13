@@ -3,6 +3,7 @@ name: Build & Release (leanback)
 # 每次 push 到 main 即构建 release 版并发布 GitHub Release。
 # 版本号规则：<上游版本号>.NewTV2.<YYYYMMDD>.<HHMMSS>
 #   例：5.8.7.NewTV2.20261113.173045（UPSTREAM_VERSION 在下方 Compute version 步骤维护）
+#   <YYYYMMDD> / <HHMMSS> 均为北京时间（UTC+8），非 UTC。
 # versionCode 用「Unix 秒 - 1700000000」保证单调递增且不超 int 上限。
 # 应用内更新检查（Github.REPO = ctowl2018/NewTV2）按 语义版本 + 时间戳 判定更新。
 on:
@@ -54,13 +55,13 @@ jobs:
           echo "storePassword=fongmi123" >> local.properties
           cat local.properties
 
-      - name: Compute version
+      - name: Compute version (Beijing time, UTC+8)
         id: ver
         env:
           UPSTREAM_VERSION: "5.8.7"
         run: |
-          DATE=$(date +%Y%m%d)
-          TIME=$(date +%H%M%S)
+          DATE=$(date -d '8 hours' +%Y%m%d)
+          TIME=$(date -d '8 hours' +%H%M%S)
           echo "version_name=${UPSTREAM_VERSION}.NewTV2.${DATE}.${TIME}" >> "$GITHUB_OUTPUT"
           echo "version_code=$(( $(date +%s) - 1700000000 ))" >> "$GITHUB_OUTPUT"
 
@@ -84,16 +85,23 @@ jobs:
           done
           ls -l
 
+      - name: Prepare Release notes from last commit
+        run: |
+          body=$(git log -1 --format=%b)
+          if [ -z "$body" ]; then body=$(git log -1 --format=%B); fi
+          {
+            echo "Automated leanback (TV) release built from commit ${{ github.sha }}."
+            echo ""
+            echo "$body"
+          } > release_notes.md
+          cat release_notes.md
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version_name }}
           name: NewTV2 v${{ steps.ver.outputs.version_name }}
-          body: |
-            Automated leanback (TV) release built from commit `${{ github.sha }}`.
-
-            Signed with the project's debug-equivalent key so it installs over existing debug builds.
-            Auto-update source: ctowl2018/NewTV2.
+          body_path: release_notes.md
           files: |
             app/build/outputs/apk/leanback/release/leanback-arm64_v8a.apk
             app/build/outputs/apk/leanback/release/leanback-armeabi_v7a.apk
