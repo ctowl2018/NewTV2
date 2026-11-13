@@ -1,8 +1,10 @@
 name: Build & Release (leanback)
 
 # 每次 push 到 main 即构建 release 版并发布 GitHub Release。
-# 版本号自动递增：v5.8.7（基准）+ github.run_number → v5.8.8、v5.8.9 …
-# 应用内更新检查（Github.REPO = ctowl2018/NewTV2）会据此提示更新。
+# 版本号规则：<上游版本号>.NewTV2.<YYYYMMDD>.<HHMMSS>
+#   例：5.8.7.NewTV2.20261113.173045（UPSTREAM_VERSION 在下方 Compute version 步骤维护）
+# versionCode 用「Unix 秒 - 1700000000」保证单调递增且不超 int 上限。
+# 应用内更新检查（Github.REPO = ctowl2018/NewTV2）按 语义版本 + 时间戳 判定更新。
 on:
   push:
     branches: [main]
@@ -18,8 +20,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      RUN_NUMBER: ${{ github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,10 +55,13 @@ jobs:
 
       - name: Compute version
         id: ver
+        env:
+          UPSTREAM_VERSION: "5.8.7"
         run: |
-          PATCH=$((7 + RUN_NUMBER))
-          echo "version_name=5.8.${PATCH}" >> "$GITHUB_OUTPUT"
-          echo "version_code=$((587 + RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+          DATE=$(date +%Y%m%d)
+          TIME=$(date +%H%M%S)
+          echo "version_name=${UPSTREAM_VERSION}.NewTV2.${DATE}.${TIME}" >> "$GITHUB_OUTPUT"
+          echo "version_code=$(( $(date +%s) - 1700000000 ))" >> "$GITHUB_OUTPUT"
 
       - name: Build leanback release APK
         run: |

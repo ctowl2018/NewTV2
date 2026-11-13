@@ -12,40 +12,63 @@ public class Github {
     }
 
     public static JSONObject getUpdate(JSONArray releases, String currentVersion, String filename) {
-        int[] latest = version(currentVersion);
-        if (latest == null) throw new IllegalArgumentException("Invalid app version");
+        Ver current = parseVersion(currentVersion);
+        if (current == null) throw new IllegalArgumentException("Invalid app version");
+        Ver best = current;
         JSONObject selected = null;
         for (int i = 0; i < releases.length(); i++) {
             JSONObject release = releases.optJSONObject(i);
             if (release == null || release.optBoolean("draft") || release.optBoolean("prerelease") || getAsset(release, filename) == null) continue;
-            int[] candidate = version(release.optString("tag_name"));
+            Ver candidate = parseVersion(release.optString("tag_name"));
             if (candidate == null) continue;
-            if (isNewer(candidate, latest)) {
-                latest = candidate;
+            if (isNewer(candidate, best)) {
+                best = candidate;
                 selected = release;
             }
         }
         return selected;
     }
 
-    private static boolean isNewer(int[] candidate, int[] current) {
-        for (int i = 0; i < current.length; i++) if (candidate[i] != current[i]) return candidate[i] > current[i];
-        return false;
+    /**
+     * 解析版本号，兼容两种格式：
+     *  - 纯语义版本：x.y.z
+     *  - NewTV2 自编译版本：<上游版本>.NewTV2.<YYYYMMDD>.<HHMMSS>
+     * 比较优先级：先比语义版本三段，再比时间戳（日期+时间，秒级，单调递增）。
+     */
+    private static Ver parseVersion(String tag) {
+        String t = tag.startsWith("v") ? tag.substring(1) : tag;
+        String[] parts = t.split("\\.", -1);
+        if (parts.length < 3) return null;
+        int[] semver = new int[3];
+        for (int i = 0; i < 3; i++) {
+            if (!parts[i].matches("[0-9]+")) return null;
+            semver[i] = Integer.parseInt(parts[i]);
+        }
+        long stamp = 0;
+        if (parts.length >= 6 && "NewTV2".equals(parts[3]) && parts[4].matches("[0-9]{8}") && parts[5].matches("[0-9]{6}")) {
+            try {
+                stamp = (long) Integer.parseInt(parts[4]) * 1_000_000L + Integer.parseInt(parts[5]);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return new Ver(semver, stamp);
     }
 
-    private static int[] version(String tag) {
-        String[] parts = (tag.startsWith("v") ? tag.substring(1) : tag).split("\\.", -1);
-        if (parts.length != 3) return null;
-        int[] version = new int[3];
-        try {
-            for (int i = 0; i < parts.length; i++) {
-                if (!parts[i].matches("[0-9]+")) return null;
-                version[i] = Integer.parseInt(parts[i]);
-            }
-        } catch (NumberFormatException e) {
-            return null;
+    private static boolean isNewer(Ver candidate, Ver current) {
+        for (int i = 0; i < 3; i++) {
+            if (candidate.semver[i] != current.semver[i]) return candidate.semver[i] > current.semver[i];
         }
-        return version;
+        return candidate.stamp > current.stamp;
+    }
+
+    private static final class Ver {
+        final int[] semver;
+        final long stamp;
+
+        Ver(int[] semver, long stamp) {
+            this.semver = semver;
+            this.stamp = stamp;
+        }
     }
 
     public static String getNotes(String body, String flavor) {
