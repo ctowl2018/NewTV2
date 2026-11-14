@@ -237,6 +237,23 @@ public final class TmdbStore {
         return new Stats(count, bytes);
     }
 
+    /**
+     * 备份恢复后调用：磁盘文件已被整体替换，这里只丢掉内存里的索引与位图并推进 generation，
+     * 让正在后台跑的抓取任务丢弃旧结果；不删任何文件。
+     */
+    public static void reset() {
+        synchronized (LOCK) {
+            generation++;
+            index = null;
+            synchronized (BITMAPS) {
+                BITMAPS.evictAll();
+            }
+            synchronized (LOGOS) {
+                LOGOS.evictAll();
+            }
+        }
+    }
+
     /** 清空全部 TMDB 缓存：索引、背景图、logo 与内存位图引用。 */
     public static void clear() {
         synchronized (LOCK) {

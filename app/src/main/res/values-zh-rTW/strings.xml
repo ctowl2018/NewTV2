@@ -608,8 +608,7 @@
     <string name="tmdb_site_summary">%1$d 個站點輪換</string>
     <string name="tmdb_cache">快取（背景圖）</string>
     <string name="tmdb_cache_info">%1$d 張 · %2$s</string>
-    <string name="tmdb_clear">清理快取</string>
-    <string name="tmdb_clear_confirm">確認刪除全部 TMDB 背景圖與 logo 快取？</string>
+    <string name="tmdb_cache_hint">由「設定 → 清除快取」統一清理</string>
     <string name="tmdb_error_toast">刮削失敗提示</string>
     <string name="tmdb_fetch_failed">TMDB 刮削失敗：%1$s</string>
     <string name="tmdb_retry">TMDB刮削</string>

@@ -162,6 +162,11 @@ public class Vod implements Parcelable, Diffable<Vod> {
         this.vodPic = vodPic;
     }
 
+    /** 热榜卡片用它承载「评分：x.x」：卡片会从备注里解析出角标，不再重复显示在信息行。 */
+    public void setRemarks(String vodRemarks) {
+        this.vodRemarks = vodRemarks;
+    }
+
     public String getRemarks() {
         return TextUtils.isEmpty(vodRemarks) ? "" : vodRemarks.trim();
     }

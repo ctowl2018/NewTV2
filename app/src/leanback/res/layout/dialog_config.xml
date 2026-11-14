@@ -5,11 +5,24 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <com.google.android.material.textview.MaterialTextView
+    <!--
+      名称（选填）：与配置库里的名称字段一一对应。
+      用于给站源起一个短名字（顶部站源入口、设置项都显示它），留空则回退显示地址。
+      长度上限与移动端保持一致。
+    -->
+    <com.fongmi.android.tv.ui.custom.CustomEditText
         android:id="@+id/name"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone" />
+        android:layout_marginBottom="12dp"
+        android:hint="@string/dialog_config_name"
+        android:imeOptions="actionNext"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:maxLength="10"
+        android:nextFocusDown="@id/text"
+        android:singleLine="true"
+        android:textSize="18sp" />
 
     <com.fongmi.android.tv.ui.custom.CustomEditText
         android:id="@+id/text"
@@ -20,6 +33,7 @@
         android:imeOptions="actionDone"
         android:importantForAutofill="no"
         android:nextFocusDown="@id/positive"
+        android:nextFocusUp="@id/name"
         android:inputType="text"
         android:singleLine="true"
         android:textSize="18sp" />

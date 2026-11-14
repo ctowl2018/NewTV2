@@ -22,6 +22,9 @@ import java.util.List;
 @Entity(indices = @Index(value = {"url", "type"}, unique = true))
 public class Config {
 
+    /** 点播配置类型（与 BaseConfig.VOD 同值；BaseConfig 非 public，这里给 UI 层一个可达常量）。 */
+    public static final int VOD = 0;
+
     @PrimaryKey(autoGenerate = true)
     @SerializedName("id")
     private int id;

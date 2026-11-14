@@ -82,6 +82,8 @@ public class DoubanHotPresenter extends Presenter {
     private static final float IMAGE_ALPHA = BackdropStyle.IMAGE_ALPHA;
 
     private final OnClickListener listener;
+    /** true = TMDB 抓取由外部队列统一调度，本 Presenter 只消费已落库结果。 */
+    private final boolean externalArt;
 
     public interface OnClickListener {
 
@@ -90,7 +92,17 @@ public class DoubanHotPresenter extends Presenter {
     }
 
     public DoubanHotPresenter(OnClickListener listener) {
+        this(listener, false);
+    }
+
+    /**
+     * @param externalArt 频道页传 true：它一次要补主视觉 10 条 + 四个平台榜最多 40 条，
+     *                    若由本 Presenter 自行 fetch 会在 bind 时突发 10 个请求。改为只听
+     *                    {@code TmdbApi.addOnFetched} 广播，由 HotRankArt 匀速队列统一抓取。
+     */
+    public DoubanHotPresenter(OnClickListener listener, boolean externalArt) {
         this.listener = listener;
+        this.externalArt = externalArt;
     }
 
     @NonNull
@@ -111,7 +123,7 @@ public class DoubanHotPresenter extends Presenter {
          * 与焦点位置、滚动位置、density、屏幕高度全部无关。
          */
         binding.getRoot().setTranslationZ(-1f);
-        return new Holder(binding, listener);
+        return new Holder(binding, listener, externalArt);
     }
 
     /**
@@ -158,6 +170,7 @@ public class DoubanHotPresenter extends Presenter {
 
         private final AdapterDoubanHotBinding binding;
         private final OnClickListener listener;
+        private final boolean externalArt;
         private final Handler handler = new Handler(Looper.getMainLooper());
         /** 全部候选条目，保持榜单原始排片顺序，供逐条补入时复位。 */
         private final List<DoubanHotItem> candidates = new ArrayList<>();
@@ -195,10 +208,11 @@ public class DoubanHotPresenter extends Presenter {
             if (!TextUtils.equals(boundLogo, logo)) bindTitle(item, art);
         };
 
-        private Holder(@NonNull AdapterDoubanHotBinding binding, OnClickListener listener) {
+        private Holder(@NonNull AdapterDoubanHotBinding binding, OnClickListener listener, boolean externalArt) {
             super(binding.getRoot());
             this.binding = binding;
             this.listener = listener;
+            this.externalArt = externalArt;
             this.front = binding.backdrop.getImageA();
             this.rotate = () -> {
                 if (binding.getRoot().hasWindowFocus()) show(index + 1, true);
@@ -634,6 +648,8 @@ public class DoubanHotPresenter extends Presenter {
 
         /** 只在缺素材时触发一次；TmdbApi 内部还有「已缓存 / 进行中 / miss 冷却」三重短路。 */
         private void requestTmdb(String title) {
+            // 频道页由 HotRankArt 匀速队列统一抓取，避免一次绑定突发十条请求。
+            if (externalArt) return;
             if (TextUtils.isEmpty(title) || !requested.add(title)) return;
             TmdbApi.fetch(title, null, null);
         }

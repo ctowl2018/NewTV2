@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  站源下拉的第 0 项「切换站点」：打开左侧的点播地址历史二级面板。
+
+  结构：可聚焦的 30dp 行（左指实心三角 + 文字）+ 底部 1dp 分割线，
+  三角放在文字左侧、指向二级面板弹出的方向；分割线只属于本项（跟随 item 滚动），
+  用来与下方的站源项区分开；聚焦底色只套在行上，不盖住分割线。
+
+  文字必须用 android:text 写死（tools:text 只是设计预览，运行时为空），
+  否则这一项只会显示一个三角。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/switchRow"
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="@drawable/selector_site_menu_item"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
+
+        <!-- 左指实心三角：ic_site_arrow 默认朝下，旋转 90° 朝左；放在文字左侧，指向二级面板弹出的方向 -->
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/indicator"
+            android:layout_width="12dp"
+            android:layout_height="6dp"
+            android:layout_marginEnd="8dp"
+            android:rotation="90"
+            android:src="@drawable/ic_site_arrow"
+            app:tint="@color/white_70" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:text="@string/site_switch_config"
+            android:textColor="@color/white_70"
+            android:textSize="12sp"
+            tools:text="切换站点" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 与下方站源项的分割线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="2dp"
+        android:background="#26FFFFFF" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

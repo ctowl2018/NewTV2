@@ -208,6 +208,20 @@
                     <button id="action_setting" onclick="setting()" class="md-btn md-btn-filled panel-action"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="icons.svg#send"/></svg><span data-i18n="send">發送</span></button>
                 </div>
                 <div class="md-card panel-content">
+                    <div class="panel-intro"><h2 data-i18n="tmdb">TMDB</h2><p data-i18n="tmdbHint">傳送至裝置目前的 TMDB 站點輸入視窗。</p></div>
+                    <div class="setting-fields">
+                        <div class="md-field">
+                            <label for="tmdb_url" data-i18n="tmdbUrl">站點地址</label>
+                            <input id="tmdb_url" class="md-input" type="text" autocomplete="off" />
+                        </div>
+                        <div class="md-field">
+                            <label for="tmdb_key" data-i18n="tmdbKey">API 密鑰</label>
+                            <input id="tmdb_key" class="md-input" type="text" autocomplete="off" />
+                        </div>
+                    </div>
+                    <button id="action_tmdb" onclick="tmdb()" class="md-btn md-btn-filled panel-action"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="icons.svg#send"/></svg><span data-i18n="send">發送</span></button>
+                </div>
+                <div class="md-card panel-content">
                     <a class="panel-link" href="logs.html">
                         <span class="panel-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 3h16v18H4V3zm2 2v14h12V5H6zm2 3h8v2H8V8zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/></svg></span>
                         <span class="panel-link-text"><span data-i18n="logTitle">應用日誌</span></span>

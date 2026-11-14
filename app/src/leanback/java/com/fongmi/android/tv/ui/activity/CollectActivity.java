@@ -40,6 +40,13 @@ public class CollectActivity extends BaseActivity {
     private List<Site> mSites;
     private View mOldView;
 
+    /**
+     * 直接按片名打开搜索结果页（首页主视觉、收藏、片库、搜索页都会走这里）。
+     *
+     * <p><b>本方法不参与搜索历史</b>：历史的唯一写入点是搜索页自己的搜索动作。
+     * 结果页既不新增记录，也不清空记录 —— 从任何非搜索页入口进来都不会影响搜索页的历史列表。
+     * 需要记录历史时由调用方（搜索页）在启动本页之前完成写入。</p>
+     */
     public static void start(Activity activity, String keyword) {
         Intent intent = new Intent(activity, CollectActivity.class);
         intent.putExtra("keyword", keyword);

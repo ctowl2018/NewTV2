@@ -61,6 +61,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
+import com.fongmi.android.tv.ui.adapter.ConfigMenuAdapter;
 import com.fongmi.android.tv.ui.adapter.SiteMenuAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
@@ -118,6 +119,7 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     private ArrayObjectAdapter mHistoryAdapter;
     private ArrayObjectAdapter mAdapter;
     private SiteMenuAdapter mSiteMenuAdapter;
+    private ConfigMenuAdapter mConfigMenuAdapter;
     private HistoryPresenter mPresenter;
     private VodPresenter mVodPresenter;
     private SiteViewModel mViewModel;
@@ -309,8 +311,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
      *
      * <p>导航文字按钮按序为「首页 / 电影 / 剧集 / 综艺 / 片库 / 我的」共 <b>6</b> 项：
      * 「首页」刷新首页内容并回到列表顶部；「片库」进 VodActivity；「我的」进设置页
-     * （原右侧齿轮图标已移除，设置入口并入导航）；电影 / 剧集 / 综艺 暂不接线
-     * （可聚焦、有焦点反馈，但点击不触发任何动作）。左右走位未写死 nextFocusLeft/Right，
+     * （原右侧齿轮图标已移除，设置入口并入导航）；电影 / 剧集 / 综艺 分别进各自的
+     * 热榜频道页（带上首页分类结果，保证频道页「片库」入口可用）。左右走位未写死 nextFocusLeft/Right，
      * 完全由布局顺序决定；「首页」仍是 index 0 且带 focusedByDefault，
      * 启动 / setFocus() / 返回「回首页」都指向它。</p>
      *
@@ -321,9 +323,11 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
      */
     private void setToolbar() {
         mToolbar.navHome.setOnClickListener(v -> refreshHome());
+        mToolbar.navMovie.setOnClickListener(v -> MovieActivity.start(this, mResult));
+        mToolbar.navSeries.setOnClickListener(v -> SeriesActivity.start(this, mResult));
+        mToolbar.navVariety.setOnClickListener(v -> VarietyActivity.start(this, mResult));
         mToolbar.navVod.setOnClickListener(v -> VodActivity.start(this, mResult));
         mToolbar.navMine.setOnClickListener(v -> SettingActivity.start(this));
-        // 电影 / 剧集 / 综艺：只保留焦点反馈，暂不接线。
         mToolbar.siteEntry.setOnClickListener(v -> showSiteSheet());
         mSheet.siteScrim.setOnClickListener(v -> hideSiteSheet());
         mSheet.siteList.setLayoutManager(new LinearLayoutManager(this));
@@ -491,8 +495,21 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         showToolbarImmediate();
         List<Site> sites = VodConfig.get().getSites().stream().filter(site -> !site.isHide()).toList();
         if (sites.isEmpty()) return;
-        mSiteMenuAdapter = new SiteMenuAdapter(sites, getHome(), this::setSite);
+        mSiteMenuAdapter = new SiteMenuAdapter(sites, getHome(), new SiteMenuAdapter.OnClickListener() {
+            @Override
+            public void onItemClick(Site item) {
+                setSite(item);
+            }
+
+            @Override
+            public void onSwitchClick() {
+                showConfigSheet();
+            }
+        });
         mSheet.siteList.setAdapter(mSiteMenuAdapter);
+        // 二级面板随新一次展开复位：上一轮留下的动画与可见性都清掉。
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
         mSheet.getRoot().setVisibility(View.VISIBLE);
         // 先置透明，避免「定位那一帧」把静态画面闪出来；post 里定位完再启动动画。
         mSheet.sitePanel.setAlpha(0f);
@@ -515,12 +532,15 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     /**
      * 打开渐变：遮罩淡入 + 面板淡入、自上方轻微下滑、纵向展开，减速插值收尾。
      * 站源 sheet 与功能 sheet 共用同一套动效，保证两个下拉观感一致。
+     * {@code scrim} 传 {@code null} 表示复用已展开的遮罩（二级面板不再重复淡入遮罩）。
      */
     private void animatePanelOpen(View panel, View scrim) {
         panel.animate().cancel();
-        scrim.animate().cancel();
-        scrim.setAlpha(0f);
-        scrim.animate().alpha(1f).setDuration(SHEET_ANIM).start();
+        if (scrim != null) {
+            scrim.animate().cancel();
+            scrim.setAlpha(0f);
+            scrim.animate().alpha(1f).setDuration(SHEET_ANIM).start();
+        }
         panel.setPivotY(0f);
         panel.setAlpha(0f);
         panel.setTranslationY(-ResUtil.dp2px(12));
@@ -549,11 +569,96 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         lp.topMargin = entry[1] - root[1] + mToolbar.siteEntry.getHeight() + ResUtil.dp2px(6);
         lp.rightMargin = marginEnd;
         float textWidth = mSiteMenuAdapter.maxTextWidth(mToolbar.siteName.getPaint());
+        // 「切换站点」入口也要算进面板宽度，别把它挤成省略号
+        textWidth = Math.max(textWidth, mToolbar.siteName.getPaint().measureText(getString(R.string.site_switch_config)));
         int width = (int) Math.ceil(textWidth) + ResUtil.dp2px(44);
         // 极长站源名不能把面板顶出屏幕左边，给一个不截断文字前提下的安全上限。
         int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(48));
         lp.width = Math.min(Math.max(width, ResUtil.dp2px(140)), maxWidth);
         mSheet.sitePanel.setLayoutParams(lp);
+    }
+
+    /**
+     * 二级面板锚定：顶边与站源面板对齐，右缘贴在站源面板左侧留 8dp 间隙；
+     * 宽度固定 240dp（点播网址普遍很长，靠省略号截断，不随内容自适应撑爆屏幕）。
+     */
+    private void positionConfigSheet() {
+        FrameLayout.LayoutParams site = (FrameLayout.LayoutParams) mSheet.sitePanel.getLayoutParams();
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) mSheet.configPanel.getLayoutParams();
+        lp.topMargin = site.topMargin;
+        lp.rightMargin = site.rightMargin + site.width + ResUtil.dp2px(8);
+        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - lp.rightMargin - ResUtil.dp2px(24));
+        lp.width = Math.min(ResUtil.dp2px(240), maxWidth);
+        mSheet.configPanel.setLayoutParams(lp);
+    }
+
+    /**
+     * 「切换站点」二级面板：列出设置中保存过的点播地址（历史），确认即切换整个点播配置。
+     * 显示期间焦点直接落进二级列表的当前配置项；再按返回先收回二级面板。
+     */
+    private void showConfigSheet() {
+        if (isVisible(mSheet.configPanel)) {
+            hideConfigSheet();
+            return;
+        }
+        List<Config> configs = Config.getAll(Config.VOD);
+        if (configs.isEmpty()) {
+            Notify.show(R.string.site_switch_empty);
+            return;
+        }
+        mConfigMenuAdapter = new ConfigMenuAdapter(configs, VodConfig.get().getConfig(), this::setConfig);
+        mSheet.configList.setLayoutManager(new LinearLayoutManager(this));
+        mSheet.configList.setItemAnimator(null);
+        mSheet.configList.setAdapter(mConfigMenuAdapter);
+        mSheet.configPanel.setVisibility(View.VISIBLE);
+        mSheet.configPanel.setAlpha(0f);
+        mSheet.configList.post(() -> {
+            if (!isVisible(mSheet.configPanel)) return;
+            positionConfigSheet();
+            mSheet.configList.scrollToPosition(mConfigMenuAdapter.indexOfCurrent());
+            // 焦点直接落进二级列表（当前配置项）：用户目的就是切地址，不用再按一次方向键
+            RecyclerView.ViewHolder holder = mSheet.configList.findViewHolderForAdapterPosition(mConfigMenuAdapter.indexOfCurrent());
+            if (holder != null) holder.itemView.requestFocus();
+            else mSheet.configPanel.requestFocus();
+            animatePanelOpen(mSheet.configPanel, null);
+        });
+    }
+
+    /** 收回二级面板，焦点回到「切换站点」入口（站源列表第 0 项），再按返回才是关整个 sheet。 */
+    private void hideConfigSheet() {
+        if (!isVisible(mSheet.configPanel)) return;
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
+        RecyclerView.ViewHolder holder = mSheet.siteList.findViewHolderForAdapterPosition(0);
+        if (holder != null) holder.itemView.requestFocus();
+        else mSheet.sitePanel.requestFocus();
+    }
+
+    /**
+     * 选中点播地址：切换整个点播配置并自动重载——加载期间显示进度；
+     * 成功后收起整个 sheet，{@code onConfigEvent(VOD)} 会随后触发首页内容 / 历史 / 标题的自动刷新；
+     * 失败则提示错误并退回站源列表，保留用户所在的操作现场。
+     */
+    private void setConfig(Config item) {
+        VodConfig.load(item, new Callback() {
+            @Override
+            public void start() {
+                Notify.progress(HomeActivity.this);
+            }
+
+            @Override
+            public void success() {
+                Notify.dismiss();
+                hideSiteSheet();
+            }
+
+            @Override
+            public void error(String msg) {
+                Notify.dismiss();
+                if (!TextUtils.isEmpty(msg)) Notify.show(msg);
+                hideConfigSheet();
+            }
+        });
     }
 
     /** 收起下拉 sheet，焦点回到触发它的入口（此时 sheet 已 GONE，焦点守卫不介入）。 */
@@ -563,6 +668,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         // 下次打开时 showSiteSheet() 会重新设置初始状态。
         mSheet.sitePanel.animate().cancel();
         mSheet.siteScrim.animate().cancel();
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
         mSheet.getRoot().setVisibility(View.GONE);
         mToolbar.siteArrow.setRotation(0f);
         mToolbar.siteEntry.requestFocus();
@@ -1026,7 +1133,10 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
 
     @Override
     protected void onBackInvoked() {
-        if (isVisible(mSheet.getRoot())) {
+        if (isVisible(mSheet.configPanel)) {
+            // 二级面板先于站源面板收回（分层返回）
+            hideConfigSheet();
+        } else if (isVisible(mSheet.getRoot())) {
             hideSiteSheet();
         } else if (mBinding.progressLayout.isProgress()) {
             showContent();

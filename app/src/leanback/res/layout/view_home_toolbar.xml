@@ -70,7 +70,8 @@
       「片库」，视觉上像焦点从旧位置飞过来；改由各页在首次布局完成、绘制之前
       显式投放焦点（见 HomeActivity / VodActivity 的 installInitialFocus）。
       「片库」进 VodActivity；「我的」在最后，作为设置入口（SettingActivity）；
-      电影 / 剧集 / 综艺 目前只保留焦点反馈，未接线。
+      电影 / 剧集 / 综艺 分别进入对应的热榜频道页（MovieActivity / SeriesActivity /
+      VarietyActivity），三页共用 HotCategoryActivity 模板与同一份顶栏。
 
       尺寸统一：固定 36dp 高（与搜索圆钮、站源入口同高）、
       最小宽 64dp（2 个汉字 16sp = 32dp + 左右各 16dp 内边距）、间距 8dp、圆角 18dp（半高）。

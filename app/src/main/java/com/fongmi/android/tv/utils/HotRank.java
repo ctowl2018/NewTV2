@@ -72,6 +72,12 @@ public class HotRank {
     public static final int TV = 3;
     public static final int VARIETY = 4;
 
+    /**
+     * 频道页四个平台榜容器的固定顺序；字符串必须与 {@link #buildSections()} 里的 site 完全一致。
+     * 合并榜的权重顺序（{@link #PRIORITY_VIDEO} / {@link #PRIORITY_VARIETY}）不受此数组影响。
+     */
+    public static final String[] SITES = {"腾讯视频", "爱奇艺", "优酷", "芒果TV"};
+
     /** 每个类目最多输出多少条，与搜索页的 HOT_LIMIT 对齐。 */
     private static final int LIMIT = 10;
     /** 每个榜单最多取前多少名（与后端 MAX_ITEMS 对齐）。 */
@@ -102,6 +108,15 @@ public class HotRank {
     public interface Callback {
 
         void onResult(String json);
+    }
+
+    /**
+     * 频道页专用回调：一次刷新同时拿到「按搜索页权重轮转后的分类合并榜」与「四个平台各自的榜单」。
+     * 两项都是 {@code {"data":[{"title":...}]}} 格式，可直接交给 {@code Word.objectFrom()}。
+     */
+    public interface SitesCallback {
+
+        void onResult(String merged, String[] siteJson);
     }
 
     /* ============================ 榜单定义 ============================ */
@@ -138,6 +153,9 @@ public class HotRank {
         String youkuBase = "https://so.youku.com/search/q_";
         list.add(new Section("youku_movie", "优酷", "电影综合排行", "电影", "youku", youkuBase + enc("电影排行"), "https://so.youku.com/", "", 0));
         list.add(new Section("youku_tv", "优酷", "电视剧综合排行", "电视剧", "youku", youkuBase + enc("电视剧排行"), "https://so.youku.com/", "", 0));
+        // 综艺榜此前缺优酷一档，导致按平台切分时「优酷·热搜榜」在综艺页恒为空。
+        // 与电影 / 电视剧同用 SSR 解析（parseYouku 自带频道过滤与噪声过滤）。
+        list.add(new Section("youku_zongyi", "优酷", "综艺综合排行", "综艺", "youku", youkuBase + enc("综艺排行"), "https://so.youku.com/", "", 0));
 
         String iqiyiBase = "https://pcw-api.iqiyi.com/album/album/fytoplist?dim=hour&type=realTime&size=10&page=1&cid=";
         String iqiyiRef = "https://www.iqiyi.com/ranks1/-10/-10";
@@ -175,6 +193,8 @@ public class HotRank {
     private static long cacheTime;
     private static boolean refreshing;
     private static final List<CatCallback> pending = new ArrayList<>();
+    /** 需要「原始聚合 JSON」的等待者（频道页要按平台二次切分）。 */
+    private static final List<Callback> rawPending = new ArrayList<>();
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "HotRank");
         t.setDaemon(true);
@@ -194,14 +214,14 @@ public class HotRank {
     /** 取一份仍有效的聚合缓存（内存优先，其次磁盘）；无效返回 null。 */
     private static String getValidCache() {
         synchronized (LOCK) {
-            if (cacheJson != null && System.currentTimeMillis() - cacheTime < AGG_TTL_MS) {
+            if (cacheJson != null && System.currentTimeMillis() - cacheTime < AGG_TTL_MS && isCurrentSchema(cacheJson)) {
                 return cacheJson;
             }
         }
         File f = cacheFile();
         if (f.exists()) {
             String disk = readFileSafe(f);
-            if (disk != null && System.currentTimeMillis() - f.lastModified() < AGG_TTL_MS) {
+            if (disk != null && System.currentTimeMillis() - f.lastModified() < AGG_TTL_MS && isCurrentSchema(disk)) {
                 synchronized (LOCK) {
                     cacheJson = disk;
                     cacheTime = f.lastModified();
@@ -210,6 +230,15 @@ public class HotRank {
             }
         }
         return null;
+    }
+
+    /**
+     * 榜单来源增减时让旧聚合缓存自动失效：否则新增的「优酷·综艺」榜要等 12 小时 TTL
+     * 到期才会出现，频道页会一直显示占位卡。
+     */
+    private static boolean isCurrentSchema(String json) {
+        RankResponse resp = parse(json);
+        return resp != null && resp.lists != null && resp.lists.size() >= SECTIONS.size();
     }
 
     private static File cacheFile() {
@@ -238,6 +267,23 @@ public class HotRank {
 
     /* ============================ 入口 ============================ */
 
+    /** 统一清除缓存时调用：删掉磁盘聚合缓存并丢弃内存副本，下次取热词重新聚合。 */
+    public static void clearCache() {
+        synchronized (LOCK) {
+            cacheJson = null;
+            cacheTime = 0;
+        }
+        cacheFile().delete();
+    }
+
+    /** 备份恢复后调用：磁盘缓存已被整体替换，只丢内存副本，不删文件。 */
+    public static void reset() {
+        synchronized (LOCK) {
+            cacheJson = null;
+            cacheTime = 0;
+        }
+    }
+
     public static void fetch(int cat, Callback callback) {
         String cache = getValidCache();
         if (cache != null) {
@@ -246,6 +292,29 @@ public class HotRank {
         }
         synchronized (LOCK) {
             pending.add(new CatCallback(cat, callback));
+            if (refreshing) return;
+            refreshing = true;
+        }
+        executor.execute(HotRank::refresh);
+    }
+
+    /**
+     * 频道页入口：一次刷新产出「分类合并榜 + 四个平台分榜」，避免五个容器各自触发刷新。
+     *
+     * <p>合并榜沿用 {@link #fetch(int, Callback)} 的同一套轮转权重与去重规则，分榜只按平台
+     * 过滤、保持该平台原始名次与同样的简繁归一 / 去重。命中缓存时同步回调；冷启动由后台
+     * 刷新完成后回调，<b>回调线程不保证是主线程</b>，调用方需自行切换。</p>
+     */
+    public static void fetch(int cat, SitesCallback callback) {
+        String cache = getValidCache();
+        if (cache != null) {
+            callback.onResult(merge(cache, cat), siteJson(cache, cat));
+            return;
+        }
+        synchronized (LOCK) {
+            rawPending.add(json -> callback.onResult(
+                    json == null ? null : merge(json, cat),
+                    json == null ? new String[SITES.length] : siteJson(json, cat)));
             if (refreshing) return;
             refreshing = true;
         }
@@ -278,13 +347,13 @@ public class HotRank {
                 cacheTime = System.currentTimeMillis();
             }
             List<CatCallback> waiters = new ArrayList<>(pending);
+            List<Callback> rawWaiters = new ArrayList<>(rawPending);
             pending.clear();
+            rawPending.clear();
             refreshing = false;
-            if (json == null) {
-                for (CatCallback w : waiters) w.callback.onResult(null);
-                return;
-            }
-            for (CatCallback w : waiters) w.callback.onResult(merge(json, w.cat));
+            for (CatCallback w : waiters) w.callback.onResult(json == null ? null : merge(json, w.cat));
+            // 频道页需要原始 JSON 才能按平台切分；全部失败时传 null，调用方保留已有展示数据。
+            for (Callback cb : rawWaiters) cb.onResult(json);
         }
     }
 
@@ -747,8 +816,43 @@ public class HotRank {
         }
         // 所有来源都没取到词时返回 null，避免把已有缓存覆盖成空。
         if (merged.isEmpty()) return null;
+        return wordJson(merged);
+    }
+
+    /** 按平台切出四个榜单，顺序由 {@link #SITES} 固定。单榜最多取 {@link #MAX_ITEMS} 条。 */
+    private static String[] siteJson(String json, int cat) {
+        String[] result = new String[SITES.length];
+        for (int i = 0; i < SITES.length; i++) result[i] = siteMerge(json, cat, SITES[i]);
+        return result;
+    }
+
+    /**
+     * 单平台榜单：只按 category + site 过滤，保持该平台的原始名次；
+     * 简繁归一 / 标点与版本后缀去重沿用合并榜的 {@link #add}，保证两种口径一致。
+     * 抓取失败的来源返回 null，调用方跳过该容器而不是显示空标题。
+     */
+    private static String siteMerge(String json, int cat, String site) {
+        RankResponse resp = parse(json);
+        if (resp == null || resp.lists == null || resp.lists.isEmpty()) return null;
+        String category = category(cat);
+        List<String> merged = new ArrayList<>();
+        Map<String, Integer> index = new HashMap<>();
+        for (RankList list : resp.lists) {
+            if (list == null || !category.equals(list.category) || !site.equals(list.site)) continue;
+            if (!TextUtils.isEmpty(list.error) || list.items == null || list.items.isEmpty()) continue;
+            for (RankItem item : list.items) {
+                if (item == null || TextUtils.isEmpty(item.title)) continue;
+                add(merged, index, item.title.trim());
+                if (merged.size() >= MAX_ITEMS) break;
+            }
+            if (merged.size() >= MAX_ITEMS) break;
+        }
+        return merged.isEmpty() ? null : wordJson(merged);
+    }
+
+    private static String wordJson(List<String> titles) {
         JsonArray array = new JsonArray();
-        for (String title : merged) {
+        for (String title : titles) {
             JsonObject item = new JsonObject();
             item.addProperty("title", title);
             array.add(item);

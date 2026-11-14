@@ -11,10 +11,15 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.DialogTmdbSiteBinding;
+import com.fongmi.android.tv.event.ServerEvent;
 import com.fongmi.android.tv.impl.TmdbListener;
 import com.fongmi.android.tv.setting.TmdbSetting;
 import com.fongmi.android.tv.setting.TmdbSite;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +78,18 @@ public class TmdbSiteDialog extends BaseAlertDialog {
         binding.positive.setOnClickListener(this::onSave);
         binding.negative.setOnClickListener(view -> dismiss());
         binding.delete.setOnClickListener(this::onDelete);
+        // 与点播配置输入完全相同的远程输入入口：扫码后在手机上填地址与密钥，
+        // 内容只回填到当前这个对话框，按「确定」才真正保存。
+        binding.phone.setOnClickListener(view -> LocalConnectDialog.show(requireActivity(), "tmdb"));
+    }
+
+    /** 手机端同步过来的站点地址与密钥：填上即可，仍由用户确认后走原有校验与保存。 */
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onServerEvent(ServerEvent event) {
+        if (event.type() != ServerEvent.Type.TMDB || !isAdded()) return;
+        binding.url.setText(event.text());
+        binding.key.setText(event.name());
+        binding.key.setSelection(binding.key.getText().length());
     }
 
     private void onSave(View view) {
@@ -143,5 +160,12 @@ public class TmdbSiteDialog extends BaseAlertDialog {
     public void onStart() {
         super.onStart();
         setWidth(0.6f);
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        EventBus.getDefault().unregister(this);
     }
 }

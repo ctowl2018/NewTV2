@@ -608,8 +608,7 @@
     <string name="tmdb_site_summary">%1$d 个站点轮换</string>
     <string name="tmdb_cache">缓存（背景图）</string>
     <string name="tmdb_cache_info">%1$d 张 · %2$s</string>
-    <string name="tmdb_clear">清理缓存</string>
-    <string name="tmdb_clear_confirm">确认删除全部 TMDB 背景图与 logo 缓存？</string>
+    <string name="tmdb_cache_hint">由「设置 → 清除缓存」统一清理</string>
     <string name="tmdb_error_toast">刮削失败提示</string>
     <string name="tmdb_fetch_failed">TMDB 刮削失败：%1$s</string>
     <string name="tmdb_retry">TMDB刮削</string>

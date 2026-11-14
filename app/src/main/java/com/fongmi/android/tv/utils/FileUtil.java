@@ -11,6 +11,8 @@ import androidx.core.content.FileProvider;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.api.TmdbApi;
+import com.fongmi.android.tv.db.BackupFiles;
 import com.fongmi.android.tv.impl.Callback;
 import com.github.catvod.net.Download;
 import com.github.catvod.utils.Path;
@@ -55,10 +57,18 @@ public class FileUtil {
         }
     }
 
+    /**
+     * 设置里的统一缓存清理：外部缓存目录 + 本项目新增功能放在内部 files 目录的缓存。
+     * TMDB 配置页不再单独提供清理入口，避免同一件事有两个入口、清完一处另一处还在。
+     * TMDB 刮削日志属于排查记录，不随缓存清理删除。
+     */
     public static void clearCache(Callback callback) {
         Task.execute(() -> {
             try {
                 Download.clearCache(Path.cache());
+                TmdbApi.clearCache();
+                DoubanHot.clearCache();
+                HotRank.clearCache();
                 App.post(callback::success);
             } catch (IOException e) {
                 App.post(() -> Notify.show(e.getMessage()));
@@ -66,10 +76,11 @@ public class FileUtil {
         });
     }
 
+    /** 统计口径与清理口径保持一致：内部 files 里的缓存也要算进显示值。 */
     public static void getCacheSize(Callback callback) {
         Task.execute(() -> {
-            String usage = byteCountToDisplaySize(Path.size(Path.cache()));
-            App.post(() -> callback.success(usage));
+            long usage = Path.size(Path.cache()) + BackupFiles.size();
+            App.post(() -> callback.success(byteCountToDisplaySize(usage)));
         });
     }
 

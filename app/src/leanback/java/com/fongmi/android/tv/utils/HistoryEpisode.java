@@ -48,6 +48,11 @@ public final class HistoryEpisode {
     private static final ArrayDeque<Task> QUEUE = new ArrayDeque<>();
     private static boolean running;
 
+    /** 备份恢复后调用：历史与站源数据可能整体更换，丢掉按「片名+备注」缓存的集数解析结果。 */
+    public static void reset() {
+        CACHE.clear();
+    }
+
     /** 「第3集 / 第12话 / 第4期」——保留原单位字，最贴近站点自己的写法。 */
     private static final Pattern CN = Pattern.compile("第\\s*([0-9]{1,4})\\s*([集话話回期篇])");
     /** {@code S01E05}：取 E 后面的数字，输出更短的「第5集」。 */

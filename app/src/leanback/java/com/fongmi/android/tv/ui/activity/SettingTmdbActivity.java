@@ -10,7 +10,6 @@ import android.widget.TextView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.api.TmdbApi;
 import com.fongmi.android.tv.api.TmdbLog;
 import com.fongmi.android.tv.api.TmdbStore;
 import com.fongmi.android.tv.databinding.ActivitySettingTmdbBinding;
@@ -20,11 +19,10 @@ import com.fongmi.android.tv.setting.TmdbSetting;
 import com.fongmi.android.tv.setting.TmdbSite;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.TmdbSiteDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
 
-/** 设置 → TMDB 配置：抓取开关、多站点（地址 + 各自密钥，轮换使用）、缓存统计与清理。 */
+/** 设置 → TMDB 配置：抓取开关、多站点（地址 + 各自密钥，轮换使用）、缓存统计与日志。 */
 public class SettingTmdbActivity extends BaseActivity implements TmdbListener {
 
     private ActivitySettingTmdbBinding mBinding;
@@ -55,7 +53,6 @@ public class SettingTmdbActivity extends BaseActivity implements TmdbListener {
         mBinding.tmdbEnable.setOnClickListener(this::toggleEnable);
         mBinding.tmdbToast.setOnClickListener(this::toggleErrorToast);
         mBinding.tmdbAddSite.setOnClickListener(view -> TmdbSiteDialog.show(this, -1));
-        mBinding.tmdbClear.setOnClickListener(this::onClear);
         mBinding.tmdbLog.setOnClickListener(view -> TmdbLogActivity.start(this));
     }
 
@@ -81,18 +78,6 @@ public class SettingTmdbActivity extends BaseActivity implements TmdbListener {
     private void toggleErrorToast(View view) {
         TmdbSetting.putErrorToast(!TmdbSetting.isErrorToast());
         mBinding.tmdbToastText.setText(Setting.getSwitch(TmdbSetting.isErrorToast()));
-    }
-
-    private void onClear(View view) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.tmdb_clear)
-                .setMessage(R.string.tmdb_clear_confirm)
-                .setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
-                    TmdbApi.clearCache();
-                    updateCacheText();
-                })
-                .setNegativeButton(R.string.dialog_negative, null)
-                .show();
     }
 
     /** 站点行：一条站点一行，点击进入编辑（改地址 / 改密钥 / 删除）。 */
@@ -128,7 +113,7 @@ public class SettingTmdbActivity extends BaseActivity implements TmdbListener {
     }
 
     /**
-     * 总开关关闭时，其下方所有子项（提示开关、站点列表、新增站点、缓存、清理、日志）一并隐藏，
+     * 总开关关闭时，其下方所有子项（提示开关、站点列表、新增站点、缓存统计、日志）一并隐藏，
      * 页面只留总开关，避免留下不可用又占焦点的残留行。
      */
     private void updateVisibility() {
@@ -138,7 +123,7 @@ public class SettingTmdbActivity extends BaseActivity implements TmdbListener {
         mBinding.tmdbSites.setVisibility(visibility);
         mBinding.tmdbAddSite.setVisibility(enabled && TmdbSetting.getSites().size() < TmdbSetting.MAX_SITES ? View.VISIBLE : View.GONE);
         mBinding.tmdbCache.setVisibility(visibility);
-        mBinding.tmdbClear.setVisibility(visibility);
+        mBinding.tmdbCacheHint.setVisibility(visibility);
         mBinding.tmdbLog.setVisibility(visibility);
     }
 

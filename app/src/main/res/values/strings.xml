@@ -625,8 +625,7 @@
     <string name="tmdb_site_summary">%1$d sites (rotating)</string>
     <string name="tmdb_cache">Cache (backdrops)</string>
     <string name="tmdb_cache_info">%1$d images · %2$s</string>
-    <string name="tmdb_clear">Clear cache</string>
-    <string name="tmdb_clear_confirm">Delete all cached TMDB backdrops and logos?</string>
+    <string name="tmdb_cache_hint">Cleared together with Settings → Clear Cache</string>
     <string name="tmdb_error_toast">Scrape failure toast</string>
     <string name="tmdb_fetch_failed">TMDB scrape failed: %1$s</string>
     <string name="tmdb_retry">TMDB scrape</string>

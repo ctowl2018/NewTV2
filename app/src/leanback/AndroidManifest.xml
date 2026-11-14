@@ -193,6 +193,21 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:screenOrientation="sensorLandscape" />
 
+        <!-- 电影 / 剧集 / 综艺 三个热榜频道页：共用 HotCategoryActivity 模板。 -->
+        <activity
+            android:name=".ui.activity.MovieActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:screenOrientation="sensorLandscape" />
+
+        <activity
+            android:name=".ui.activity.SeriesActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:screenOrientation="sensorLandscape" />
+
+        <activity
+            android:name=".ui.activity.VarietyActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:screenOrientation="sensorLandscape" />
 
         <activity
             android:name=".ui.activity.VideoActivity"

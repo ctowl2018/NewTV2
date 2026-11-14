@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  电影 / 剧集 / 综艺频道页：与首页 activity_home.xml 保持同一套图层与样式，
+  只去掉 L4 启动画面（品牌 banner 只在冷启动首页播放一次）。
+  三个频道共用这一份 XML，靠 Activity 传入的热榜类目区分数据。
+
+    L0  ProgressLayout → VerticalGridView：主视觉（第 0 行）+ 四个平台热搜榜容器。
+    L1  topScrim：顶部渐变遮罩，高度按工具栏底边 + 5dp 动态设置。
+    L2  homeToolbar：与首页 / 片库完全共用的顶栏布局。
+    L3  siteSheet：与首页 / 片库完全共用的站源下拉。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false">
+
+    <com.fongmi.android.tv.ui.custom.ProgressLayout
+        android:id="@+id/progressLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.leanback.widget.VerticalGridView
+            android:id="@+id/recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingStart="48dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="48dp"
+            android:paddingBottom="24dp"
+            app:focusOutEnd="true"
+            app:focusOutFront="true" />
+
+    </com.fongmi.android.tv.ui.custom.ProgressLayout>
+
+    <View
+        android:id="@+id/topScrim"
+        android:layout_width="match_parent"
+        android:layout_height="85dp"
+        android:layout_gravity="top"
+        android:background="@drawable/shape_top_scrim"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
+    <include
+        android:id="@+id/homeToolbar"
+        layout="@layout/view_home_toolbar" />
+
+    <include
+        android:id="@+id/siteSheet"
+        layout="@layout/view_site_sheet" />
+
+</FrameLayout>

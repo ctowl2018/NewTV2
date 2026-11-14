@@ -8,6 +8,12 @@
     <string name="home_setting">Setting</string>
     <string name="home_history">History</string>
     <string name="home_recommend">Recommend</string>
+    <string name="hot_rank_tencent">Tencent Video · Hot Search</string>
+    <string name="hot_rank_iqiyi">iQIYI · Hot Search</string>
+    <string name="hot_rank_youku">Youku · Hot Search</string>
+    <string name="hot_rank_mgtv">Mango TV · Hot Search</string>
+    <string name="hot_rank_empty">No hot search data, please try again later</string>
+    <string name="hot_rank_platform_empty">No data</string>
     <string name="home_nav_home">Home</string>
     <string name="home_nav_movie">Movies</string>
     <string name="home_nav_series">Series</string>
@@ -20,6 +26,8 @@
     <string name="douban_hot_no_rating">No rating</string>
     <string name="douban_hot_rating">%1$s pts</string>
     <string name="history_played">Watched: %1$s</string>
+    <string name="site_switch_config">Switch Site</string>
+    <string name="site_switch_empty">No saved addresses yet</string>
     <string name="douban_hot_type_tv">Series</string>
     <string name="douban_hot_type_movie">Movie</string>
     <string name="douban_hot_type_variety">Variety</string>

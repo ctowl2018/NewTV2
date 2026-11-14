@@ -30,6 +30,7 @@ import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.utils.FileUtil;
+import com.fongmi.android.tv.utils.HistoryEpisode;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -244,7 +245,12 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             @Override
             public void success() {
                 Notify.show(R.string.restore_success);
+                // 备份可能整体替换了观看历史与站源，丢掉这两处进程内缓存，
+                // 避免恢复后首页仍显示恢复前解析出来的内容。
+                HistoryEpisode.reset();
+                com.fongmi.android.tv.bean.Cache.clear();
                 setOtherText();
+                setCacheText();
                 initConfig();
             }
 

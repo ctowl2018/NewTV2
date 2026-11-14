@@ -37,6 +37,31 @@
             android:layout_height="match_parent"
             android:background="@color/black_20"
             app:shapeAppearanceOverlay="@style/Vod.Grid" />
+
+        <!--
+          评分角标：仅当片名备注是「评分：x.x」（TMDB 刮削写入）时显示，
+          首页 / 站源数据没有这种备注，常态 GONE，不影响原有外观。
+        -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/shape_vod_score"
+            android:includeFontPadding="false"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:singleLine="true"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="8.7"
+            tools:visibility="visible" />
     </FrameLayout>
 
     <com.google.android.material.textview.MaterialTextView

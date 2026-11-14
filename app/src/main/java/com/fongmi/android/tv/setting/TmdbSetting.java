@@ -75,6 +75,15 @@ public final class TmdbSetting {
         TmdbApi.onConfigChanged();
     }
 
+    /**
+     * 外部整体替换偏好（备份恢复）后调用：丢掉进程内的站点缓存，下次读取重新解析，
+     * 否则恢复完仍拿着恢复前的旧站点/旧密钥在跑。
+     */
+    public static void reset() {
+        cache = null;
+        CURSOR.set(0);
+    }
+
     /** 取下一个站点下标：游标全局递增，天然把请求摊到各站点。 */
     public static int nextSiteIndex(int size) {
         if (size <= 1) return 0;

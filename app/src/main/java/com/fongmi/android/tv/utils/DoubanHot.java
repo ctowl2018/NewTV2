@@ -67,7 +67,7 @@ public final class DoubanHot {
     });
 
     /** 内存缓存：同一次前台会话里反复进首页不再读盘。 */
-    private static Cache memory;
+    private static volatile Cache memory;
 
     private DoubanHot() {
     }
@@ -76,6 +76,17 @@ public final class DoubanHot {
 
         /** 结果一定切回主线程；失败时若存在旧缓存则回传旧数据，否则回传空列表。 */
         void onResult(@NonNull List<DoubanHotItem> items);
+    }
+
+    /** 统一清除缓存时调用：删掉磁盘榜单缓存并丢弃内存副本，下次进首页重新聚合。 */
+    public static void clearCache() {
+        memory = null;
+        cacheFile().delete();
+    }
+
+    /** 备份恢复后调用：磁盘缓存已被整体替换，只丢内存副本，不删文件。 */
+    public static void reset() {
+        memory = null;
     }
 
     /**

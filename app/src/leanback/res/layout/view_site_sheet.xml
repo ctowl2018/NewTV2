@@ -53,4 +53,32 @@
 
     </FrameLayout>
 
+    <!--
+      「切换站点」二级面板：点播地址历史（设置中保存过的点播地址），锚定在站源列表左侧，
+      顶边与站源面板对齐、右缘留 8dp 间隙；宽度与位置由宿主的 positionConfigSheet() 写入。
+      显示期间仍在 FocusTrapFrameLayout 内，方向键可在两个面板之间自由走位，焦点不会逃出 sheet。
+    -->
+    <FrameLayout
+        android:id="@+id/configPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:background="@drawable/shape_site_sheet"
+        android:clipChildren="false"
+        android:padding="6dp"
+        android:visibility="gone">
+
+        <com.fongmi.android.tv.ui.custom.CustomRecyclerView
+            android:id="@+id/configList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            app:maxHeight="240dp"
+            tools:itemCount="4"
+            tools:listitem="@layout/adapter_site_menu" />
+
+    </FrameLayout>
+
 </com.fongmi.android.tv.ui.custom.FocusTrapFrameLayout>

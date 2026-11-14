@@ -13,6 +13,7 @@
   描边只挂在 poster 的 foreground（selector_vod），不套文字层。
 -->
 <androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -33,15 +34,16 @@
 
         <!--
           剧照层：等比铺满 + 顶部贴齐（竖版海报回退时保留顶部、裁掉下半截，不拉伸）。
-          clipToOutline 让矩阵裁出来的直角被圆角底裁成圆角。
+          圆角用 ShapeableImageView（Canvas 路径裁剪，部分电视渲染器不支持
+          clipToOutline 的轮廓裁剪，会变成直角 + 图片溢出画框，所以不能依赖它）。
         -->
         <com.fongmi.android.tv.ui.custom.CoverTopImageView
             android:id="@+id/image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/shape_history_poster"
-            android:clipToOutline="true"
-            android:scaleType="matrix" />
+            android:scaleType="matrix"
+            app:shapeAppearanceOverlay="@style/Vod.Grid" />
 
         <!-- 删除态的整图遮罩：与收藏页一致，16dp 圆角，不会露出直角黑块。 -->
         <com.google.android.material.imageview.ShapeableImageView

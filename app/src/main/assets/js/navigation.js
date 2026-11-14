@@ -1,7 +1,7 @@
 const WEB_TABS = {
     search: {panel: 1, title: 'search'}, push: {panel: 1, title: 'push'},
     play: {panel: 2, title: 'remoteTitle'}, subtitles: {panel: 3, title: 'subtitles'}, danmaku: {panel: 3, title: 'danmaku'},
-    settings: {panel: 4, title: 'settings'}, files: {panel: 5, title: 'local'}
+    settings: {panel: 4, title: 'settings'}, tmdb: {panel: 4, title: 'tmdb'}, files: {panel: 5, title: 'local'}
 };
 
 function webRoute(search) {

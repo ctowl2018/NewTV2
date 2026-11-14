@@ -54,6 +54,17 @@ function setting() {
     doAction('setting', { text, name: $('#setting_name').val() });
 }
 
+// TMDB 站点与密钥：与直播/点播地址输入同一套交互，内容送到设备当前打开的站点输入窗口。
+function tmdb() {
+    const url = $('#tmdb_url').val().trim();
+    const key = $('#tmdb_key').val().trim();
+    if (!url || !key) {
+        warnToast(t('inputRequired'));
+        return;
+    }
+    doAction('tmdb', { url, key });
+}
+
 function sendDanmaku() {
     const text = $('#danmaku_text').val().trim();
     if (!text) {
@@ -740,6 +751,12 @@ $(function () {
         if (e.key === 'Enter') {
             this.blur();
             setting();
+        }
+    });
+    $('#tmdb_url, #tmdb_key').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            this.blur();
+            tmdb();
         }
     });
     $('#newFolderContent').on('keydown', function (e) {

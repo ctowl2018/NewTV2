@@ -5,6 +5,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
+import com.fongmi.android.tv.utils.HotRankArt;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterVodRectBinding;
 import com.fongmi.android.tv.ui.base.BaseVodHolder;
@@ -41,11 +42,20 @@ public class VodRectHolder extends BaseVodHolder {
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());
-        binding.remark.setText(item.getRemarks());
+        // TMDB 热榜卡片把评分写进备注：识别成角标后不再重复占信息行。
+        String score = HotRankArt.score(item.getRemarks());
+        if (score.isEmpty()) {
+            binding.score.setVisibility(View.GONE);
+            binding.remark.setText(item.getRemarks());
+        } else {
+            binding.score.setText(score);
+            binding.score.setVisibility(View.VISIBLE);
+            binding.remark.setText("");
+        }
         binding.site.setVisibility(item.getSiteVisible());
         binding.year.setVisibility(item.getYearVisible());
         binding.name.setVisibility(item.getNameVisible());
-        binding.remark.setVisibility(item.getRemarkVisible());
+        binding.remark.setVisibility(score.isEmpty() ? item.getRemarkVisible() : View.GONE);
         binding.metadata.setVisibility(binding.getRoot().hasFocus() ? View.VISIBLE : View.INVISIBLE);
         binding.getRoot().setOnClickListener(v -> listener.onItemClick(item));
         binding.getRoot().setOnLongClickListener(v -> listener.onLongClick(item));

@@ -295,11 +295,19 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         if (size == 0) focusFirst(mBinding.wordRecycler);
     }
 
+    /**
+     * 搜索页发起搜索：<b>这里也是历史记录的唯一写入点</b>。
+     *
+     * <p>必须同步写盘，不能用延迟任务：结果页随后立刻启动，搜索页可能长时间不可见甚至被回收，
+     * 延迟任务里的记录只会改内存；下次进搜索页读到旧偏好，看起来就像历史被清空。
+     * 由首页主视觉 / 收藏 / 片库直接打开结果页的路径不经过本方法，因此既不计入历史，
+     * 也不会改动已有记录。</p>
+     */
     @Override
     public void onSearch() {
         if (empty()) return;
         String keyword = mBinding.keyword.getText().toString().trim();
-        App.post(() -> mRecordAdapter.add(keyword), 250);
+        mRecordAdapter.add(keyword);
         Util.hideKeyboard(mBinding.keyword);
         CollectActivity.start(this, keyword);
     }

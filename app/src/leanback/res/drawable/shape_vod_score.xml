@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 热榜卡片右下角评分角标底色：50% 透明黑 + 6dp 圆角，常态隐藏。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#80000000" />
+    <corners android:radius="6dp" />
+</shape>

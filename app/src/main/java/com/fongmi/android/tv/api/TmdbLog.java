@@ -43,6 +43,8 @@ public final class TmdbLog {
     public static final String STAGE_SEARCH = "搜索";
     public static final String STAGE_IMAGES = "图集";
     public static final String STAGE_BACKDROP = "背景图";
+    /** 竖版海报：频道页热榜卡片用，缺失时回退背景图。 */
+    public static final String STAGE_POSTER = "海报";
     public static final String STAGE_LOGO = "Logo";
     public static final String STAGE_DONE = "完成";
     public static final String STAGE_FAIL = "失败";
@@ -155,6 +157,14 @@ public final class TmdbLog {
             File file = file();
             if (file.exists()) file.delete();
         });
+    }
+
+    /** 备份恢复后调用：日志文件已被替换，清空内存并允许下次访问时重新读盘；不删文件。 */
+    public static void reset() {
+        synchronized (LOCK) {
+            ENTRIES.clear();
+            loaded = false;
+        }
     }
 
     /** 时间列显示：HH:mm:ss。 */

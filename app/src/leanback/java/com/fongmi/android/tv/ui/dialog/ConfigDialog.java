@@ -64,6 +64,8 @@ public class ConfigDialog extends BaseAlertDialog {
 
     @Override
     protected void initView() {
+        // 名称是选填项：进来先把库里当前配置的名字回填出来，没有就留空
+        binding.name.setText(VodConfig.get().getConfig().getName());
         binding.text.setText(url = getUrl());
         binding.text.setSelection(TextUtils.isEmpty(url) ? 0 : url.length());
         binding.positive.setText(edit ? R.string.dialog_edit : R.string.dialog_positive);
@@ -115,10 +117,16 @@ public class ConfigDialog extends BaseAlertDialog {
     private void onPositive(View view) {
         String name = binding.name.getText().toString().trim();
         String text = binding.text.getText().toString().trim();
-        if (edit) Config.find(url, type).url(text).update();
+        if (edit) Config.find(url, type).url(text).name(name).update();
         if (text.isEmpty()) Config.delete(url, type);
-        if (name.isEmpty()) ((ConfigListener) requireActivity()).setConfig(Config.find(text, type));
-        else ((ConfigListener) requireActivity()).setConfig(Config.find(text, name, type));
+        /*
+         * 名称与地址一起落库：库里已有该地址就直接改名，没有则先建记录再写名称。
+         * 名称留空表示「不要自定义名字」，会把库里已有的名称一并清掉，界面与库保持一致
+         * （显示时自动回退成地址）。
+         */
+        Config config = Config.find(text, type).name(name);
+        if (!TextUtils.isEmpty(text)) config.update();
+        ((ConfigListener) requireActivity()).setConfig(config);
         dismiss();
     }
 
@@ -139,6 +147,8 @@ public class ConfigDialog extends BaseAlertDialog {
         super.onStart();
         setWidth(0.55f);
         EventBus.getDefault().register(this);
+        // 焦点先落在地址输入框（改动最多的字段），名称框按「上」可达
+        binding.text.post(binding.text::requestFocus);
     }
 
     @Override

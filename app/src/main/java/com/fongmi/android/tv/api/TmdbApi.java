@@ -56,6 +56,8 @@ import okhttp3.Response;
 public final class TmdbApi {
 
     public static final String BACKDROP_SIZE = "w1280";
+    /** 竖版海报：频道页热榜卡片用；比 w1280 背景图小，不额外增加明显带宽。 */
+    public static final String POSTER_SIZE = "w500";
     /**
      * logo 取原图：w500 在 1080p 电视上放大到 200dp（400px）后会发虚、边缘出锯齿。
      * 旧索引里的 {@code w500_} 文件由 {@link #ensureHiResLogo(String)} 在后台逐条升级。
@@ -256,11 +258,20 @@ public final class TmdbApi {
 
     /** 清空缓存（设置页调用）：同时清掉冷却与进行中标记，后台任务靠 generation 丢弃旧结果。 */
     public static void clearCache() {
+        resetState();
+        TmdbStore.clear();
+    }
+
+    /**
+     * 只重置进程内的抓取状态（备份恢复后调用），<b>不删磁盘缓存</b>。
+     * 恢复后站点、密钥、素材索引都可能全变了，这些「已尝试 / 冷却中」标记必须失效。
+     */
+    public static void resetState() {
         RECENT_FAILURES.clear();
         IN_FLIGHT.clear();
         META_ATTEMPTED.clear();
         LOGO_IN_FLIGHT.clear();
-        TmdbStore.clear();
+        SITE_COOLDOWN.clear();
     }
 
     /** 抓取结果回调：用于播放页的失败提示与手动重试反馈，回调已切到主线程。 */
@@ -503,6 +514,18 @@ public final class TmdbApi {
             art.setRating(ratingOf(item.voteAverage));
             art.setYear(yearOf(item.releaseDate, item.firstAirDate));
             art.setGenre(genreOf(item.genreIds));
+            // search/multi 自带 poster_path：顺手取一张竖版海报给频道页热榜卡片用。
+            // 下载失败不影响背景图 / 文本元数据，卡片会回退到背景图。
+            if (!TextUtils.isEmpty(item.posterPath)) {
+                try {
+                    byte[] posterBytes = downloadRotating("/t/p/" + POSTER_SIZE + item.posterPath, keyword, TmdbLog.STAGE_POSTER);
+                    File posterFile = TmdbStore.imageFile(POSTER_SIZE, item.posterPath);
+                    TmdbStore.write(posterFile, posterBytes);
+                    art.setPoster(posterFile.getName());
+                } catch (Exception e) {
+                    TmdbLog.add(TmdbLog.STAGE_POSTER, keyword, "", "", "海报下载失败，回退背景图：" + describe(e), false);
+                }
+            }
             String logo = pickLogo(images);
             if (!TextUtils.isEmpty(logo)) {
                 try {
@@ -848,6 +871,9 @@ public final class TmdbApi {
         String originalName;
         @SerializedName("backdrop_path")
         String backdropPath;
+        /** 竖版海报路径；频道页热榜卡片用，旧索引没有该字段时回退背景图。 */
+        @SerializedName("poster_path")
+        String posterPath;
         /** search/multi 的搜索结果自带 overview，无需再单独请求详情接口。 */
         @SerializedName("overview")
         String overview;

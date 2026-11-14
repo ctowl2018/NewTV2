@@ -39,6 +39,9 @@ public class TmdbArt {
     private int season = -1;
     @SerializedName("backdrop")
     private String backdrop;
+    /** 竖版海报文件名（w500）。老索引没有该字段，getter 兜空串，卡片回退背景图。 */
+    @SerializedName("poster")
+    private String poster;
     @SerializedName("logo")
     private String logo;
     /** TMDB 剧情简介（zh-CN）。老索引没有这个字段，Gson 会解析成 null，getter 兜成空串。 */
@@ -114,6 +117,14 @@ public class TmdbArt {
         this.backdrop = backdrop;
     }
 
+    public String getPoster() {
+        return poster == null ? "" : poster;
+    }
+
+    public void setPoster(String poster) {
+        this.poster = poster;
+    }
+
     public String getLogo() {
         return logo == null ? "" : logo;
     }
@@ -184,8 +195,19 @@ public class TmdbArt {
         return getBackdrop().isEmpty() ? null : new File(TmdbStore.dir(), getBackdrop());
     }
 
+    public File getPosterFile() {
+        return getPoster().isEmpty() ? null : new File(TmdbStore.dir(), getPoster());
+    }
+
     public File getLogoFile() {
         return getLogo().isEmpty() ? null : new File(TmdbStore.dir(), getLogo());
+    }
+
+    /** 频道页卡片图：优先竖版海报，老索引只有横版剧照时回退它。 */
+    public File getCardFile() {
+        File poster = getPosterFile();
+        if (poster != null && poster.exists() && poster.length() > 0) return poster;
+        return hasBackdrop() ? getBackdropFile() : null;
     }
 
     public boolean hasBackdrop() {

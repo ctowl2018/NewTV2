@@ -30,20 +30,24 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Class;
+import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.ActivityVodBinding;
 import com.fongmi.android.tv.databinding.ViewHomeToolbarBinding;
 import com.fongmi.android.tv.databinding.ViewSiteSheetBinding;
 import com.fongmi.android.tv.event.RefreshEvent;
+import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.fongmi.android.tv.ui.adapter.ConfigMenuAdapter;
 import com.fongmi.android.tv.ui.adapter.SiteMenuAdapter;
 import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.fragment.FolderFragment;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.KeyUtil;
+import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 
 import org.greenrobot.eventbus.Subscribe;
@@ -70,6 +74,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     private ViewSiteSheetBinding mSheet;
     private TypeAdapter mAdapter;
     private SiteMenuAdapter mSiteMenuAdapter;
+    private ConfigMenuAdapter mConfigMenuAdapter;
     private SiteViewModel mViewModel;
     private Clock mClock;
     private String mKey;
@@ -184,6 +189,9 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
      */
     private void setToolbar() {
         mToolbar.navHome.setOnClickListener(v -> exitToHome());
+        mToolbar.navMovie.setOnClickListener(v -> MovieActivity.start(this, getResult()));
+        mToolbar.navSeries.setOnClickListener(v -> SeriesActivity.start(this, getResult()));
+        mToolbar.navVariety.setOnClickListener(v -> VarietyActivity.start(this, getResult()));
         mToolbar.navVod.setOnClickListener(v -> {
             // 已在片库：回到第一个分类，并让分类胶囊保持焦点。
             clearPendingPoster();
@@ -222,8 +230,21 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         if (isVisible(mSheet.getRoot())) return;
         List<Site> sites = VodConfig.get().getSites().stream().filter(site -> !site.isHide()).toList();
         if (sites.isEmpty()) return;
-        mSiteMenuAdapter = new SiteMenuAdapter(sites, VodConfig.get().getHome(), this::setSite);
+        mSiteMenuAdapter = new SiteMenuAdapter(sites, VodConfig.get().getHome(), new SiteMenuAdapter.OnClickListener() {
+            @Override
+            public void onItemClick(Site item) {
+                setSite(item);
+            }
+
+            @Override
+            public void onSwitchClick() {
+                showConfigSheet();
+            }
+        });
         mSheet.siteList.setAdapter(mSiteMenuAdapter);
+        // 二级面板随新一次展开复位：上一轮留下的动画与可见性都清掉。
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
         mSheet.getRoot().setVisibility(View.VISIBLE);
         mSheet.sitePanel.setAlpha(0f);
         mSheet.siteScrim.setAlpha(0f);
@@ -240,9 +261,11 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     private void animatePanelOpen(View panel, View scrim) {
         panel.animate().cancel();
-        scrim.animate().cancel();
-        scrim.setAlpha(0f);
-        scrim.animate().alpha(1f).setDuration(SHEET_ANIM).start();
+        if (scrim != null) {
+            scrim.animate().cancel();
+            scrim.setAlpha(0f);
+            scrim.animate().alpha(1f).setDuration(SHEET_ANIM).start();
+        }
         panel.setPivotY(0f);
         panel.setAlpha(0f);
         panel.setTranslationY(-ResUtil.dp2px(12));
@@ -268,16 +291,109 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         lp.topMargin = entry[1] - root[1] + mToolbar.siteEntry.getHeight() + ResUtil.dp2px(6);
         lp.rightMargin = marginEnd;
         float textWidth = mSiteMenuAdapter.maxTextWidth(mToolbar.siteName.getPaint());
+        // 「切换站点」入口也要算进面板宽度，别把它挤成省略号
+        textWidth = Math.max(textWidth, mToolbar.siteName.getPaint().measureText(getString(R.string.site_switch_config)));
         int width = (int) Math.ceil(textWidth) + ResUtil.dp2px(44);
         int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - marginEnd - ResUtil.dp2px(48));
         lp.width = Math.min(Math.max(width, ResUtil.dp2px(140)), maxWidth);
         mSheet.sitePanel.setLayoutParams(lp);
     }
 
+    /**
+     * 二级面板锚定：顶边与站源面板对齐，右缘贴在站源面板左侧留 8dp 间隙；
+     * 宽度固定 240dp（点播网址普遍很长，靠省略号截断，不随内容自适应撑爆屏幕）。
+     */
+    private void positionConfigSheet() {
+        FrameLayout.LayoutParams site = (FrameLayout.LayoutParams) mSheet.sitePanel.getLayoutParams();
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) mSheet.configPanel.getLayoutParams();
+        lp.topMargin = site.topMargin;
+        lp.rightMargin = site.rightMargin + site.width + ResUtil.dp2px(8);
+        int maxWidth = Math.max(ResUtil.dp2px(140), mBinding.getRoot().getWidth() - lp.rightMargin - ResUtil.dp2px(24));
+        lp.width = Math.min(ResUtil.dp2px(240), maxWidth);
+        mSheet.configPanel.setLayoutParams(lp);
+    }
+
+    /**
+     * 「切换站点」二级面板：列出设置中保存过的点播地址（历史），确认即切换整个点播配置。
+     * 显示期间焦点直接落进二级列表的当前配置项；再按返回先收回二级面板。
+     */
+    private void showConfigSheet() {
+        if (isVisible(mSheet.configPanel)) {
+            hideConfigSheet();
+            return;
+        }
+        List<Config> configs = Config.getAll(Config.VOD);
+        if (configs.isEmpty()) {
+            Notify.show(R.string.site_switch_empty);
+            return;
+        }
+        mConfigMenuAdapter = new ConfigMenuAdapter(configs, VodConfig.get().getConfig(), this::setConfig);
+        mSheet.configList.setLayoutManager(new LinearLayoutManager(this));
+        mSheet.configList.setItemAnimator(null);
+        mSheet.configList.setAdapter(mConfigMenuAdapter);
+        mSheet.configPanel.setVisibility(View.VISIBLE);
+        mSheet.configPanel.setAlpha(0f);
+        mSheet.configList.post(() -> {
+            if (!isVisible(mSheet.configPanel)) return;
+            positionConfigSheet();
+            mSheet.configList.scrollToPosition(mConfigMenuAdapter.indexOfCurrent());
+            // 焦点直接落进二级列表（当前配置项）：用户目的就是切地址，不用再按一次方向键
+            RecyclerView.ViewHolder holder = mSheet.configList.findViewHolderForAdapterPosition(mConfigMenuAdapter.indexOfCurrent());
+            if (holder != null) holder.itemView.requestFocus();
+            else mSheet.configPanel.requestFocus();
+            animatePanelOpen(mSheet.configPanel, null);
+        });
+    }
+
+    /** 收回二级面板，焦点回到「切换站点」入口（站源列表第 0 项），再按返回才是关整个 sheet。 */
+    private void hideConfigSheet() {
+        if (!isVisible(mSheet.configPanel)) return;
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
+        RecyclerView.ViewHolder holder = mSheet.siteList.findViewHolderForAdapterPosition(0);
+        if (holder != null) holder.itemView.requestFocus();
+        else mSheet.sitePanel.requestFocus();
+    }
+
+    /**
+     * 选中点播地址：切换整个点播配置并自动重载——加载期间显示进度；
+     * 成功后收起整个 sheet，站源与首页站源都已随新配置更新，
+     * 随即重拉一次首页内容，分类分页按「换站源就地重建」流程刷新；
+     * 失败则提示错误并退回站源列表，保留用户所在的操作现场。
+     */
+    private void setConfig(Config item) {
+        VodConfig.load(item, new Callback() {
+            @Override
+            public void start() {
+                Notify.progress(VodActivity.this);
+            }
+
+            @Override
+            public void success() {
+                Notify.dismiss();
+                Site home = VodConfig.get().getHome();
+                mKey = home == null ? null : home.getKey();
+                setTitle();
+                hideSiteSheet();
+                // 新配置的站源与首页站源已就位，重拉分类触发 onTypesChanged 的就地重建
+                mViewModel.homeContent();
+            }
+
+            @Override
+            public void error(String msg) {
+                Notify.dismiss();
+                if (!TextUtils.isEmpty(msg)) Notify.show(msg);
+                hideConfigSheet();
+            }
+        });
+    }
+
     private void hideSiteSheet() {
         if (!isVisible(mSheet.getRoot())) return;
         mSheet.sitePanel.animate().cancel();
         mSheet.siteScrim.animate().cancel();
+        mSheet.configPanel.animate().cancel();
+        mSheet.configPanel.setVisibility(View.GONE);
         mSheet.getRoot().setVisibility(View.GONE);
         mToolbar.siteArrow.setRotation(0f);
         mToolbar.siteEntry.requestFocus();
@@ -630,7 +746,10 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     @Override
     protected void onBackInvoked() {
-        if (isVisible(mSheet.getRoot())) {
+        if (isVisible(mSheet.configPanel)) {
+            // 二级面板先于站源面板收回（分层返回）
+            hideConfigSheet();
+        } else if (isVisible(mSheet.getRoot())) {
             hideSiteSheet();
         } else if (isFilterVisible()) {
             updateFilter();

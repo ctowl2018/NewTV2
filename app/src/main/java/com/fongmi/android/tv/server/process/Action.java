@@ -55,6 +55,7 @@ public class Action implements Process {
             case "cast" -> onCast(params);
             case "search" -> onSearch(params);
             case "setting" -> onSetting(params);
+            case "tmdb" -> onTmdb(params);
             case "refresh" -> onRefresh(params);
             case "control" -> onControl(params);
             case "danmaku" -> onDanmaku(params);
@@ -86,6 +87,17 @@ public class Action implements Process {
         String name = params.get("name");
         if (TextUtils.isEmpty(text)) return;
         ServerEvent.setting(text, name);
+    }
+
+    /**
+     * 手机远程输入 TMDB 站点：与直播/点播地址输入一致，只把内容送到当前打开的输入窗口，
+     * 由用户按「确定」后才真正保存；地址与密钥都必填，空值直接丢弃。
+     */
+    private void onTmdb(Map<String, String> params) {
+        String url = params.get("url");
+        String key = params.get("key");
+        if (TextUtils.isEmpty(url) || TextUtils.isEmpty(key)) return;
+        ServerEvent.tmdb(url.trim(), key.trim());
     }
 
     private void onRefresh(Map<String, String> params) {
