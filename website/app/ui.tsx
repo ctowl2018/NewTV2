@@ -38,7 +38,7 @@ export function Footer() {
           <Image src={assetPath("/logo.svg")} alt="" width={26} height={26} />
           <b>影視TV</b>
         </Link>
-        <p>App 本身不內建或提供任何內容來源。</p>
+        <p>App 本身不內建或提供任何內容來源；海報、劇照等素材僅供資訊展示，版權歸原始權利人所有，如有侵權請透過 GitHub Issues 聯絡刪除。</p>
         <a href="#top">回到頂端 ↑</a>
       </div>
     </footer>
