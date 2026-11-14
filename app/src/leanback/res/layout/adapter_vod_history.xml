@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  首页「最近观看」横版卡片（HistoryPresenter 专用）。
+
+  <b>与竖版海报卡的区别</b>：画框是横版（16:9，高 90dp），文字只有两行 —— 片名、
+  「集数·已播:百分比」，不再显示站源；尺寸固定，不随「图片尺寸」设置变化
+  （见 Product.getHistorySpec()）。
+
+  <b>尺寸</b>：卡片宽度、画框高度都由 HistoryPresenter 在运行时写入
+  （画框 16:9，剧照 / 海报等比铺满后按顶部贴齐裁切），XML 里的值只是占位。
+
+  <b>圆角与裁切</b>：image 自带 16dp 圆角底 + clipToOutline，裁切后的图片四角仍是圆的；
+  描边只挂在 poster 的 foreground（selector_vod），不套文字层。
+-->
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical">
+
+    <!-- duplicateParentState：焦点在卡片根上，让描边能跟随 state_focused。 -->
+    <FrameLayout
+        android:id="@+id/poster"
+        android:layout_width="match_parent"
+        android:layout_height="90dp"
+        android:clipChildren="false"
+        android:duplicateParentState="true"
+        android:foreground="@drawable/selector_vod">
+
+        <!--
+          剧照层：等比铺满 + 顶部贴齐（竖版海报回退时保留顶部、裁掉下半截，不拉伸）。
+          clipToOutline 让矩阵裁出来的直角被圆角底裁成圆角。
+        -->
+        <com.fongmi.android.tv.ui.custom.CoverTopImageView
+            android:id="@+id/image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/shape_history_poster"
+            android:clipToOutline="true"
+            android:scaleType="matrix" />
+
+        <!-- 删除态的整图遮罩：与收藏页一致，16dp 圆角，不会露出直角黑块。 -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/delete"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/shape_vod_delete"
+            android:scaleType="center"
+            android:src="@drawable/ic_vod_delete"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </FrameLayout>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/name"
+        android:layout_width="match_parent"
+        android:layout_height="26dp"
+        android:layout_marginTop="8dp"
+        android:duplicateParentState="true"
+        android:ellipsize="end"
+        android:gravity="start|center_vertical"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="@color/selector_vod_title"
+        android:textSize="16sp"
+        tools:text="第三起凶案" />
+
+    <!-- 「集数·已播:百分比」：常显（最近观看需要一直看到哪一集、看了多少）。 -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/meta"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:gravity="start|center_vertical"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="@color/white_60"
+        android:textSize="12sp"
+        tools:text="第7集·已播:45%" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>

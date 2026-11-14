@@ -39,7 +39,7 @@
     android:paddingEnd="48dp">
 
     <!--
-      搜索圆钮：品牌位改成「放大镜」——深色圆底（#262626）+ 白色放大镜，点击 / 确认键进搜索页。
+      搜索圆钮：品牌位改成「放大镜」——50% 透明黑圆底（#80000000）+ 白色放大镜，点击 / 确认键进搜索页。
       尺寸 36dp 与导航选中框等高，内边距 5dp → 图标盒 26dp、可见墨迹约 19~20dp
       （ic_home_search 墨迹占 viewBox 的 80%×75%），与 16sp 文字的视觉重量相当，也与原三角 54% 的比例接近。
       焦点反馈与导航胶囊同源：圆底转纯白、放大镜转纯黑（selector_logo_bg / selector_logo_tint），
@@ -65,7 +65,10 @@
       频道导航：6 个文字按钮，16sp 加粗。
       顺序即焦点顺序（未写 nextFocusLeft/Right，交给布局顺序自动串联）：
       首页 → 电影 → 剧集 → 综艺 → 片库 → 我的。
-      「首页」是 index 0，带 focusedByDefault，启动 / setFocus() / 返回「回首页」都指向它；
+      「首页」是 index 0，启动 / setFocus() / 返回「回首页」都指向它。
+      <b>不写 focusedByDefault</b>：默认焦点会让新页面先亮一下「首页」再跳到
+      「片库」，视觉上像焦点从旧位置飞过来；改由各页在首次布局完成、绘制之前
+      显式投放焦点（见 HomeActivity / VodActivity 的 installInitialFocus）。
       「片库」进 VodActivity；「我的」在最后，作为设置入口（SettingActivity）；
       电影 / 剧集 / 综艺 目前只保留焦点反馈，未接线。
 
@@ -91,7 +94,6 @@
             android:ellipsize="end"
             android:focusable="true"
             android:focusableInTouchMode="true"
-            android:focusedByDefault="true"
             android:gravity="center"
             android:maxLines="1"
             android:minWidth="64dp"

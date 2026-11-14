@@ -56,6 +56,25 @@ public class Product {
         return getSpec(Style.rect());
     }
 
+    /** 「最近观看」横版画框的固定高度（dp）。 */
+    private static final int HISTORY_POSTER_HEIGHT_DP = 90;
+
+    /** 「最近观看」横版画框的宽高比 16:9。 */
+    private static final float HISTORY_POSTER_RATIO = 16f / 9f;
+
+    /**
+     * 首页「最近观看」横版画框的固定规格：<b>16:9、高固定 90dp</b>（宽 = 高 × 16/9 ≈ 160dp），
+     * 与「图片尺寸」设置无关 —— 用户换成小 / 中 / 大 / 特大，这一行都不会变。
+     *
+     * <p>返回值是 <b>剧照画框</b>的 {宽, 高}，单位 px。片名与「集数·已播:百分比」两行排在
+     * 画框下方，所以卡片实际高度 = 画框高 + 两行文字（1080p 下约 90 + 56 = 146dp）。</p>
+     */
+    public static int[] getHistorySpec() {
+        int height = Math.max(1, ResUtil.dp2px(HISTORY_POSTER_HEIGHT_DP));
+        int width = Math.max(1, Math.round(height * HISTORY_POSTER_RATIO));
+        return new int[]{width, height};
+    }
+
     public static int[] getSpec(int space, int column, Style style) {
         int base = ResUtil.getScreenWidth() - space;
         int width = base / column;

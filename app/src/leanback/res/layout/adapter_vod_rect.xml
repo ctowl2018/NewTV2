@@ -53,20 +53,31 @@
         android:textSize="16sp"
         tools:text="蜘蛛人" />
 
-    <!-- 悬停展开：VodRectHolder 在聚焦时置 VISIBLE，失焦回到 INVISIBLE（保留占位，卡片不跳动）。 -->
+    <!--
+      悬停展开：VodRectHolder 在聚焦时置 VISIBLE，失焦回到 INVISIBLE（保留占位，卡片不跳动）。
+
+      <b>基线对齐（勿改成 center_vertical）</b>：横排 LinearLayout 只在子项「非
+      match_parent 高度 + 垂直 gravity 为 TOP」时才做基线对齐（CENTER_VERTICAL 分支
+      里基线对齐被官方移除，见 bug #1038483）。早期这里给行和子项都写了
+      center_vertical，各文字按自身字体度量独立居中：纯数字（Roboto）与中文
+      （回退的 Noto CJK，ascent/descent 更大）算出的基线不同，实测「2026」会比
+      「更新至HD」高约 4px。现在子项高度改 wrap_content、行垂直 gravity 取 top，
+      由 LinearLayout 统一把各行文本的基线拉到同一条线上。
+    -->
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/metadata"
         android:layout_width="match_parent"
         android:layout_height="20dp"
         android:layout_marginTop="2dp"
-        android:gravity="center_vertical"
+        android:gravity="start|top"
         android:orientation="horizontal"
+        android:paddingTop="2dp"
         android:visibility="invisible">
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/year"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:gravity="start|center_vertical"
@@ -81,7 +92,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/remark"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
@@ -95,7 +106,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/site"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="start|center_vertical"
             android:includeFontPadding="false"

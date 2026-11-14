@@ -83,6 +83,13 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
      * 而不是回到海报区当前选中位置（对称于首页的 mPendingPoster）。
      */
     private View mPendingPoster;
+    /**
+     * 首帧焦点是否已投放。进入本页时焦点应落在「片库」（当前激活的导航项）上，
+     * 之后从搜索 / 设置等页面返回则保留用户原来的落点，不再重投。
+     */
+    private boolean mInitialFocusDone;
+    /** 分类数据是否已至少应用过一次：用于区分「首次进页」与「换站源」。 */
+    private boolean mTypesApplied;
 
     /**
      * 站源 sheet 显示期间的焦点守卫：一旦焦点落到面板之外，立刻拉回当前站源项。
@@ -152,6 +159,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         setPager();
         applyTopScrim();
         setTitle();
+        installInitialFocus();
     }
 
     /**
@@ -366,7 +374,11 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         mBinding.pager.setAdapter(new PageAdapter(manager));
         mBinding.pager.setCurrentItem(0, false);
         mBinding.recycler.setSelectedPosition(0);
-        focusCapsule(0);
+        // 首次拿到分类数据时<b>不抢焦点</b>：「进页面先看到自己在导航里的位置」优先，
+        // 焦点保持在顶栏「片库」，按 ↓ 自然进入分类胶囊。
+        // 换站源是用户主动操作（焦点本来就在胶囊或顶栏），仍按原逻辑回第一个胶囊。
+        if (mTypesApplied) focusCapsule(0);
+        else mTypesApplied = true;
     }
 
     /**
@@ -428,7 +440,10 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
             public void onPageSelected(int position) {
                 // 焦点始终留在分类胶囊上；只把海报区的位置复位，不抢焦点、不点亮。
                 mBinding.recycler.setSelectedPosition(position);
-                mBinding.recycler.requestFocus();
+                // 这里不再无条件 requestFocus：首帧焦点在顶栏「片库」上，切页回调
+                // （含 ViewPager 预加载）若抢走焦点会让用户刚进页面就掉进分类栏。
+                // 只有焦点真的空了（例如重建后短暂丢失）才兜底落回胶囊。
+                if (getCurrentFocus() == null) mBinding.recycler.requestFocus();
                 clearPendingPoster();
                 mBinding.pager.post(() -> {
                     FolderFragment folder = getFragment(position);
@@ -445,9 +460,8 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     private void setRecyclerView() {
-        // 首帧焦点：先请求分类胶囊（本页主内容）；顶栏「首页」带 focusedByDefault，
-        // 极少数情况下布局未完成时由它接管起始焦点 —— 两种落点都可用，按 ↑ / ↓ 互通。
-        mBinding.recycler.requestFocus();
+        // 首帧焦点不在这里抢：由 onWindowFocusChanged() 统一投给顶栏「片库」，
+        // 布局未完成时再退回分类胶囊，保证焦点既不丢失也不停在错误元素上。
         mBinding.recycler.setHorizontalSpacing(ResUtil.dp2px(16));
         mBinding.recycler.setRowHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         mBinding.recycler.setAdapter(mAdapter = new TypeAdapter(this));
@@ -520,6 +534,56 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         mClock = Clock.create().view(mToolbar.clock).format("HH:mm");
         mClock.start();
         applyPosterSizeIfChanged();
+        // 从设置 / 搜索等页面返回：焦点若还停在别的导航项上，在首帧绘制前归位到「片库」。
+        if (mInitialFocusDone && isNavFocused() && !mToolbar.navVod.hasFocus()) mToolbar.navVod.requestFocus();
+    }
+
+    /**
+     * 首帧焦点：在第一次布局完成、尚未绘制时就把焦点投到「片库」。
+     *
+     * <p>布局里已去掉 {@code focusedByDefault}：否则进入本页会先亮「首页」那一帧、
+     * 再跳到「片库」，观感就是焦点从旧位置飞过来。用一次性全局布局监听，
+     * 保证首帧画出来时焦点已经在当前页对应的导航项上。</p>
+     */
+    private void installInitialFocus() {
+        View anchor = mToolbar.getRoot();
+        anchor.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                anchor.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                requestInitialFocus();
+            }
+        });
+    }
+
+    /** 投放首帧焦点：优先「片库」，失败下一帧重试，最后退回分类胶囊，焦点不悬空。 */
+    private void requestInitialFocus() {
+        if (mBinding == null || mInitialFocusDone) return;
+        if (mToolbar.navVod.requestFocus()) {
+            mInitialFocusDone = true;
+            return;
+        }
+        mToolbar.navVod.post(() -> {
+            if (mBinding == null) return;
+            mInitialFocusDone = mToolbar.navVod.requestFocus() || mBinding.recycler.requestFocus();
+        });
+    }
+
+    /**
+     * 首帧焦点由 {@link #installInitialFocus()} 在布局阶段完成；这里只做兜底：
+     * 万一布局监听没跑到（极端时序），窗口拿到焦点时再投一次。
+     * 之后每次重新回到本页时，若焦点停在别的导航项上（例如从「我的」返回），
+     * 归位到本页对应的「片库」。
+     */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (!hasFocus || mBinding == null) return;
+        if (!mInitialFocusDone) {
+            requestInitialFocus();
+            return;
+        }
+        if (isNavFocused() && !mToolbar.navVod.hasFocus()) mToolbar.navVod.requestFocus();
     }
 
     @Override
@@ -602,6 +666,11 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     /** 焦点是否在顶部工具栏内（含任意后代）。 */
     private boolean isToolbarFocused() {
         return mToolbar.getRoot().hasFocus();
+    }
+
+    /** 焦点是否在左侧导航文字按钮组。 */
+    private boolean isNavFocused() {
+        return isInside(getCurrentFocus(), mToolbar.navButtons);
     }
 
     /** 焦点精确落到分页下标对应的分类胶囊（setSelectedPosition 会同步胶囊选中态）。 */

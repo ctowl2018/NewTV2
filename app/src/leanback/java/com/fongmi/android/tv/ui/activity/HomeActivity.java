@@ -138,6 +138,11 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     private boolean mInitialFocusDone;
     /** 顶栏当前是否可见：只作动画去重，避免同一状态反复启动属性动画。 */
     private boolean mToolbarVisible = true;
+    /**
+     * 用户是否进入过内容区（列表）：主视觉异步插入后是否需要把视口钉回顶部，
+     * 用「是否已经浏览过」区分冷启动与浏览中途刷新，避免把用户从下面拽回首页。
+     */
+    private boolean mContentVisited;
 
     /**
      * 站源 sheet 显示期间的焦点守卫：一旦焦点落到面板之外（例如布局变化导致系统重新分配焦点），
@@ -159,7 +164,11 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
      * 或「列表滚回顶部但焦点还没挪走」这类中间态都会收敛到同一个正确结果。</p>
      */
     private final ViewTreeObserver.OnGlobalFocusChangeListener toolbarFocusWatcher =
-            (oldFocus, newFocus) -> updateToolbar(newFocus);
+            (oldFocus, newFocus) -> {
+                // 焦点一旦进过列表就认为用户开始浏览：之后再插入主视觉不再回拽视口。
+                if (isDescendant(newFocus, mBinding.recycler)) mContentVisited = true;
+                updateToolbar(newFocus);
+            };
 
     /** 滚动也参与显隐判定：程序化滚回顶部时，用当前焦点重新收敛一次顶栏状态。 */
     private final RecyclerView.OnScrollListener toolbarScrollWatcher = new RecyclerView.OnScrollListener() {
@@ -221,6 +230,7 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         setAdapter();
         checkPermission();
         loadDoubanHot();
+        installInitialFocus();
         // 启动画面：静态品牌 banner（原始尺寸 50%、等比居中）显示片刻后自动淡出。
         mBinding.splashBrand.play();
     }
@@ -768,6 +778,24 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
             if (items == null || items.isEmpty()) return;
             removeDoubanHot();
             mAdapter.add(getDoubanHotIndex(), DoubanHotRow.create(items));
+            pinToHeroIfContentUntouched();
+        });
+    }
+
+    /**
+     * 主视觉是<b>异步</b>插到列表第 0 行的：插入前列表顶部是「最近观看 / 更新推荐」，
+     * 插入后 RecyclerView 会保持原来的可视锚点，观感上就像页面自动滚到了这两行
+     * （冷启动无缓存、主视觉晚到时最明显；命中缓存则几乎在首帧前完成，所以表现为「偶发」）。
+     *
+     * <p>只要用户还没进入内容区（焦点仍在顶栏），就把视口钉回第 0 行，让主视觉始终在最上方；
+     * 若焦点已经在列表内，说明用户正在浏览，不能打扰，保持原位置即可。</p>
+     */
+    private void pinToHeroIfContentUntouched() {
+        if (mBinding == null) return;
+        mBinding.recycler.post(() -> {
+            if (mBinding == null || isFinishing() || isDestroyed()) return;
+            if (mContentVisited || isContentFocused()) return;
+            mBinding.recycler.scrollToPosition(getDoubanHotIndex());
         });
     }
 
@@ -937,6 +965,9 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         if (mClock != null) mClock.stop();
         mClock = Clock.create().view(mToolbar.clock).format("HH:mm");
         mClock.start();
+        // 从片库等页面返回：焦点若还停在上一页的导航项上（如「片库」），
+        // 在首帧绘制之前就归位到「首页」，避免先看到旧高亮再跳过来。
+        if (mInitialFocusDone && isNavFocused() && !mToolbar.navHome.hasFocus()) mToolbar.navHome.requestFocus();
     }
 
     @Override
@@ -946,25 +977,51 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     }
 
     /**
-     * 首次获得窗口焦点时把焦点明确交给「首页」。
+     * 首帧焦点：在第一次布局完成、尚未绘制时就把焦点投到「首页」。
      *
-     * <p>品牌入口（logo）已改为不可聚焦，系统现在会直接落到带 {@code focusedByDefault}
-     * 的「首页」上；这里保留一次显式改投作为兜底（布局未完成时下一帧再试一次），
-     * 只做一次：之后从搜索 / 结果 / 播放页返回时保留用户原来的焦点位置。</p>
+     * <p>布局里已去掉 {@code focusedByDefault}：否则新页面会先亮默认项、再跳到目标，
+     * 观感就是焦点从旧位置快速闪一下再移过来。这里用一次性全局布局监听，保证
+     * 首帧画出来时焦点已经在目标控件上。</p>
      */
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (!hasFocus || mInitialFocusDone || mBinding == null) return;
+    private void installInitialFocus() {
+        View anchor = mToolbar.getRoot();
+        anchor.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                anchor.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                requestInitialFocus();
+            }
+        });
+    }
+
+    /** 投放首帧焦点：优先「首页」，失败下一帧重试，最后退回列表，焦点不悬空。 */
+    private void requestInitialFocus() {
+        if (mBinding == null || mInitialFocusDone) return;
         if (mToolbar.navHome.requestFocus()) {
             mInitialFocusDone = true;
             return;
         }
-        // 极少数情况下导航还没完成布局：下一帧再试一次。
         mToolbar.navHome.post(() -> {
             if (mBinding == null) return;
-            if (mToolbar.navHome.requestFocus()) mInitialFocusDone = true;
+            mInitialFocusDone = mToolbar.navHome.requestFocus() || mBinding.recycler.requestFocus();
         });
+    }
+
+    /**
+     * 首帧焦点由 {@link #installInitialFocus()} 在布局阶段完成；这里只做兜底：
+     * 万一布局监听没跑到（极端时序），窗口拿到焦点时再投一次。
+     * 之后每次重新回到本页时，若焦点停在别的导航项上（例如刚从片库返回），
+     * 归位到本页对应的「首页」。
+     */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (!hasFocus || mBinding == null) return;
+        if (!mInitialFocusDone) {
+            requestInitialFocus();
+            return;
+        }
+        if (isNavFocused() && !mToolbar.navHome.hasFocus()) mToolbar.navHome.requestFocus();
     }
 
     @Override

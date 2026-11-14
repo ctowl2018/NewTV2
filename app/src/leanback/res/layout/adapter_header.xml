@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  首页行标题（「最近观看」「更新推荐」以及各站源分组行）。
+
+  字号 18sp：两个模块共用这一份布局，样式天然一致。
+
+  上下间距不在这里写 padding —— recycler 的行间距（verticalSpacing 16dp）会加在每一行之间，
+  用 padding 只能把间距继续撑大。实际间距由 HeaderPresenter 用负 margin 削到
+  「上 12dp / 下 8dp」，且只影响标题行，其它行的行距保持不变。
+-->
 <com.google.android.material.textview.MaterialTextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/text"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:textColor="@color/white"
-    android:textSize="24sp"
+    android:textSize="18sp"
     tools:text="@string/home_recommend" />

@@ -19,6 +19,7 @@
     <string name="douban_hot_action">查看详情</string>
     <string name="douban_hot_no_rating">暂无评分</string>
     <string name="douban_hot_rating">%1$s 分</string>
+    <string name="history_played">已播:%1$s</string>
     <string name="douban_hot_type_tv">剧集</string>
     <string name="douban_hot_type_movie">电影</string>
     <string name="douban_hot_type_variety">综艺</string>

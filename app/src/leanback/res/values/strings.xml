@@ -19,6 +19,7 @@
     <string name="douban_hot_action">View details</string>
     <string name="douban_hot_no_rating">No rating</string>
     <string name="douban_hot_rating">%1$s pts</string>
+    <string name="history_played">Watched: %1$s</string>
     <string name="douban_hot_type_tv">Series</string>
     <string name="douban_hot_type_movie">Movie</string>
     <string name="douban_hot_type_variety">Variety</string>

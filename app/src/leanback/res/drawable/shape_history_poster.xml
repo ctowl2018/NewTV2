@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  首页「最近观看」横版卡的图片底色：16dp 四角圆角（与网格卡的 Vod.Grid 一致）。
+  配合 ImageView 的 android:clipToOutline="true"，裁切后的图片四角同样是圆的，
+  不会露出直角黑边；图片未加载出来时这层就是占位底。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <corners android:radius="16dp" />
+    <solid android:color="@color/black_20" />
+
+</shape>

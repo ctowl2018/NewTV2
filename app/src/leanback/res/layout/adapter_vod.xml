@@ -57,18 +57,26 @@
         android:textSize="16sp"
         tools:text="蜘蛛人" />
 
+    <!--
+      元数据行：年份 / 备注 / 站源。
+      <b>基线对齐（勿改成 center_vertical）</b>：横排 LinearLayout 只有在子项
+      「非 match_parent 高度 + 垂直 gravity 为 TOP」时才对齐基线（CENTER_VERTICAL
+      分支的基线对齐已被官方移除，见 bug #1038483）。否则数字与中文按各自字体
+      度量独立居中，会差几个像素、看起来不齐。
+    -->
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/metadata"
         android:layout_width="match_parent"
         android:layout_height="20dp"
         android:layout_marginTop="2dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:gravity="start|top"
+        android:orientation="horizontal"
+        android:paddingTop="2dp">
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/year"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
             android:gravity="start|center_vertical"
@@ -83,7 +91,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/remark"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
@@ -97,7 +105,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/site"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="start|center_vertical"
             android:includeFontPadding="false"
