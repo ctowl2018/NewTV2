@@ -35,6 +35,7 @@ import com.fongmi.android.tv.bean.DoubanHotRow;
 import com.fongmi.android.tv.bean.TmdbArt;
 import com.fongmi.android.tv.databinding.AdapterDoubanHotBinding;
 import com.fongmi.android.tv.ui.custom.BackdropStyle;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.utils.ResUtil;
 
 import java.util.ArrayList;
@@ -98,7 +99,7 @@ public class DoubanHotPresenter extends Presenter {
     /**
      * @param externalArt 频道页传 true：它一次要补主视觉 10 条 + 四个平台榜最多 40 条，
      *                    若由本 Presenter 自行 fetch 会在 bind 时突发 10 个请求。改为只听
-     *                    {@code TmdbApi.addOnFetched} 广播，由 HotRankArt 匀速队列统一抓取。
+     *                    {@code TmdbApi.addOnFetched} 广播，由 ArtSource 匀速队列统一抓取。
      */
     public DoubanHotPresenter(OnClickListener listener, boolean externalArt) {
         this.listener = listener;
@@ -547,7 +548,7 @@ public class DoubanHotPresenter extends Presenter {
          * <p>主视觉已改用 {@link com.fongmi.android.tv.utils.HotRank} 供数，HotRank 只给片名，
          * 所以评分 / 年份 / 题材都从 {@link TmdbArt} 读 —— 它们由 {@code TmdbApi} 在
          * {@code search/multi} 时一并写入索引。老索引缺字段时由
-         * {@code TmdbApi.ensureMeta()} 后台补抓，回来后 notifyFetched → refresh 再刷一次这里。</p>
+         * {@code ArtSource.ensureMeta()} 后台补抓，回来后 notifyFetched → refresh 再刷一次这里。</p>
          */
         private void bindMeta(DoubanHotItem item) {
             TmdbArt art = TmdbStore.find(item.getTitle());
@@ -612,7 +613,7 @@ public class DoubanHotPresenter extends Presenter {
                 binding.overview.setText(ss);
                 binding.overview.setVisibility(View.VISIBLE);
             }
-            TmdbApi.ensureMeta(item.getTitle());
+            ArtSource.ensureMeta(item.getTitle());
         }
 
         private String typeLabel(String type) {
@@ -646,12 +647,12 @@ public class DoubanHotPresenter extends Presenter {
             }
         }
 
-        /** 只在缺素材时触发一次；TmdbApi 内部还有「已缓存 / 进行中 / miss 冷却」三重短路。 */
+        /** 只在缺素材时触发一次；统一入口内部有「已缓存 / 进行中 / 冷却」多重短路。 */
         private void requestTmdb(String title) {
-            // 频道页由 HotRankArt 匀速队列统一抓取，避免一次绑定突发十条请求。
+            // 频道页由 ArtSource 匀速队列统一抓取，避免一次绑定突发十条请求。
             if (externalArt) return;
             if (TextUtils.isEmpty(title) || !requested.add(title)) return;
-            TmdbApi.fetch(title, null, null);
+            ArtSource.fetch(title, ArtSource.CAT_AUTO, null);
         }
 
         /**

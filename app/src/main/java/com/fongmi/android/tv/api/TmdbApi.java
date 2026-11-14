@@ -7,7 +7,9 @@ import android.util.Log;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.TmdbArt;
 import com.fongmi.android.tv.setting.TmdbSetting;
+import com.fongmi.android.tv.utils.ArtFailure;
 import com.fongmi.android.tv.setting.TmdbSite;
+import com.fongmi.android.tv.utils.ArtCooldown;
 import com.github.catvod.net.OkHttp;
 import com.google.gson.annotations.SerializedName;
 
@@ -81,7 +83,7 @@ public final class TmdbApi {
     private static final Set<String> META_ATTEMPTED = Collections.synchronizedSet(new HashSet<>());
     /** 高清 logo 升级进行中标记：同样与图片主抓取分开。 */
     private static final Set<String> LOGO_IN_FLIGHT = Collections.synchronizedSet(new HashSet<>());
-    /** 网络异常后的短暂冷却（ms）：避免换集时反复重试，又不像「搜不到」那样压 24 小时。 */
+    /** 网络异常后的短暂冷却（ms）：避免换集时反复重试，又不像「搜不到」那样压很久。 */
     private static final Map<String, Long> RECENT_FAILURES = Collections.synchronizedMap(new HashMap<>());
     private static final long FAILURE_COOLDOWN = 60_000L;
     /** 站点级冷却：某站点报错后短暂跳过它，避免每次请求都先去撞一次被限流 / Key 失效的站点。 */
@@ -161,7 +163,8 @@ public final class TmdbApi {
         });
     }
 
-    private static void notifyFetched() {
+    /** 抓取完成广播：供页面就地刷新；豆瓣桥降级成功后也复用同一个通知。 */
+    public static void notifyFetched() {
         App.post(() -> {
             for (WeakReference<Runnable> ref : ON_FETCHED) {
                 Runnable callback = ref.get();
@@ -280,6 +283,14 @@ public final class TmdbApi {
         void onSuccess(String keyword, TmdbArt art);
 
         void onFailure(String keyword, String reason);
+
+        /**
+         * 带失败类型 {@link ArtFailure} 的回调：调用方据此区分「确实没这部片」与
+         * 「网络 / 限流等临时问题」。默认转发到两参版本，只关心成功与否的调用方无需改动。
+         */
+        default void onFailure(String keyword, String reason, int type) {
+            onFailure(keyword, reason);
+        }
     }
 
     /**
@@ -320,14 +331,14 @@ public final class TmdbApi {
             return;
         }
         if (primary.isEmpty() && names.isEmpty()) {
-            reportFailure(callback, primary, "没有可用的片名关键字");
+            reportFailure(callback, primary, "没有可用的片名关键字", ArtFailure.TEMPORARY);
             return;
         }
 
         // 分季片名展开成候选队列：原名搜不到就用母剧名、紧凑名继续试。
         List<String> queries = TmdbKey.candidates(names);
         if (queries.isEmpty()) {
-            reportFailure(callback, primary, "片名无法拆出可用关键字");
+            reportFailure(callback, primary, "片名无法拆出可用关键字", ArtFailure.TEMPORARY);
             return;
         }
 
@@ -375,12 +386,14 @@ public final class TmdbApi {
         EXECUTOR.execute(() -> {
             try {
                 String reason = "TMDB 未找到可用素材";
+                int type = ArtFailure.TEMPORARY;
                 for (String query : tasks) {
                     Attempt attempt = search(query, generation);
                     if (TmdbStore.generation() != generation) return; // 期间被清理，丢弃结果
                     if (attempt.art == null) {
                         reason = attempt.reason;
-                        // miss 只绑当前关键字，绝不扩散别名：以前会把整部剧所有季压 24 小时。
+                        type = attempt.type;
+                        // miss 只绑当前关键字，绝不扩散别名：以前会把整部剧所有季一起压住。
                         TmdbArt miss = new TmdbArt();
                         miss.setKeyword(query);
                         miss.setTime(System.currentTimeMillis());
@@ -404,28 +417,33 @@ public final class TmdbApi {
                     return;
                 }
                 // 所有候选都跑完仍未取到图：按「无匹配」处理，记录 miss 冷却。
-                reportFailure(callback, primaryKeyword, reason);
+                reportFailure(callback, primaryKeyword, reason, type);
             } catch (Exception e) {
                 Log.w(TAG, "fetch failed: " + e.getMessage());
                 RECENT_FAILURES.put(token, System.currentTimeMillis());
-                reportFailure(callback, primaryKeyword, describe(e));
+                reportFailure(callback, primaryKeyword, describe(e), ArtFailure.TEMPORARY);
             } finally {
                 IN_FLIGHT.remove(token);
             }
         });
     }
 
-    /** 统一失败出口：写一条「失败」日志，并把原因回给调用方（如果有）。 */
-    private static void reportFailure(FetchCallback callback, String keyword, String reason) {
+    /** 统一失败出口：写一条「失败」日志，并把原因与失败类型回给调用方（如果有）。 */
+    private static void reportFailure(FetchCallback callback, String keyword, String reason, int type) {
         String message = TextUtils.isEmpty(reason) ? "未知原因" : reason;
         TmdbLog.add(TmdbLog.STAGE_FAIL, keyword, "", "", message, true);
-        notifyFailure(callback, keyword, message);
+        notifyFailure(callback, keyword, message, type);
+    }
+
+    /** 没有分类的失败一律按临时性处理，避免误判成「没有这部片」。 */
+    private static void notifyFailure(FetchCallback callback, String keyword, String reason) {
+        notifyFailure(callback, keyword, reason, ArtFailure.TEMPORARY);
     }
 
     /** 有回调才把失败原因送回去（切主线程）；首页海报聚焦这类没有回调的调用方保持静默。 */
-    private static void notifyFailure(FetchCallback callback, String keyword, String reason) {
+    private static void notifyFailure(FetchCallback callback, String keyword, String reason, int type) {
         if (callback == null) return;
-        App.post(() -> callback.onFailure(keyword, reason));
+        App.post(() -> callback.onFailure(keyword, reason, type));
     }
 
     /** 配置变更后清掉失败冷却与「未命中」记录，让新地址 / 新密钥立刻生效。 */
@@ -433,6 +451,8 @@ public final class TmdbApi {
         RECENT_FAILURES.clear();
         SITE_COOLDOWN.clear();
         TmdbStore.clearMisses();
+        // 换了地址 / 密钥就解除双失败冷却，让新配置立刻有机会重新抓取。
+        ArtCooldown.clear();
     }
 
     /** 已有缓存时补齐新别名（例如后来才拿到弹幕片名，或换了一季的海报）。 */
@@ -466,7 +486,8 @@ public final class TmdbApi {
         TmdbLog.add(TmdbLog.STAGE_SEARCH, keyword, TmdbLog.mask(response.url), "HTTP " + response.code
                 + " · results=" + parsed.results.size() + " · 可用=" + items.size()
                 + (items.isEmpty() ? "" : " · 首个=" + label(items.get(0))), "");
-        if (items.isEmpty()) return Attempt.miss("搜索无匹配结果");
+        // 只有「接口正常返回但没有任何候选」才是「没有这部片」；解析失败、限流、异常都不算。
+        if (items.isEmpty()) return Attempt.miss("搜索无匹配结果", ArtFailure.NO_MATCH);
         // ---- 多结果优先判定插入点（仅 items.size() > 1 时生效）----
         // 若前 3 条里存在 title==original_title 的条目，直接以它作为首个候选：
         // 走 attemptItem 跑完整取图流程，拿到可用背景图就直接返回；
@@ -578,18 +599,25 @@ public final class TmdbApi {
 
         final TmdbArt art;
         final String reason;
+        final int type;
 
-        private Attempt(TmdbArt art, String reason) {
+        private Attempt(TmdbArt art, String reason, int type) {
             this.art = art;
             this.reason = reason;
+            this.type = type;
         }
 
         static Attempt hit(TmdbArt art) {
-            return new Attempt(art, null);
+            return new Attempt(art, null, ArtFailure.NONE);
         }
 
+        /** 默认按临时性失败处理：无图、下载失败、解析异常都不该进黑名单。 */
         static Attempt miss(String reason) {
-            return new Attempt(null, reason);
+            return new Attempt(null, reason, ArtFailure.TEMPORARY);
+        }
+
+        static Attempt miss(String reason, int type) {
+            return new Attempt(null, reason, type);
         }
     }
 
@@ -657,6 +685,14 @@ public final class TmdbApi {
     /** 图片地址不带 key，但同样按轮换走，避免所有图片都压在同一个站点上。 */
     private static byte[] downloadRotating(String path, String keyword, String stage) throws IOException {
         return withRotation(site -> site.base() + path, url -> download(url, keyword, stage));
+    }
+
+    /**
+     * 供豆瓣桥复用：桥给出的剧照 / logo 是 TMDB 图片直链，国内可能不可达，
+     * 优先用用户已配置的 TMDB 站点按同一路径下载，失败再回落到直连。
+     */
+    public static byte[] downloadImage(String path, String keyword, String stage) throws IOException {
+        return downloadRotating(path, keyword, stage);
     }
 
     private interface UrlBuilder {

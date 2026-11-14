@@ -52,9 +52,10 @@ import com.fongmi.android.tv.ui.presenter.DoubanHotPresenter;
 import com.fongmi.android.tv.ui.presenter.HeaderPresenter;
 import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
+import com.fongmi.android.tv.utils.ArtBlacklist;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.HotRank;
-import com.fongmi.android.tv.utils.HotRankArt;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -82,7 +83,7 @@ import java.util.Optional;
  * 不做首页 DoubanHot 的「2 剧集→2 电影→…」混排。四个平台容器按 site 过滤原始榜单，
  * 保持各平台自己的名次。</p>
  *
- * <p><b>海报与评分</b>：统一由 {@link HotRankArt} 排队补 TMDB 素材（匀速、缓存、限次重试），
+ * <p><b>海报与评分</b>：统一由 {@link ArtSource} 排队补 TMDB 素材（匀速、缓存、限次重试），
  * 抓取完成后原地更新卡片，不重建行、不抢焦点。</p>
  */
 public abstract class HotCategoryActivity extends BaseActivity implements SiteListener, VodPresenter.OnClickListener {
@@ -134,7 +135,7 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
     private boolean mToolbarVisible = true;
     private boolean mContentVisited;
 
-    private final HotRankArt.Listener mArtListener = this::refreshCards;
+    private final ArtSource.Listener mArtListener = this::refreshCards;
 
     private final ViewTreeObserver.OnGlobalFocusChangeListener focusGuard = (oldFocus, newFocus) -> {
         if (mBinding == null || !isVisible(mSheet.getRoot())) return;
@@ -173,7 +174,7 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
         setAdapter();
         installInitialFocus();
         loadRanks();
-        HotRankArt.register(mArtListener);
+        ArtSource.register(mArtListener);
     }
 
     @Override
@@ -202,7 +203,7 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
         // 卡片自带 1.04 缩放，行容器必须关掉 Leanback 的 ZOOM_FACTOR_*（否则焦点抖动）。
         selector.addPresenter(ListRow.class, new CustomRowPresenter(Product.POSTER_SPACING_DP,
                 FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 0), VodPresenter.class);
-        // 频道页片名多，主视觉不再自行触发抓取，统一走 HotRankArt 的匀速队列。
+        // 频道页片名多，主视觉不再自行触发抓取，统一走 ArtSource 的匀速队列。
         selector.addPresenter(DoubanHotRow.class, new DoubanHotPresenter(this::onDoubanHotClick, true));
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
@@ -227,6 +228,8 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
         List<String> all = new ArrayList<>();
         for (Word.Data data : Word.objectFrom(merged).getData()) {
             if (TextUtils.isEmpty(data.getTitle())) continue;
+            // 主视觉一律隐藏黑名单影片：确认没有素材的片子不适合当首屏推荐。
+            if (ArtBlacklist.contains(data.getTitle())) continue;
             DoubanHotItem item = new DoubanHotItem();
             item.setTitle(data.getTitle());
             item.setType(hotType());
@@ -240,11 +243,31 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
             for (Word.Data data : Word.objectFrom(json).getData()) {
                 if (!TextUtils.isEmpty(data.getTitle())) titles.add(data.getTitle());
             }
+            // 综艺页覆写为 false：热榜本身就是节目单，缺素材的节目仍应能被浏览。
+            if (hideBlacklistInGrid()) titles = ArtBlacklist.filterTitles(titles);
             mSiteTitles.add(titles);
             all.addAll(titles);
         }
         buildRows();
-        HotRankArt.enqueue(all);
+        // 四个页面共用同一套素材解析（TMDB 优先 → 豆瓣桥兜底 → 失败分级处置）。
+        ArtSource.enqueue(all, category(), scope());
+    }
+
+    /**
+     * 海报网格是否隐藏黑名单影片。
+     * 默认隐藏；综艺页覆写为 false —— 综艺热榜本身就是节目单，缺素材的节目也该能被找到，
+     * 只有主视觉仍然隐藏。
+     */
+    protected boolean hideBlacklistInGrid() {
+        return true;
+    }
+
+    /**
+     * 刮削作用域：用页面类名区分电影 / 剧集 / 综艺。
+     * 进入本页后它的待抓任务排最前，本页刮完（或剩余项都在冷却期）才轮到其他页。
+     */
+    protected String scope() {
+        return getClass().getSimpleName();
     }
 
     /** 行结构：主视觉（0）→ [标题 + 海报行] × 4；整体无「最近观看」。 */
@@ -267,7 +290,7 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
                 empty.setName(getString(R.string.hot_rank_platform_empty));
                 cards.add(empty);
             } else {
-                for (String title : titles) cards.add(HotRankArt.card(title));
+                for (String title : titles) cards.add(ArtSource.card(title));
             }
             row.addAll(0, cards);
             mRowAdapters.add(row);
@@ -277,18 +300,47 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
         pinToHeroIfContentUntouched();
     }
 
-    /** TMDB 抓取完成：只更新卡片的图片与评分，保留行与焦点位置。 */
+    /** 任一数据源落库：只更新卡片的图片与评分，保留行与焦点位置。 */
     private void refreshCards() {
         if (mBinding == null || isFinishing() || isDestroyed()) return;
         for (ArrayObjectAdapter row : mRowAdapters) {
-            for (int i = 0; i < row.size(); i++) {
+            boolean changed = false;
+            // 倒序遍历：刚被拉黑的卡片要直接移除，正序删会跳过下一项。
+            for (int i = row.size() - 1; i >= 0; i--) {
                 if (!(row.get(i) instanceof Vod old)) continue;
-                Vod fresh = HotRankArt.card(old.getName());
-                if (fresh.getPic().equals(old.getPic()) && fresh.getRemarks().equals(old.getRemarks())) continue;
-                old.setPic(fresh.getPic());
-                old.setRemarks(fresh.getRemarks());
+                if (hideBlacklistInGrid() && ArtBlacklist.contains(old.getName())) {
+                    row.removeItems(i, 1);
+                    changed = true;
+                    continue;
+                }
+                if (ArtSource.apply(old)) changed = true;
             }
-            row.notifyArrayItemRangeChanged(0, row.size());
+            // 整行被清空时补一张占位卡，保持四个平台容器的高度与行结构不变。
+            if (row.size() == 0) {
+                Vod empty = new Vod();
+                empty.setName(getString(R.string.hot_rank_platform_empty));
+                row.add(empty);
+                changed = true;
+            }
+            if (changed) row.notifyArrayItemRangeChanged(0, row.size());
+        }
+        refreshHero();
+    }
+
+    /** 主视觉里出现刚被拉黑的片名时重建这一行；焦点停在这行时留到下次进页面再过滤。 */
+    private void refreshHero() {
+        for (int i = 0; i < mAdapter.size(); i++) {
+            if (!(mAdapter.get(i) instanceof DoubanHotRow row)) continue;
+            List<DoubanHotItem> shown = new ArrayList<>();
+            for (DoubanHotItem item : row.getItems()) {
+                if (ArtBlacklist.contains(item.getTitle())) continue;
+                shown.add(item);
+            }
+            if (shown.size() == row.size()) return;
+            if (mBinding.recycler.getSelectedPosition() == i) return;
+            if (shown.isEmpty()) mAdapter.removeItems(i, 1);
+            else mAdapter.replace(i, DoubanHotRow.create(shown));
+            return;
         }
     }
 
@@ -660,6 +712,8 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
     @Override
     protected void onResume() {
         super.onResume();
+        // 回到本页即把刮削优先级切回本页。
+        ArtSource.setActiveScope(scope());
         if (mClock != null) mClock.stop();
         mClock = Clock.create().view(mToolbar.clock).format("HH:mm");
         mClock.start();
@@ -669,6 +723,8 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
     @Override
     protected void onPause() {
         super.onPause();
+        // 离开四页后不再保留页面优先级，恢复普通轮转。
+        ArtSource.clearActiveScope(scope());
         if (mClock != null) mClock.stop();
     }
 
@@ -784,7 +840,7 @@ public abstract class HotCategoryActivity extends BaseActivity implements SiteLi
 
     @Override
     protected void onDestroy() {
-        HotRankArt.unregister(mArtListener);
+        ArtSource.unregister(mArtListener);
         ViewTreeObserver observer = getWindow().getDecorView().getViewTreeObserver();
         observer.removeOnGlobalFocusChangeListener(focusGuard);
         observer.removeOnGlobalFocusChangeListener(toolbarFocusWatcher);

@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.api.TmdbApi;
+import com.fongmi.android.tv.api.TmdbLog;
 import com.github.catvod.utils.Prefers;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * TMDB 抓取的站点配置与轮换。
+ * 刮削配置：TMDB 站点轮换、总开关与两个二级开关、豆瓣桥地址与密钥。
  *
  * <p>配置结构：{@code tmdb_sites} 存一个 JSON 数组，每项是 {@code {"url":"...","key":"..."}}，
  * 一条记录就是一个站点及其专属密钥。数组长度不写死在代码里（{@link #MAX_SITES} 只是 UI 防呆），
@@ -25,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>兼容旧配置：早期版本只有 {@code tmdb_api_url} + {@code tmdb_api_key} 两项，
  * 首次读取时自动迁移成一条站点记录。</p>
  *
- * <p>项目不再内置任何默认站点与密钥：新安装需用户在「设置 → TMDB 配置」自行添加。
+ * <p>项目不再内置任何默认站点与密钥：新安装需用户在「设置 → 影片刮削设置」自行添加。
  * 未配置时 {@link #getSites()} 返回空列表，抓取请求会以「no tmdb site」安全失败。</p>
  */
 public final class TmdbSetting {
@@ -39,11 +40,22 @@ public final class TmdbSetting {
     /** 站点数量上限：仅用于设置页防呆，轮换逻辑本身按实际条数走。 */
     public static final int MAX_SITES = 8;
 
+    /**
+     * 豆瓣桥：豆瓣数据的唯一来源，替代此前直连豆瓣网页接口的抓取方式。
+     * 内置公共实例地址，但<b>不内置任何密钥</b>，必须由用户自行填写。
+     */
+    public static final String DEFAULT_BRIDGE_URL = "https://douban-bridge.baran.wang";
+    public static final String DEFAULT_BRIDGE_KEY = "";
+
     private static final String KEY_SITES = "tmdb_sites";
     private static final String KEY_LEGACY_URL = "tmdb_api_url";
     private static final String KEY_LEGACY_KEY = "tmdb_api_key";
     private static final String KEY_ENABLE = "tmdb_enable";
     private static final String KEY_ERROR_TOAST = "tmdb_error_toast";
+    private static final String KEY_TMDB_SCRAPE = "tmdb_scrape_tmdb";
+    private static final String KEY_BRIDGE_SCRAPE = "douban_bridge_scrape";
+    private static final String KEY_BRIDGE_URL = "douban_bridge_url";
+    private static final String KEY_BRIDGE_KEY = "douban_bridge_key";
 
     /** 轮换游标：每个请求取一次，取模落到具体站点。 */
     private static final AtomicInteger CURSOR = new AtomicInteger();
@@ -90,23 +102,65 @@ public final class TmdbSetting {
         return (CURSOR.getAndIncrement() & 0x7FFFFFFF) % size;
     }
 
-    /** 总开关：默认关闭；关闭后播放页与首页海报聚焦都不再抓取，已缓存的图片仍可显示。 */
-    public static boolean isEnabled() {
+    /**
+     * 刮削总开关：默认关闭。关闭后 TMDB 与豆瓣桥都不再抓取，已缓存的图片仍可显示。
+     */
+    public static boolean isMasterEnabled() {
         return Prefers.getBoolean(KEY_ENABLE, false);
     }
 
-    public static void putEnabled(boolean value) {
+    public static void putMaster(boolean value) {
+        boolean old = isMasterEnabled();
         Prefers.put(KEY_ENABLE, value);
+        if (old != value) logConfig(TmdbLog.SOURCE_TMDB, "刮削总开关", value ? "已开启" : "已关闭");
+        TmdbApi.onConfigChanged();
+    }
+
+    /** TMDB 二级开关：默认开启，只有总开关同时打开时才真正生效。 */
+    public static boolean isTmdbScrapeEnabled() {
+        return Prefers.getBoolean(KEY_TMDB_SCRAPE, true);
+    }
+
+    public static void putTmdbScrape(boolean value) {
+        boolean old = isTmdbScrapeEnabled();
+        Prefers.put(KEY_TMDB_SCRAPE, value);
+        if (old != value) logConfig(TmdbLog.SOURCE_TMDB, "TMDB 刮削", value ? "已开启" : "已关闭");
+        TmdbApi.onConfigChanged();
+    }
+
+    /** 豆瓣桥二级开关：默认开启，只有总开关同时打开时才真正生效。 */
+    public static boolean isBridgeScrapeEnabled() {
+        return Prefers.getBoolean(KEY_BRIDGE_SCRAPE, true);
+    }
+
+    public static void putBridgeScrape(boolean value) {
+        boolean old = isBridgeScrapeEnabled();
+        Prefers.put(KEY_BRIDGE_SCRAPE, value);
+        if (old != value) logConfig(TmdbLog.SOURCE_BRIDGE, "豆瓣桥刮削", value ? "已开启" : "已关闭");
+        TmdbApi.onConfigChanged();
+    }
+
+    /**
+     * TMDB 是否可抓取：总开关与 TMDB 二级开关同时开启。
+     * 旧代码统一用这个方法判断，语义从「总开关」收窄为「总开关 + 二级开关」。
+     */
+    public static boolean isEnabled() {
+        return isMasterEnabled() && isTmdbScrapeEnabled();
+    }
+
+    /** 兼容旧入口：等价于 {@link #putMaster(boolean)}。 */
+    public static void putEnabled(boolean value) {
+        putMaster(value);
     }
 
     /**
      * 播放详情页刮削失败时是否用 Toast 提示。
      *
      * <p><b>默认关闭</b>：首次安装没有该键时返回 false —— 刮削失败属于后台的「素材补齐」，
-     * 大多数用户并不关心，默认静默以免反复打扰；需要排查时可在「设置 → TMDB 配置」里打开。
+     * 大多数用户并不关心，默认静默以免反复打扰；需要排查时可在「设置 → 影片刮削设置」里打开。
      *
-     * <p>本开关<b>只在总开关 {@link #isEnabled()} 打开时才有意义</b>：刮削整体关闭时，
-     * 无论这里返回什么，调用方都不允许弹失败提示（见 {@code VideoActivity#onTmdbResult}）。
+     * <p>本开关<b>只在 TMDB 可抓取（{@link #isEnabled()}：总开关 + TMDB 二级开关）时才有意义</b>：
+     * 刮削关闭时，无论这里返回什么，调用方都不允许弹失败提示（见 {@code VideoActivity#onTmdbResult}）。
      * 二者是「与」关系，不是并列关系 —— 不要只判断本方法。</p>
      */
     public static boolean isErrorToast() {
@@ -115,6 +169,71 @@ public final class TmdbSetting {
 
     public static void putErrorToast(boolean value) {
         Prefers.put(KEY_ERROR_TOAST, value);
+    }
+
+    /** 豆瓣桥地址；默认使用内置公共实例，可改为自建地址。 */
+    public static String getBridgeUrl() {
+        String url = Prefers.getString(KEY_BRIDGE_URL, DEFAULT_BRIDGE_URL);
+        return url == null ? "" : url.trim();
+    }
+
+    /** 豆瓣桥密钥；不内置默认值，未配置时返回空串。 */
+    public static String getBridgeKey() {
+        String key = Prefers.getString(KEY_BRIDGE_KEY, DEFAULT_BRIDGE_KEY);
+        return key == null ? "" : key.trim();
+    }
+
+    /** 豆瓣桥是否已配置好地址与密钥（不代表已启用）。 */
+    public static boolean isBridgeConfigured() {
+        String url = getBridgeUrl();
+        return (url.startsWith("http://") || url.startsWith("https://")) && !getBridgeKey().isEmpty();
+    }
+
+    /** 豆瓣桥是否可抓取：总开关、豆瓣桥二级开关、地址与密钥三者同时满足。 */
+    public static boolean isBridgeEnabled() {
+        return isMasterEnabled() && isBridgeScrapeEnabled() && isBridgeConfigured();
+    }
+
+    /** 保存豆瓣桥配置；传入空地址表示停用。只在值真正变化时写一条配置日志。 */
+    public static void putBridge(String url, String key) {
+        String base = url == null ? "" : url.trim();
+        while (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+        String secret = key == null ? "" : key.trim();
+        String oldUrl = getBridgeUrl();
+        String oldKey = getBridgeKey();
+        boolean urlChanged = !TextUtils.equals(oldUrl, base);
+        boolean keyChanged = !TextUtils.equals(oldKey, secret);
+        Prefers.put(KEY_BRIDGE_URL, base);
+        Prefers.put(KEY_BRIDGE_KEY, secret);
+        if (!urlChanged && !keyChanged) return;
+        String reason;
+        if (base.isEmpty()) {
+            reason = "地址已清空，豆瓣桥停用";
+        } else {
+            List<String> parts = new ArrayList<>();
+            if (urlChanged) parts.add("地址已更新为 " + hostOf(base));
+            if (keyChanged) parts.add(secret.isEmpty() ? "密钥已清空" : "密钥已更新");
+            reason = TextUtils.join("；", parts);
+        }
+        logConfig(TmdbLog.SOURCE_BRIDGE, "豆瓣桥", reason);
+    }
+
+    /** 设置页摘要只显示主机名，避免把长地址与密钥铺满一行。 */
+    public static String getBridgeHost() {
+        return hostOf(getBridgeUrl());
+    }
+
+    private static String hostOf(String url) {
+        if (TextUtils.isEmpty(url)) return "";
+        int start = url.indexOf("://");
+        String host = start >= 0 ? url.substring(start + 3) : url;
+        int slash = host.indexOf('/');
+        return slash >= 0 ? host.substring(0, slash) : host;
+    }
+
+    /** 配置变更只写结论，不写密钥；日志页的来源 / 状态筛选仍按 TMDB 与豆瓣桥归类。 */
+    private static void logConfig(String source, String keyword, String reason) {
+        TmdbLog.add(source, TmdbLog.STAGE_CONFIG, keyword, "", "", reason, false);
     }
 
     /** 解析 tmdb_sites；为空或损坏时返回空列表，由调用方决定走迁移。 */

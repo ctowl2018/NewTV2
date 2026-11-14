@@ -18,8 +18,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,9 +35,13 @@ import java.util.Map;
  */
 public final class TmdbStore {
 
+    /**
+     * 海报套数上限：一套 = 一部影片的竖版海报 / 横版剧照 / logo。
+     * 同一条记录里的三个文件算一套，不按文件数累计，超限时清掉最早抓取的那批。
+     */
+    public static final int MAX_SETS = 200;
     private static final String DIR_NAME = "tmdb";
     private static final String INDEX_NAME = "index.json";
-    private static final String BACKDROP_PREFIX = "w1280_";
     private static final Object LOCK = new Object();
     /**
      * 索引的 Gson 类型。用 {@link TypeToken#getParameterized} 显式声明，而不用
@@ -150,8 +159,55 @@ public final class TmdbStore {
                 if (!alias.isEmpty()) map.put(alias, art);
             }
             if (!primary.isEmpty()) map.put(primary, art);
+            trim(map, art);
             persist(map);
         }
+    }
+
+    /**
+     * 缓存总量控制：超过 {@link #MAX_SETS} 套时，按抓取时间清掉最早的那批。
+     *
+     * <p>别名（不同季名、海报名、弹幕名）会指向同一条记录，所以这里先按对象身份去重再计数，
+     * 否则同一部片会被当成好几套。没有图片的「未命中」记录不占额度，也不参与淘汰。</p>
+     *
+     * <p>{@code keep} 是本次刚写入的记录：给它补别名时可能恰好是最老的一条，
+     * 不排除的话会「刚写进去就被自己淘汰掉」。</p>
+     */
+    private static void trim(Map<String, TmdbArt> map, TmdbArt keep) {
+        IdentityHashMap<TmdbArt, Boolean> seen = new IdentityHashMap<>();
+        List<TmdbArt> arts = new ArrayList<>();
+        int total = 0;
+        for (TmdbArt art : map.values()) {
+            if (art == null || seen.put(art, Boolean.TRUE) != null) continue;
+            if (!hasArtwork(art)) continue;
+            total++;
+            if (art != keep) arts.add(art);
+        }
+        if (total <= MAX_SETS) return;
+        arts.sort(Comparator.comparingLong(TmdbArt::getTime));
+        int remove = total - MAX_SETS;
+        for (int i = 0; i < remove && i < arts.size(); i++) remove(map, arts.get(i));
+    }
+
+    private static boolean hasArtwork(TmdbArt art) {
+        return !art.getPoster().isEmpty() || !art.getBackdrop().isEmpty() || !art.getLogo().isEmpty();
+    }
+
+    /** 移除一条记录：索引里所有指向它的别名一起删，磁盘上的三个文件同步清掉。 */
+    private static void remove(Map<String, TmdbArt> map, TmdbArt target) {
+        Iterator<Map.Entry<String, TmdbArt>> iterator = map.entrySet().iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().getValue() == target) iterator.remove();
+        }
+        deleteFile(target.getPoster());
+        deleteFile(target.getBackdrop());
+        deleteFile(target.getLogo());
+    }
+
+    private static void deleteFile(String name) {
+        if (name == null || name.isEmpty()) return;
+        File file = new File(dir(), name);
+        if (file.isFile()) file.delete();
     }
 
     /**
@@ -198,44 +254,22 @@ public final class TmdbStore {
         }
     }
 
-    /** 配置变更后清掉「未命中」记录，让新地址 / 新密钥立刻生效；已抓到图的记录保留。 */
+    /**
+     * 配置变更后清掉「确认无结果」的 miss 记录，让新地址 / 新密钥立刻生效。
+     * 豆瓣桥可能只取到竖版海报（没有背景图），这类记录的时间戳刻意保持 0，
+     * 不属于 miss，必须保留，否则换一次开关就会把已经拿到的海报一起删掉。
+     */
     public static void clearMisses() {
         synchronized (LOCK) {
             Map<String, TmdbArt> map = load();
-            boolean changed = map.entrySet().removeIf(entry -> entry.getValue() == null || !entry.getValue().hasBackdrop());
+            boolean changed = map.entrySet().removeIf(entry -> {
+                TmdbArt art = entry.getValue();
+                return art == null || (!art.hasBackdrop() && art.getTime() > 0);
+            });
             if (changed) persist(map);
         }
     }
 
-    /** 缓存统计：背景图张数与这些背景图文件占用的字节数。 */
-    public static final class Stats {
-        public final int backdrops;
-        public final long bytes;
-
-        Stats(int backdrops, long bytes) {
-            this.backdrops = backdrops;
-            this.bytes = bytes;
-        }
-    }
-
-    /**
-     * 直接扫目录统计 w1280_ 前缀的图片，不依赖索引是否完整；
-     * 清理会删掉整个目录，所以这里的数字与清理后释放的空间口径一致。
-     */
-    public static Stats stats() {
-        File[] files = dir().listFiles();
-        int count = 0;
-        long bytes = 0;
-        if (files != null) {
-            for (File file : files) {
-                if (file.isFile() && file.getName().startsWith(BACKDROP_PREFIX)) {
-                    count++;
-                    bytes += file.length();
-                }
-            }
-        }
-        return new Stats(count, bytes);
-    }
 
     /**
      * 备份恢复后调用：磁盘文件已被整体替换，这里只丢掉内存里的索引与位图并推进 generation，

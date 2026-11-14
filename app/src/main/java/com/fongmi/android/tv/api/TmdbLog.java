@@ -21,12 +21,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * TMDB 刮削日志：内存环形缓冲 + JSONL 文件持久化，供「设置 → TMDB 配置 → 查看 TMDB 刮削日志」查看。
+ * 刮削日志：内存环形缓冲 + JSONL 文件持久化，供「设置 → 影片刮削设置 → 刮削日志」查看。
+ * 同时收录 TMDB 与豆瓣桥两条链路，条目带来源字段可过滤。
  *
  * <p>一条日志就是一次可观察的动作（阶段），字段固定：
  * <ul>
  *     <li>{@code time} 发生时间；</li>
- *     <li>{@code stage} 阶段：触发 / 跳过 / 搜索 / 图集 / 背景图 / Logo / 完成 / 失败；</li>
+ *     <li>{@code source} 来源：TMDB / 豆瓣桥（历史日志可能为「豆瓣」）；</li>
+ *     <li>{@code stage} 阶段：触发 / 跳过 / 配置 / 搜索 / 图集 / 背景图 / Logo / 桥榜单 / 桥详情 / 桥图片 / 桥素材 / 桥匹配 / 黑名单 / 完成 / 失败；</li>
  *     <li>{@code keyword} 本次刮削的关键字（便于按片名过滤）；</li>
  *     <li>{@code request} 实际请求的 URL，api_key 只露头尾；</li>
  *     <li>{@code response} 响应摘要（HTTP 码 + 结果条数 / 字节数，失败时附上游错误体片段）；</li>
@@ -48,11 +50,37 @@ public final class TmdbLog {
     public static final String STAGE_LOGO = "Logo";
     public static final String STAGE_DONE = "完成";
     public static final String STAGE_FAIL = "失败";
+    /** 刮削开关、豆瓣桥地址 / 密钥变更：用来解释某段时间为什么没有抓取记录。 */
+    public static final String STAGE_CONFIG = "配置";
+    /** 豆瓣桥降级链路的阶段（旧直连豆瓣的日志仍按字符串原样展示）。 */
+    public static final String STAGE_BRIDGE_TRIGGER = "降级触发";
+    public static final String STAGE_BRIDGE_LIST = "桥榜单";
+    public static final String STAGE_BRIDGE_DETAIL = "桥详情";
+    public static final String STAGE_BRIDGE_COVER = "桥图片";
+    public static final String STAGE_BRIDGE_MATCH = "桥匹配";
+    /** 豆瓣桥写入索引时的字段摘要：海报 / 背景图 / 评分 / 简介各取到了什么。 */
+    public static final String STAGE_BRIDGE_SAVE = "桥素材";
+    /** 加入黑名单：TMDB 与豆瓣桥都确认「没有这部片」，此后不再刮削。 */
+    public static final String STAGE_BLACKLIST = "黑名单";
+
+    /** 日志来源，供设置页按来源过滤。 */
+    public static final String SOURCE_TMDB = "TMDB";
+    /** 旧版直连豆瓣留下的来源标记，仅供历史日志识别。 */
+    public static final String SOURCE_DOUBAN = "豆瓣";
+    /** 豆瓣桥：当前豆瓣海报 / 评分 / 简介的唯一来源。 */
+    public static final String SOURCE_BRIDGE = "豆瓣桥";
+    /** 日志状态，供设置页按状态过滤；判定以 failed 优先。 */
+    public static final String STATUS_DONE = "完成";
+    public static final String STATUS_FAIL = "失败";
+    public static final String STATUS_SKIP = "跳过";
+    public static final String STATUS_OTHER = "其它";
+    /** 黑名单：可在日志页单独筛出来，看哪些片被判定为「没有这部片」。 */
+    public static final String STATUS_BLACKLIST = "黑名单";
 
     /** 内存里保留的条数：电视上滚动查看够用，也不会占太多内存。 */
-    public static final int MAX_ENTRIES = 240;
+    public static final int MAX_ENTRIES = 600;
     /** 日志文件上限：超过后按内存里的最新记录整体重写。 */
-    private static final long MAX_FILE_BYTES = 512L * 1024;
+    private static final long MAX_FILE_BYTES = 1024L * 1024;
     private static final String FILE_NAME = "tmdb-log.jsonl";
 
     private static final Object LOCK = new Object();
@@ -72,6 +100,7 @@ public final class TmdbLog {
     public static final class Entry {
 
         public long time;
+        public String source = SOURCE_TMDB;
         public String stage = "";
         public String keyword = "";
         public String request = "";
@@ -80,8 +109,13 @@ public final class TmdbLog {
         public boolean failed;
 
         public static Entry create(String stage, String keyword, String request, String response, String reason, boolean failed) {
+            return create(SOURCE_TMDB, stage, keyword, request, response, reason, failed);
+        }
+
+        public static Entry create(String source, String stage, String keyword, String request, String response, String reason, boolean failed) {
             Entry entry = new Entry();
             entry.time = System.currentTimeMillis();
+            entry.source = TextUtils.isEmpty(source) ? SOURCE_TMDB : clip(source, 12);
             entry.stage = clip(stage, 12);
             entry.keyword = clip(keyword, 80);
             entry.request = clip(request, 400);
@@ -92,9 +126,14 @@ public final class TmdbLog {
         }
     }
 
-    /** 记录一条日志。任何线程都可以调用。 */
+    /** 记录一条 TMDB 日志。任何线程都可以调用。 */
     public static void add(String stage, String keyword, String request, String response, String reason, boolean failed) {
-        Entry entry = Entry.create(stage, keyword, request, response, reason, failed);
+        add(SOURCE_TMDB, stage, keyword, request, response, reason, failed);
+    }
+
+    /** 记录一条指定来源的日志（豆瓣降级链路用）。 */
+    public static void add(String source, String stage, String keyword, String request, String response, String reason, boolean failed) {
+        Entry entry = Entry.create(source, stage, keyword, request, response, reason, failed);
         synchronized (LOCK) {
             ensureLoaded();
             ENTRIES.add(entry);
@@ -111,6 +150,21 @@ public final class TmdbLog {
     /** 带请求 / 响应但没有失败标记的写法：成功阶段的流水。 */
     public static void add(String stage, String keyword, String request, String response, String reason) {
         add(stage, keyword, request, response, reason, false);
+    }
+
+    /** 状态判定：失败标记优先，其次按阶段；其余算流水。 */
+    public static String status(Entry entry) {
+        if (entry == null) return STATUS_OTHER;
+        if (entry.failed) return STATUS_FAIL;
+        if (STAGE_BLACKLIST.equals(entry.stage)) return STATUS_BLACKLIST;
+        if (STAGE_SKIP.equals(entry.stage)) return STATUS_SKIP;
+        if (STAGE_DONE.equals(entry.stage)) return STATUS_DONE;
+        return STATUS_OTHER;
+    }
+
+    /** 旧日志文件里没有来源字段，统一按 TMDB 处理。 */
+    public static String source(Entry entry) {
+        return entry == null || TextUtils.isEmpty(entry.source) ? SOURCE_TMDB : entry.source;
     }
 
     /** 最新的在前，方便设置页从最近一次刮削往回看。 */
@@ -222,7 +276,10 @@ public final class TmdbLog {
                 if (line.trim().isEmpty()) continue;
                 try {
                     Entry entry = App.gson().fromJson(line, Entry.class);
-                    if (entry != null) ENTRIES.add(entry);
+                    if (entry != null) {
+                        if (TextUtils.isEmpty(entry.source)) entry.source = SOURCE_TMDB;
+                        ENTRIES.add(entry);
+                    }
                 } catch (Exception ignored) {
                     // 单行损坏不影响其它记录。
                 }

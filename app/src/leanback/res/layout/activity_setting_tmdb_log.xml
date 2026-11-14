@@ -49,11 +49,95 @@
             android:background="@drawable/selector_item"
             android:focusable="true"
             android:focusableInTouchMode="true"
+            android:nextFocusDown="@id/filterSourceAll"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:text="@string/tmdb_log_clear"
             android:textColor="@color/white"
             android:textSize="14sp" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <!-- 来源过滤：与状态过滤各自单选，两个条件组合生效 -->
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:alpha="0.55"
+            android:text="@string/tmdb_filter_source"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterSourceAll"
+            style="@style/LogFilterChip"
+            android:nextFocusDown="@id/filterStatusAll"
+            android:text="@string/tmdb_filter_all" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterSourceTmdb"
+            style="@style/LogFilterChip"
+            android:nextFocusDown="@id/filterStatusAll"
+            android:text="@string/tmdb_filter_tmdb" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterSourceDouban"
+            style="@style/LogFilterChip"
+            android:nextFocusDown="@id/filterStatusAll"
+            android:text="@string/tmdb_filter_douban" />
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
+            android:alpha="0.55"
+            android:text="@string/tmdb_filter_status"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusAll"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_all" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusDone"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_done" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusFail"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_fail" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusSkip"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_skip" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusOther"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_other" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/filterStatusBlacklist"
+            style="@style/LogFilterChip"
+            android:text="@string/tmdb_filter_blacklist" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 

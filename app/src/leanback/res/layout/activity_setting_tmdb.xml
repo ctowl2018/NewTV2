@@ -54,6 +54,67 @@
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
+        <!-- 二级开关：总开关打开后才出现，分别控制豆瓣桥与 TMDB -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/bridgeScrape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:background="@drawable/selector_item"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/douban_bridge_scrape"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/bridgeScrapeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                tools:text="开" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/tmdbScrape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:background="@drawable/selector_item"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/tmdb_scrape_tmdb"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tmdbScrapeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                tools:text="开" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
         <!-- 失败提示开关：默认关闭，紧跟总开关，位置固定；总开关关闭时整行隐藏 -->
         <androidx.appcompat.widget.LinearLayoutCompat
             android:id="@+id/tmdbToast"
@@ -111,46 +172,38 @@
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <!-- 缓存统计：只读，不占遥控器焦点。清理统一走「设置 → 清除缓存」，这里不再放重复入口 -->
+        <!-- 豆瓣桥：豆瓣数据的唯一来源，地址与密钥可改；未配置时自动降级为仅用 TMDB -->
         <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/tmdbCache"
+            android:id="@+id/tmdbBridge"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:focusable="false"
+            android:background="@drawable/selector_item"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
             android:orientation="horizontal">
 
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="16dp"
-                android:text="@string/tmdb_cache"
+                android:text="@string/tmdb_bridge"
                 android:textColor="@color/white"
                 android:textSize="18sp" />
 
             <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/tmdbCacheText"
+                android:id="@+id/tmdbBridgeText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="end"
                 android:singleLine="true"
                 android:textColor="@color/white"
                 android:textSize="18sp"
-                tools:text="12 张 · 4.20 MB" />
+                tools:text="douban-bridge.baran.wang · 已启用" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/tmdbCacheHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:focusable="false"
-            android:text="@string/tmdb_cache_hint"
-            android:textColor="@color/white_50"
-            android:textSize="14sp" />
-
-        <!-- 查看 TMDB 刮削日志：排查失败原因时进这个页面 -->
+        <!-- 刮削日志：统一查看 TMDB 与豆瓣记录，排查失败原因时进这个页面 -->
         <androidx.appcompat.widget.LinearLayoutCompat
             android:id="@+id/tmdbLog"
             android:layout_width="match_parent"
@@ -178,6 +231,37 @@
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 tools:text="12 条 · 失败 1 次" />
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <!-- 黑名单：TMDB 与豆瓣桥都确认「没有这部片」的影片；只做展示，移除走「设置 → 清除缓存」 -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/tmdbBlacklist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/selector_item"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/blacklist_entry"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tmdbBlacklistText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                tools:text="共 6 部" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 

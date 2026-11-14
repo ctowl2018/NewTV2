@@ -33,5 +33,6 @@
     <!-- TMDB 刮削日志：成功阶段与失败条目的文字色 -->
     <color name="tmdb_log_fail">#FF7B7B</color>
     <color name="tmdb_log_ok">#8FD98F</color>
+    <color name="tmdb_log_blacklist">#FF8F3C</color>
 
 </resources>

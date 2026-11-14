@@ -128,7 +128,7 @@
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <!-- TMDB 配置：总开关、多站点（地址 + 各自密钥，轮换使用）、缓存与刮削日志 -->
+        <!-- 影片刮削设置：总开关与两个二级开关、多站点、豆瓣桥、缓存与刮削日志 -->
         <androidx.appcompat.widget.LinearLayoutCompat
             android:id="@+id/tmdb"
             android:layout_width="match_parent"

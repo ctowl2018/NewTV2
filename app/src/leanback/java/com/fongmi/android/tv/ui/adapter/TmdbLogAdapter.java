@@ -17,10 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TMDB 刮削日志列表：一条日志一张卡片，首行是「时间 · 阶段 · 关键字」，
+ * 刮削日志列表（TMDB + 豆瓣）：一条日志一张卡片，首行是「时间 · 来源 · 阶段 · 关键字」，
  * 下面按需展开「请求 / 响应 / 说明」，失败条目整条标红，方便一眼定位。
  *
- * <p>用 RecyclerView 而不是一次性 inflate 全部条目：日志最多 240 条，
+ * <p>用 RecyclerView 而不是一次性 inflate 全部条目：日志最多 600 条，
  * 全渲染会有近千个 View，电视上滚动会卡。</p>
  */
 public class TmdbLogAdapter extends RecyclerView.Adapter<TmdbLogAdapter.ViewHolder> {
@@ -60,6 +60,7 @@ public class TmdbLogAdapter extends RecyclerView.Adapter<TmdbLogAdapter.ViewHold
 
         void bind(TmdbLog.Entry entry) {
             binding.logTime.setText(TmdbLog.dateTime(entry.time));
+            binding.logSource.setText(TmdbLog.source(entry));
             binding.logStage.setText(entry.stage);
             binding.logStage.setTextColor(color(entry));
             binding.logKeyword.setText(entry.keyword);
@@ -84,6 +85,8 @@ public class TmdbLogAdapter extends RecyclerView.Adapter<TmdbLogAdapter.ViewHold
         private int color(TmdbLog.Entry entry) {
             if (entry.failed) return ContextCompat.getColor(binding.getRoot().getContext(), R.color.tmdb_log_fail);
             if (TmdbLog.STAGE_DONE.equals(entry.stage)) return ContextCompat.getColor(binding.getRoot().getContext(), R.color.tmdb_log_ok);
+            // 黑名单不是错误，但比普通流水更需要被看见，单独给一个强调色。
+            if (TmdbLog.STAGE_BLACKLIST.equals(entry.stage)) return ContextCompat.getColor(binding.getRoot().getContext(), R.color.tmdb_log_blacklist);
             return ContextCompat.getColor(binding.getRoot().getContext(), R.color.white);
         }
     }

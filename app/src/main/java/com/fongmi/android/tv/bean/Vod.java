@@ -87,6 +87,9 @@ public class Vod implements Parcelable, Diffable<Vod> {
     @ElementList(entry = "dd", required = false, inline = true)
     private List<Flag> vodFlags;
     private Site site;
+    /** 统一素材组件写入的海报与评分（TMDB / 豆瓣）；transient 不进 XML、Gson 与 Parcel 缓存。 */
+    private transient String artPic;
+    private transient String artScore;
 
     public Vod() {
     }
@@ -160,6 +163,28 @@ public class Vod implements Parcelable, Diffable<Vod> {
 
     public void setPic(String vodPic) {
         this.vodPic = vodPic;
+    }
+
+    public String getArtPic() {
+        return TextUtils.isEmpty(artPic) ? "" : artPic;
+    }
+
+    public void setArtPic(String artPic) {
+        this.artPic = artPic;
+    }
+
+    /** 卡片展示用图：有统一素材就用它，否则回退站源原始海报；不改动 vodPic 本身。 */
+    public String getDisplayPic() {
+        return getArtPic().isEmpty() ? getPic() : getArtPic();
+    }
+
+    /** 海报网格的评分角标值，已按 10 分制一位小数统一；空串表示暂无评分。 */
+    public String getArtScore() {
+        return TextUtils.isEmpty(artScore) ? "" : artScore;
+    }
+
+    public void setArtScore(String artScore) {
+        this.artScore = artScore;
     }
 
     /** 热榜卡片用它承载「评分：x.x」：卡片会从备注里解析出角标，不再重复显示在信息行。 */

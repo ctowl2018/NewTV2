@@ -59,8 +59,10 @@ public class FileUtil {
 
     /**
      * 设置里的统一缓存清理：外部缓存目录 + 本项目新增功能放在内部 files 目录的缓存。
-     * TMDB 配置页不再单独提供清理入口，避免同一件事有两个入口、清完一处另一处还在。
-     * TMDB 刮削日志属于排查记录，不随缓存清理删除。
+     * 影片刮削设置页不再单独提供清理入口，避免同一件事有两个入口、清完一处另一处还在。
+     * 刮削黑名单也在这个目录里 —— 它同样是「可以重新判定」的派生数据，
+     * 因此移除黑名单条目的唯一入口就是这里。
+     * 刮削日志属于排查记录，不随缓存清理删除。
      */
     public static void clearCache(Callback callback) {
         Task.execute(() -> {
@@ -69,6 +71,8 @@ public class FileUtil {
                 TmdbApi.clearCache();
                 DoubanHot.clearCache();
                 HotRank.clearCache();
+                // tmdb/ 目录里的榜单缓存与失败记录已随 clearCache 删除，这里同步清掉内存状态与待抓队列。
+                ArtSource.reset();
                 App.post(callback::success);
             } catch (IOException e) {
                 App.post(() -> Notify.show(e.getMessage()));

@@ -23,6 +23,7 @@ import com.fongmi.android.tv.bean.TmdbArt;
 import com.fongmi.android.tv.databinding.AdapterVodHistoryBinding;
 import com.fongmi.android.tv.setting.TmdbSetting;
 import com.fongmi.android.tv.ui.custom.PosterFocusAnimator;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.utils.HistoryEpisode;
 import com.fongmi.android.tv.utils.ImgUtil;
 
@@ -221,20 +222,20 @@ public class HistoryPresenter extends Presenter {
                     .into(binding.image);
         }
 
-        /** 缺剧照时补抓一次（TmdbApi 内部有缓存 / 进行中 / 冷却三重短路，重复绑定不会打接口）。 */
+        /** 缺剧照时补抓一次（统一入口内部有缓存 / 进行中 / 冷却多重短路，重复绑定不会打接口）。 */
         private void requestBackdrop(History item) {
-            if (!TmdbSetting.isEnabled() || TextUtils.isEmpty(item.getVodName())) return;
+            if (TextUtils.isEmpty(item.getVodName())) return;
             String key = item.getKey();
-            TmdbApi.fetch(item.getVodName(), null, null, new TmdbApi.FetchCallback() {
+            ArtSource.fetch(item.getVodName(), ArtSource.CAT_AUTO, new ArtSource.Callback() {
                 @Override
-                public void onSuccess(String keyword, TmdbArt art) {
+                public void onSuccess(TmdbArt art) {
                     if (art == null || !art.hasBackdrop()) return;
                     if (!key.equals(boundKey)) return;
                     loadBackdrop(art);
                 }
 
                 @Override
-                public void onFailure(String keyword, String reason) {
+                public void onFailure(String reason) {
                     // 补抓失败就用海报兜底，不打扰用户
                 }
             });

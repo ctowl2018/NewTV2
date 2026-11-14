@@ -83,17 +83,21 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setTmdbText();
     }
 
-    /** TMDB 行右侧摘要：启用时显示站点数，关闭时显示「关」。 */
+    /** 影片刮削行右侧摘要：总开关关闭显示「关」，只开豆瓣桥显示「开」，TMDB 开启时显示站点数。 */
     private void setTmdbText() {
-        mBinding.tmdbText.setText(TmdbSetting.isEnabled()
-                ? getString(R.string.tmdb_site_summary, TmdbSetting.getSites().size())
-                : Setting.getSwitch(false));
+        if (!TmdbSetting.isMasterEnabled()) {
+            mBinding.tmdbText.setText(Setting.getSwitch(false));
+        } else if (!TmdbSetting.isTmdbScrapeEnabled()) {
+            mBinding.tmdbText.setText(Setting.getSwitch(true));
+        } else {
+            mBinding.tmdbText.setText(getString(R.string.tmdb_site_summary, TmdbSetting.getSites().size()));
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // 从「TMDB 配置」返回时开关 / 站点数可能已变，回来就刷新这一行的摘要
+        // 从「影片刮削设置」返回时开关 / 站点数可能已变，回来就刷新这一行的摘要
         if (mBinding != null) setTmdbText();
     }
 

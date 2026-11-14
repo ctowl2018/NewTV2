@@ -5,7 +5,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
-import com.fongmi.android.tv.utils.HotRankArt;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterVodRectBinding;
 import com.fongmi.android.tv.ui.base.BaseVodHolder;
@@ -42,24 +42,31 @@ public class VodRectHolder extends BaseVodHolder {
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());
-        // TMDB 热榜卡片把评分写进备注：识别成角标后不再重复占信息行。
-        String score = HotRankArt.score(item.getRemarks());
+        // 四个页面的卡片共用统一评分字段；旧缓存里写在备注中的评分仍兼容解析。
+        // 站源自带的备注（集数、更新状态等）要保留在信息行，只有评分备注才收进角标。
+        String score = item.getArtScore();
+        boolean fromRemarks = false;
+        if (score.isEmpty()) {
+            score = ArtSource.score(item.getRemarks());
+            fromRemarks = !score.isEmpty();
+        }
+        boolean remarkIsScore = !ArtSource.score(item.getRemarks()).isEmpty();
         if (score.isEmpty()) {
             binding.score.setVisibility(View.GONE);
             binding.remark.setText(item.getRemarks());
         } else {
             binding.score.setText(score);
             binding.score.setVisibility(View.VISIBLE);
-            binding.remark.setText("");
+            binding.remark.setText(fromRemarks || remarkIsScore ? "" : item.getRemarks());
         }
         binding.site.setVisibility(item.getSiteVisible());
         binding.year.setVisibility(item.getYearVisible());
         binding.name.setVisibility(item.getNameVisible());
-        binding.remark.setVisibility(score.isEmpty() ? item.getRemarkVisible() : View.GONE);
+        binding.remark.setVisibility(fromRemarks || remarkIsScore ? View.GONE : item.getRemarkVisible());
         binding.metadata.setVisibility(binding.getRoot().hasFocus() ? View.VISIBLE : View.INVISIBLE);
         binding.getRoot().setOnClickListener(v -> listener.onItemClick(item));
         binding.getRoot().setOnLongClickListener(v -> listener.onLongClick(item));
-        ImgUtil.load(item.getName(), item.getPic(), binding.image);
+        ImgUtil.load(item.getName(), item.getDisplayPic(), binding.image);
     }
 
     @Override

@@ -105,6 +105,7 @@ import com.fongmi.android.tv.ui.dialog.DecoderSettingDialog;
 import com.fongmi.android.tv.ui.dialog.EditionDialog;
 import com.fongmi.android.tv.ui.dialog.ParseDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
 import com.fongmi.android.tv.utils.FileUtil;
@@ -1001,16 +1002,17 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         tryFetchTmdb();
     }
 
-    /** 关键字就绪且总开关打开时才真正发请求；同一组合只发一次。 */
+    /** 关键字就绪时才真正发请求；同一组合只发一次。 */
     private void tryFetchTmdb() {
-        if (!mTmdbKeywordReady || !TmdbSetting.isEnabled()) return;
+        if (!mTmdbKeywordReady) return;
         String keyword = TextUtils.isEmpty(mTmdbKeyword) ? mTmdbPosterName : mTmdbKeyword;
         if (TextUtils.isEmpty(keyword)) return;
         String key = keyword + "|" + mTmdbPosterName;
         if (TextUtils.equals(key, mTmdbFetchedKey)) return;
         mTmdbFetchedKey = key;
-        // 两个名字都登记成别名：换集后即使先用站源片名查，也能命中同一条素材
-        TmdbApi.fetch(keyword, mTmdbPosterName, tmdbAliases(keyword));
+        // 两个名字都登记成别名：换集后即使先用站源片名查，也能命中同一条素材。
+        // 统一入口内部按 TMDB → 豆瓣桥 → 失败分级处置的顺序处理，两个数据源任一成功都会通知本页刷新。
+        ArtSource.fetch(keyword, mTmdbPosterName, tmdbAliases(keyword), ArtSource.CAT_AUTO, false, null);
     }
 
     private List<String> tmdbAliases(String keyword) {

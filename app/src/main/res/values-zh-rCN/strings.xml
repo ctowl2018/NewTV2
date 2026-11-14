@@ -593,11 +593,21 @@
     <string name="danmaku_disabled_hint">弹幕总开关未开启，请先在设置中开启</string>
 
 
-    <!-- TMDB 刮削（设置 → TMDB 配置） -->
-    <string name="setting_tmdb">TMDB 配置</string>
-    <string name="tmdb_enable">启用TMDB刮削</string>
+    <!-- 影片刮削（设置 → 影片刮削设置） -->
+    <string name="setting_tmdb">影片刮削设置</string>
+    <string name="tmdb_enable">启用刮削</string>
+    <string name="tmdb_scrape_tmdb">启用TMDB刮削</string>
+    <string name="douban_bridge_scrape">启用 Douban Bridge 刮削</string>
     <string name="tmdb_site_index">站点 %1$d</string>
     <string name="tmdb_add_site">添加站点</string>
+    <string name="tmdb_bridge">豆瓣桥</string>
+    <string name="tmdb_bridge_url_hint">豆瓣桥地址，留空则停用</string>
+    <string name="tmdb_bridge_key_hint">豆瓣桥密钥</string>
+    <string name="tmdb_bridge_invalid">豆瓣桥地址需以 http:// 或 https:// 开头</string>
+    <string name="tmdb_bridge_key_required">请填写豆瓣桥密钥</string>
+    <string name="tmdb_bridge_enabled">已启用</string>
+    <string name="tmdb_bridge_disabled">未启用</string>
+    <string name="tmdb_bridge_unset">未配置</string>
     <string name="tmdb_site_url_hint">站点地址，如 https://example.com</string>
     <string name="tmdb_site_key_hint">该站点的 API 密钥</string>
     <string name="tmdb_site_delete">删除</string>
@@ -606,21 +616,36 @@
     <string name="tmdb_site_min">至少保留一个站点</string>
     <string name="tmdb_site_max">最多只能配置 %1$d 个站点</string>
     <string name="tmdb_site_summary">%1$d 个站点轮换</string>
-    <string name="tmdb_cache">缓存（背景图）</string>
-    <string name="tmdb_cache_info">%1$d 张 · %2$s</string>
-    <string name="tmdb_cache_hint">由「设置 → 清除缓存」统一清理</string>
     <string name="tmdb_error_toast">刮削失败提示</string>
     <string name="tmdb_fetch_failed">TMDB 刮削失败：%1$s</string>
     <string name="tmdb_retry">TMDB刮削</string>
     <string name="tmdb_retry_start">正在重新刮削 TMDB…</string>
     <string name="tmdb_retry_success">TMDB 刮削成功：%1$s</string>
-    <string name="tmdb_disabled_hint">请先在「设置 → TMDB 配置」中启用TMDB刮削</string>
+    <string name="tmdb_disabled_hint">请先在「设置 → 影片刮削设置」中启用刮削与TMDB刮削</string>
     <string name="tmdb_no_keyword">没有可用的片名，无法刮削</string>
-    <string name="tmdb_log_entry">查看 TMDB 刮削日志</string>
-    <string name="tmdb_log_title">TMDB 刮削日志</string>
-    <string name="tmdb_log_hint">按时间记录每次刮削的阶段、请求与响应，最多保留 240 条</string>
+    <string name="tmdb_log_entry">刮削日志</string>
+    <string name="tmdb_log_title">刮削日志</string>
+    <string name="tmdb_log_hint">按时间记录 TMDB 与豆瓣桥每次刮削的阶段、请求与响应，最多保留 600 条；可按来源与状态筛选</string>
     <string name="tmdb_log_summary">共 %1$d 条 · 失败 %2$d 次</string>
     <string name="tmdb_log_clear">清空日志</string>
-    <string name="tmdb_log_clear_confirm">确认清空全部 TMDB 刮削日志？</string>
-    <string name="tmdb_log_empty">暂无日志。播放影片后这里会出现刮削记录。</string>
+    <string name="tmdb_log_clear_confirm">确认清空全部刮削日志？</string>
+    <string name="tmdb_log_empty">暂无日志。刮削影片后这里会出现记录。</string>
+    <string name="tmdb_log_off_master">刮削总开关已关闭，开启后才会产生日志。</string>
+    <string name="tmdb_log_off_sources">TMDB 与豆瓣桥刮削均已关闭，开启其中一个后才会产生日志。</string>
+    <string name="tmdb_filter_source">来源</string>
+    <string name="tmdb_filter_status">状态</string>
+    <string name="tmdb_filter_all">全部</string>
+    <string name="tmdb_filter_tmdb">TMDB</string>
+    <string name="tmdb_filter_douban">豆瓣</string>
+    <string name="tmdb_filter_done">完成</string>
+    <string name="tmdb_filter_fail">失败</string>
+    <string name="tmdb_filter_skip">跳过</string>
+    <string name="tmdb_filter_other">其它</string>
+    <string name="tmdb_filter_blacklist">黑名单</string>
+    <string name="blacklist_entry">黑名单</string>
+    <string name="blacklist_summary">共 %1$d 部</string>
+    <string name="blacklist_hint">加入黑名单的影片不再刮削，主视觉与多数海报网格也不再显示（综艺页网格除外）；由「设置 → 清除缓存」统一移除</string>
+    <string name="blacklist_empty">暂无黑名单。只有 TMDB 与豆瓣桥都确认「没有这部片」时才会加入。</string>
+    <string name="tmdb_log_filtered_empty">当前筛选条件下没有日志</string>
+    <string name="tmdb_log_summary_filtered">筛选 %1$d / 共 %2$d 条 · 失败 %3$d 次</string>
 </resources>

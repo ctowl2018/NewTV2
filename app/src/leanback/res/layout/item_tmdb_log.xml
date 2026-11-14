@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 一条 TMDB 刮削日志：首行「时间 · 阶段 · 关键字」，下面按需展开请求 / 响应 / 原因 -->
+<!-- 一条刮削日志：首行「时间 · 来源 · 阶段 · 关键字」，下面按需展开请求 / 响应 / 原因 -->
 <androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -24,6 +24,16 @@
             android:textColor="@color/white"
             android:textSize="13sp"
             tools:text="11-05 15:31:08" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/logSource"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:alpha="0.7"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            tools:text="豆瓣" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/logStage"

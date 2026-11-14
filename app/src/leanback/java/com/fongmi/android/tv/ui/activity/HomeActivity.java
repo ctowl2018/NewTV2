@@ -72,7 +72,9 @@ import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
 import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.Clock;
+import com.fongmi.android.tv.utils.ArtBlacklist;
 import com.fongmi.android.tv.utils.DoubanHot;
+import com.fongmi.android.tv.utils.ArtSource;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
@@ -144,7 +146,12 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
      * 用户是否进入过内容区（列表）：主视觉异步插入后是否需要把视口钉回顶部，
      * 用「是否已经浏览过」区分冷启动与浏览中途刷新，避免把用户从下面拽回首页。
      */
+    /** 刮削作用域：当前页任务优先，切走后未刮完的部分继续在后台排队。 */
+    private static final String SCOPE = "home";
+
     private boolean mContentVisited;
+    /** 海报网格素材落库后就地刷新，与三个频道页共用同一套解析与展示逻辑。 */
+    private final ArtSource.Listener mArtListener = this::refreshArt;
 
     /**
      * 站源 sheet 显示期间的焦点守卫：一旦焦点落到面板之外（例如布局变化导致系统重新分配焦点），
@@ -230,6 +237,7 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         applyTopScrim();
         setViewModel();
         setAdapter();
+        ArtSource.register(mArtListener);
         checkPermission();
         loadDoubanHot();
         installInitialFocus();
@@ -815,8 +823,33 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
 
     private void addVideo(Result result) {
         Style style = result.getStyle(getHome().getStyle());
-        if (style.isList()) mAdapter.addAll(mAdapter.size(), result.getList());
-        else addGrid(result.getList(), style);
+        // 黑名单影片不再出现在首页：站源列表与主视觉用同一套判定，按归一化片名剔除。
+        List<Vod> items = filterBlacklisted(result.getList());
+        if (!items.isEmpty()) {
+            List<String> names = new ArrayList<>();
+            for (Vod vod : items) {
+                if (vod == null) continue;
+                // 站源卡片保留片名 / 播放地址 / 站源备注，只覆盖海报并写入独立评分。
+                ArtSource.apply(vod);
+                if (!vod.getName().isEmpty()) names.add(vod.getName());
+            }
+            // 首页混合电影 / 剧集 / 综艺，让豆瓣同时查两类榜单；与频道页共用同一套解析。
+            ArtSource.enqueue(names, ArtSource.CAT_AUTO, SCOPE);
+        }
+        if (style.isList()) mAdapter.addAll(mAdapter.size(), items);
+        else addGrid(items, style);
+    }
+
+    /** 剔除已拉黑的影片；返回新列表，避免改动站源结果缓存里的原始数据。 */
+    private static List<Vod> filterBlacklisted(List<Vod> items) {
+        List<Vod> out = new ArrayList<>();
+        if (items == null) return out;
+        for (Vod vod : items) {
+            if (vod == null) continue;
+            if (ArtBlacklist.contains(vod.getName())) continue;
+            out.add(vod);
+        }
+        return out;
     }
 
     /**
@@ -842,6 +875,61 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
         ArrayObjectAdapter adapter = new ArrayObjectAdapter(mVodPresenter);
         adapter.addAll(0, items);
         return new ListRow(adapter);
+    }
+
+    /**
+     * 素材落库后就地刷新首页海报网格：既有直接挂在列表上的站源卡片，也有包在
+     * 横向行里的卡片；只改海报与评分字段，不重建行、不动焦点与滚动位置。
+     */
+    private void refreshArt() {
+        if (mBinding == null || mAdapter == null || isFinishing() || isDestroyed()) return;
+        // 倒序遍历：刚被拉黑的卡片要直接从行里移除，正序删会跳过下一项。
+        for (int i = mAdapter.size() - 1; i >= 0; i--) {
+            Object item = mAdapter.get(i);
+            if (item instanceof Vod) {
+                Vod vod = (Vod) item;
+                if (ArtBlacklist.contains(vod.getName())) {
+                    mAdapter.removeItems(i, 1);
+                    continue;
+                }
+                if (ArtSource.apply(vod)) mAdapter.notifyArrayItemRangeChanged(i, 1);
+            } else if (item instanceof ListRow) {
+                Object adapter = ((ListRow) item).getAdapter();
+                if (!(adapter instanceof ArrayObjectAdapter)) continue;
+                ArrayObjectAdapter row = (ArrayObjectAdapter) adapter;
+                boolean changed = false;
+                for (int j = row.size() - 1; j >= 0; j--) {
+                    Object card = row.get(j);
+                    if (!(card instanceof Vod)) continue;
+                    Vod vod = (Vod) card;
+                    if (ArtBlacklist.contains(vod.getName())) {
+                        row.removeItems(j, 1);
+                        changed = true;
+                        continue;
+                    }
+                    if (ArtSource.apply(vod)) changed = true;
+                }
+                if (changed) row.notifyArrayItemRangeChanged(0, row.size());
+            } else if (item instanceof DoubanHotRow) {
+                rebuildHero((DoubanHotRow) item, i);
+            }
+        }
+    }
+
+    /**
+     * 主视觉里出现刚被拉黑的片名时重建这一行。
+     * 焦点正停在这行时跳过：重建会让焦点丢失，用户下次进页面时会被自然过滤掉。
+     */
+    private void rebuildHero(DoubanHotRow row, int index) {
+        List<DoubanHotItem> shown = new ArrayList<>();
+        for (DoubanHotItem item : row.getItems()) {
+            if (ArtBlacklist.contains(item.getTitle())) continue;
+            shown.add(item);
+        }
+        if (shown.size() == row.size()) return;
+        if (mBinding.recycler.getSelectedPosition() == index) return;
+        if (shown.isEmpty()) mAdapter.removeItems(index, 1);
+        else mAdapter.replace(index, DoubanHotRow.create(shown));
     }
 
     private void getHistory() {
@@ -883,8 +971,14 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     private void loadDoubanHot() {
         DoubanHot.load(items -> {
             if (items == null || items.isEmpty()) return;
+            List<DoubanHotItem> shown = new ArrayList<>();
+            for (DoubanHotItem item : items) {
+                if (ArtBlacklist.contains(item.getTitle())) continue;
+                shown.add(item);
+            }
+            if (shown.isEmpty()) return;
             removeDoubanHot();
-            mAdapter.add(getDoubanHotIndex(), DoubanHotRow.create(items));
+            mAdapter.add(getDoubanHotIndex(), DoubanHotRow.create(shown));
             pinToHeroIfContentUntouched();
         });
     }
@@ -1069,6 +1163,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     @Override
     protected void onResume() {
         super.onResume();
+        // 回到首页即把刮削优先级切回本页，其他页剩余任务自动排到后面。
+        ArtSource.setActiveScope(SCOPE);
         if (mClock != null) mClock.stop();
         mClock = Clock.create().view(mToolbar.clock).format("HH:mm");
         mClock.start();
@@ -1080,6 +1176,8 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
     @Override
     protected void onPause() {
         super.onPause();
+        // 离开四页（去详情页 / 设置页等）后不再保留页面优先级，恢复普通轮转。
+        ArtSource.clearActiveScope(SCOPE);
         if (mClock != null) mClock.stop();
     }
 
@@ -1269,6 +1367,7 @@ public class HomeActivity extends BaseActivity implements SiteListener, VodPrese
 
     @Override
     protected void onDestroy() {
+        ArtSource.unregister(mArtListener);
         ViewTreeObserver observer = getWindow().getDecorView().getViewTreeObserver();
         observer.removeOnGlobalFocusChangeListener(focusGuard);
         observer.removeOnGlobalFocusChangeListener(toolbarFocusWatcher);
